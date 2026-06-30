@@ -1,6 +1,13 @@
 import { db } from './db';
 import { users, bibleVerses, habits, quarterlyPlans } from './schema';
 import { randomUUID } from 'crypto';
+import { scryptSync } from 'crypto';
+
+// Función oficial de encriptación para la contraseña del Administrador
+function hashPassword(password: string): string {
+  const salt = 'journaling-integral-salt-key';
+  return scryptSync(password, salt, 64).toString('hex');
+}
 
 async function seed() {
   console.log('Iniciando carga de datos...');
@@ -13,9 +20,7 @@ async function seed() {
   }
 
   const verses = [
-    // =========================================================================
     // TÓPICO: FINANZAS Y MAYORDOMÍA (30 Versículos)
-    // =========================================================================
     {
       id: randomUUID(),
       reference: 'Proverbios 21:5',
@@ -430,7 +435,7 @@ async function seed() {
       id: randomUUID(),
       reference: 'Proverbios 23:2',
       text: 'Y pon cuchillo a tu garganta, si tienes gran apetito.',
-      interpretation: 'Frecuencia en límites. Si detectas un desorden recurrente en tu vida, impone límites físicos infranqueables.',
+      interpretation: 'Frecuencia en límites. Si dectectas un desorden recurrente en tu vida, impone límites físicos infranqueables.',
       recommendedLevel: 1,
       topic: 'Dominio Propio',
     },
@@ -984,7 +989,7 @@ async function seed() {
     }
   ];
 
-  // Inserción Masiva Única (Evita timeouts)
+  // Inserción Masiva Única (Bulk Insert)
   await db.insert(bibleVerses).values(verses);
   console.log(`Librería cargada con éxito con ${verses.length} versículos de alto rendimiento.`);
 
