@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '../../../../db/db';
-import { users } from '../../../../db/schema';
+import { db } from '@/db/db';
+import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { scryptSync } from 'crypto';
@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltan campos requeridos.' }, { status: 400 });
     }
 
-    // Comprobar si el email ya existe
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, email),
     });
