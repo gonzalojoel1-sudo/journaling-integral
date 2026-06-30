@@ -7,8 +7,17 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth'; 
 import { authOptions } from '../api/auth/[...nextauth]/options';
+import { scryptSync } from 'crypto'; // Criptografía nativa
 
 const DEMO_USER_ID = 'demo-user-id';
+
+/**
+ * Función de encriptación idéntica a la de opciones de Auth para validar contraseñas
+ */
+function hashPassword(password: string): string {
+  const salt = 'journaling-integral-salt-key';
+  return scryptSync(password, salt, 64).toString('hex');
+}
 
 /**
  * Resuelve de manera segura el ID del usuario en sesión activa o retorna el demo por defecto
@@ -32,6 +41,7 @@ export async function getCurrentUserId(): Promise<string> {
 
 /**
  * Obtiene el perfil del usuario actual o crea uno por defecto si no existe.
+ * Incorpora un parche autocurativo de contraseñas de administrador.
  */
 export async function getOrCreateUserProfile() {
   try {
@@ -53,7 +63,7 @@ export async function getOrCreateUserProfile() {
           id: DEMO_USER_ID,
           name: 'Joel Pacheco',
           email: 'joel@journalingintegral.demo',
-          password: 'demo-password-hash',
+          password: hashPassword('admin123'), // Creado proactivamente con la encriptación correcta de 'admin123'
           currentLevel: 1,
           streakCurrent: 0,
           streakMax: 0,
@@ -63,6 +73,19 @@ export async function getOrCreateUserProfile() {
         await db.insert(users).values(newUser);
         user = newUser;
       }
+    }
+
+    // --- PARCHE AUTOCURATIVO DE CREDENCIALES ---
+    // Si el usuario existe pero conserva la firma de contraseña demo vieja, la actualiza a 'admin123' en Turso
+    if (user && (user.password === 'demo-password-hash' || user.password === '')) {
+      const correctHash = hashPassword('admin123');
+      await db
+        .update(users)
+        .set({ password: correctHash })
+        .where(eq(users.id, user.id));
+      
+      user.password = correctHash; // Actualizar referencia en memoria
+      console.log('Firma de contraseña de administrador actualizada con éxito.');
     }
 
     return { success: true, user };
@@ -434,7 +457,6 @@ export async function getVersesByTopic(topic?: string) {
     const randomIndex = Math.floor(Math.random() * list.length);
     return list[randomIndex];
   } catch (error) {
-    // Retorno preventivo (Fallback resiliente) para que la UI de la app jamás se quede en "Cargando..."
     return {
       id: 'fallback-guided-id',
       reference: 'Josué 1:9',
