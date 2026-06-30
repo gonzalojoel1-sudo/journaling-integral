@@ -5,9 +5,9 @@ import { users, dailyEntries, quarterlyPlans, habits, bibleVerses } from '../../
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getServerSession } from 'next-auth'; 
-import { authOptions } from '../api/auth/[...nextauth]/route'; // Importar opciones de seguridad
+import { authOptions } from '../api/auth/[...nextauth]/options';
 
+// ID de usuario estático para la versión de demostración local
 const DEMO_USER_ID = 'demo-user-id';
 
 /**
@@ -15,45 +15,24 @@ const DEMO_USER_ID = 'demo-user-id';
  */
 export async function getOrCreateUserProfile() {
   try {
-    // Pasar las opciones 'authOptions' es crucial para que getServerSession() pueda leer y validar el JWT
-    const session = await getServerSession(authOptions);
-    let currentUserId = DEMO_USER_ID;
-
-    if (session?.user?.email) {
-      const dbUser = await db.query.users.findFirst({
-        where: eq(users.email, session.user.email),
-      });
-      if (dbUser) {
-        currentUserId = dbUser.id;
-      }
-    }
-
     let user = await db.query.users.findFirst({
-      where: eq(users.id, currentUserId),
+      where: eq(users.id, DEMO_USER_ID),
     });
 
     if (!user) {
-      const existingByEmail = await db.query.users.findFirst({
-        where: eq(users.email, 'joel@journalingintegral.demo'),
-      });
-
-      if (existingByEmail) {
-        user = existingByEmail;
-      } else {
-        const newUser = {
-          id: DEMO_USER_ID,
-          name: 'Joel Pacheco',
-          email: 'joel@journalingintegral.demo',
-          password: 'demo-password-hash',
-          currentLevel: 1,
-          streakCurrent: 0,
-          streakMax: 0,
-          lastEntryDate: null,
-          createdAt: new Date().toISOString(),
-        };
-        await db.insert(users).values(newUser);
-        user = newUser;
-      }
+      const newUser = {
+        id: DEMO_USER_ID,
+        name: 'Joel Pacheco',
+        email: 'joel@journalingintegral.demo',
+        password: 'demo-password-hash', // Especificado para cumplir la restricción NOT NULL del esquema
+        currentLevel: 1,
+        streakCurrent: 0,
+        streakMax: 0,
+        lastEntryDate: null,
+        createdAt: new Date().toISOString(),
+      };
+      await db.insert(users).values(newUser);
+      user = newUser;
     }
 
     return { success: true, user };
@@ -114,12 +93,14 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       levelAtEntry: user.currentLevel,
       isPlanBUsed: formData.isPlanBUsed ? 1 : 0,
 
+      // Nivel 1: Energía
       sleepRating: formData.sleepRating ? Number(formData.sleepRating) : null,
       energyRating: formData.energyRating ? Number(formData.energyRating) : null,
       focusRating: formData.focusRating ? Number(formData.focusRating) : null,
       stressRating: formData.stressRating ? Number(formData.stressRating) : null,
       quickEnergyAction: formData.quickEnergyAction || null,
 
+      // Nivel 1: Oración, gratitud e identidad
       gratitude1: formData.gratitude1 || null,
       gratitude2: formData.gratitude2 || null,
       gratitude3: formData.gratitude3 || null,
@@ -127,11 +108,15 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       chooseToBeIdentity: formData.chooseToBeIdentity || null,
       identityAction: formData.identityAction || null,
       dailyMicroAchievement: formData.dailyMicroAchievement || null,
+
+      // Devocional Diario (Guardado de notas)
       devotionalNotes: formData.devotionalNotes || null,
 
+      // Nivel 2: Autoeducación
       autoeducation: formData.autoeducation ? JSON.stringify(formData.autoeducation) : null,
       implementationIntentions: formData.implementationIntentions ? JSON.stringify(formData.implementationIntentions) : null,
 
+      // Nivel 2: MITs
       mitSer: formData.mitSer || null,
       mitSerCompleted: formData.mitSerCompleted ? 1 : 0,
       mitNegocio: formData.mitNegocio || null,
@@ -139,12 +124,14 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       mitRelaciones: formData.mitRelaciones || null,
       mitRelacionesCompleted: formData.mitRelacionesCompleted ? 1 : 0,
 
+      // Nivel 2: Hábitos e historial
       dailyHabitsJson: formData.dailyHabits ? JSON.stringify(formData.dailyHabits) : null,
       achievementsTop3: formData.achievementsTop3 ? JSON.stringify(formData.achievementsTop3) : null,
       whatWorked: formData.whatWorked || null,
       whatDidNotWork: formData.whatDidNotWork || null,
       improvementIdea: formData.improvementIdea || null,
 
+      // Nivel 2 & 3: Negocio y Mentalidad
       bizProspectCompleted: formData.bizProspectCompleted ? 1 : 0,
       bizFollowUpCompleted: formData.bizFollowUpCompleted ? 1 : 0,
       bizMktActionCompleted: formData.bizMktActionCompleted ? 1 : 0,
