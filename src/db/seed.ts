@@ -1007,6 +1007,7 @@ async function seed() {
       id: demoUserId,
       name: 'Joel Pacheco',
       email: 'joel@journalingintegral.demo',
+      password: 'demo-password-hash',
       currentLevel: 1,
       streakCurrent: 5,
       streakMax: 12,
