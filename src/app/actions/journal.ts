@@ -5,6 +5,7 @@ import { users, dailyEntries, quarterlyPlans, habits, bibleVerses } from '../../
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth'; // Importar sesión del servidor
 
 // ID de usuario estático para la versión de demostración local
 const DEMO_USER_ID = 'demo-user-id';
@@ -14,22 +15,33 @@ const DEMO_USER_ID = 'demo-user-id';
  */
 export async function getOrCreateUserProfile() {
   try {
-    // 1. Buscar primero por el ID estático de demostración
+    const session = await getServerSession();
+    let currentUserId = DEMO_USER_ID;
+
+    // Si hay una sesión multiusuario activa en la nube, resolvemos su ID de forma dinámica
+    if (session?.user?.email) {
+      const dbUser = await db.query.users.findFirst({
+        where: eq(users.email, session.user.email),
+      });
+      if (dbUser) {
+        currentUserId = dbUser.id;
+      }
+    }
+
+    // Buscar perfil de usuario basado en el ID resuelto (Sea el demo o el real en sesión)
     let user = await db.query.users.findFirst({
-      where: eq(users.id, DEMO_USER_ID),
+      where: eq(users.id, currentUserId),
     });
 
     if (!user) {
-      // 2. Si no existe por ID, verificar si el email ya está registrado en la base de datos
+      // Registrar preventivo si es el usuario demo inicial
       const existingByEmail = await db.query.users.findFirst({
         where: eq(users.email, 'joel@journalingintegral.demo'),
       });
 
       if (existingByEmail) {
-        // Si el correo ya existe, adoptamos ese usuario para evitar el error UNIQUE
         user = existingByEmail;
       } else {
-        // 3. Si el correo tampoco existe, es un entorno limpio; creamos el usuario
         const newUser = {
           id: DEMO_USER_ID,
           name: 'Joel Pacheco',
@@ -198,7 +210,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         .where(eq(users.id, user.id));
     }
 
-    // Evaluación automática de progreso
+    // Evaluación de nivel en los últimos 30 días
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - 30);
     const dateLimitStr = dateLimit.toISOString().split('T')[0];

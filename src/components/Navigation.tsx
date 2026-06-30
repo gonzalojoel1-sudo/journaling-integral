@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react'; // Hooks de sesión cliente
 import { ThemeToggle } from './ThemeToggle';
 import { updateUserLevel } from '../app/actions/journal';
 import { 
@@ -13,13 +14,15 @@ import {
   TrendingUp, 
   Settings2,
   Loader2,
-  CalendarDays
+  CalendarDays,
+  LogOut,
+  UserCheck
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Diario', href: '/journal', icon: BookOpen },
-  { label: 'Historial', href: '/history', icon: CalendarDays }, // Nueva bitácora de consulta
+  { label: 'Historial', href: '/history', icon: CalendarDays },
   { label: 'Trimestre', href: '/quarterly', icon: Compass },
   { label: 'Hábitos', href: '/habits', icon: Activity },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
@@ -28,6 +31,7 @@ const NAV_ITEMS = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession(); // Detectar sesión activa
   const [isPending, startTransition] = useTransition();
   const [adminLevel, setAdminLevel] = useState<number>(1);
   const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
@@ -38,6 +42,10 @@ export function Navigation() {
       await updateUserLevel(level);
       router.refresh();
     });
+  };
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' });
   };
 
   return (
@@ -117,18 +125,44 @@ export function Navigation() {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-800/20 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-xs shrink-0">
-              JP
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold truncate">Joel Pacheco</p>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
-                <span className="text-[10px] text-stone-500 font-mono">Modo Administrador</span>
+          {/* Información del Usuario Dinámica */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-800/20 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold text-xs shrink-0">
+                {session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : 'JP'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold truncate">
+                  {session?.user?.name || 'Joel Pacheco'}
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                  <span className="text-[10px] text-stone-500 font-mono">
+                    {session ? 'En Sesión' : 'Modo Demo'}
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Alternador dinámico de Login / Logout */}
+            {session ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5" /> Cerrar Sesión
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-bold transition-colors text-center shadow-sm"
+              >
+                <UserCheck className="h-3.5 w-3.5" /> Iniciar Sesión
+              </Link>
+            )}
           </div>
+
         </div>
       </aside>
 
