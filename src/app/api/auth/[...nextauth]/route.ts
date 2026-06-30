@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth';
+import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from '@/db/db';
 import { users } from '@/db/schema';
@@ -10,7 +10,8 @@ function hashPassword(password: string): string {
   return scryptSync(password, salt, 64).toString('hex');
 }
 
-const handler = NextAuth({
+// Exportamos las opciones para que las acciones de servidor puedan descifrar la sesión
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -65,6 +66,8 @@ const handler = NextAuth({
     strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET || 'journaling-nextauth-super-secret-key-12345',
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

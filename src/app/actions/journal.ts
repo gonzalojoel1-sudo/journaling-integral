@@ -5,9 +5,9 @@ import { users, dailyEntries, quarterlyPlans, habits, bibleVerses } from '../../
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getServerSession } from 'next-auth'; // Importar sesión del servidor
+import { getServerSession } from 'next-auth'; 
+import { authOptions } from '../api/auth/[...nextauth]/route'; // Importar opciones de seguridad
 
-// ID de usuario estático para la versión de demostración local
 const DEMO_USER_ID = 'demo-user-id';
 
 /**
@@ -15,10 +15,10 @@ const DEMO_USER_ID = 'demo-user-id';
  */
 export async function getOrCreateUserProfile() {
   try {
-    const session = await getServerSession();
+    // Pasar las opciones 'authOptions' es crucial para que getServerSession() pueda leer y validar el JWT
+    const session = await getServerSession(authOptions);
     let currentUserId = DEMO_USER_ID;
 
-    // Si hay una sesión multiusuario activa en la nube, resolvemos su ID de forma dinámica
     if (session?.user?.email) {
       const dbUser = await db.query.users.findFirst({
         where: eq(users.email, session.user.email),
@@ -28,13 +28,11 @@ export async function getOrCreateUserProfile() {
       }
     }
 
-    // Buscar perfil de usuario basado en el ID resuelto (Sea el demo o el real en sesión)
     let user = await db.query.users.findFirst({
       where: eq(users.id, currentUserId),
     });
 
     if (!user) {
-      // Registrar preventivo si es el usuario demo inicial
       const existingByEmail = await db.query.users.findFirst({
         where: eq(users.email, 'joel@journalingintegral.demo'),
       });
@@ -116,14 +114,12 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       levelAtEntry: user.currentLevel,
       isPlanBUsed: formData.isPlanBUsed ? 1 : 0,
 
-      // Nivel 1: Energía
       sleepRating: formData.sleepRating ? Number(formData.sleepRating) : null,
       energyRating: formData.energyRating ? Number(formData.energyRating) : null,
       focusRating: formData.focusRating ? Number(formData.focusRating) : null,
       stressRating: formData.stressRating ? Number(formData.stressRating) : null,
       quickEnergyAction: formData.quickEnergyAction || null,
 
-      // Nivel 1: Oración, gratitud e identidad
       gratitude1: formData.gratitude1 || null,
       gratitude2: formData.gratitude2 || null,
       gratitude3: formData.gratitude3 || null,
@@ -131,15 +127,11 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       chooseToBeIdentity: formData.chooseToBeIdentity || null,
       identityAction: formData.identityAction || null,
       dailyMicroAchievement: formData.dailyMicroAchievement || null,
-
-      // Devocional Diario (Guardado de notas)
       devotionalNotes: formData.devotionalNotes || null,
 
-      // Nivel 2: Autoeducación
       autoeducation: formData.autoeducation ? JSON.stringify(formData.autoeducation) : null,
       implementationIntentions: formData.implementationIntentions ? JSON.stringify(formData.implementationIntentions) : null,
 
-      // Nivel 2: MITs
       mitSer: formData.mitSer || null,
       mitSerCompleted: formData.mitSerCompleted ? 1 : 0,
       mitNegocio: formData.mitNegocio || null,
@@ -147,24 +139,22 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       mitRelaciones: formData.mitRelaciones || null,
       mitRelacionesCompleted: formData.mitRelacionesCompleted ? 1 : 0,
 
-      // Nivel 2: Hábitos e historial
       dailyHabitsJson: formData.dailyHabits ? JSON.stringify(formData.dailyHabits) : null,
       achievementsTop3: formData.achievementsTop3 ? JSON.stringify(formData.achievementsTop3) : null,
       whatWorked: formData.whatWorked || null,
       whatDidNotWork: formData.whatDidNotWork || null,
       improvementIdea: formData.improvementIdea || null,
 
-      // Nivel 2 & 3: Negocio y Mentalidad
       bizProspectCompleted: formData.bizProspectCompleted ? 1 : 0,
       bizFollowUpCompleted: formData.bizFollowUpCompleted ? 1 : 0,
       bizMktActionCompleted: formData.bizMktActionCompleted ? 1 : 0,
-      bizContactsCount: formData.bizContactsCount ? Number(formData.bizContactsCount) : 0,
-      bizSalesCount: formData.bizSalesCount ? Number(formData.bizSalesCount) : 0,
-      bizIncome: formData.bizIncome ? Number(formData.bizIncome) : 0,
-      bizExpenses: formData.bizExpenses ? Number(formData.bizExpenses) : 0,
       bizActionsSpecific: formData.bizActionsSpecific || null,
-      bizImprovementTomorrow: formData.bizImprovementTomorrow || null,
 
+      bizContactsCount: formData.bizContactsCount || 0,
+      bizSalesCount: formData.bizSalesCount || 0,
+      bizIncome: formData.bizIncome || 0,
+      bizExpenses: formData.bizExpenses || 0,
+      bizImprovementTomorrow: formData.bizImprovementTomorrow || null,
       mindsetStateRating: formData.mindsetStateRating ? Number(formData.mindsetStateRating) : null,
       mindsetEmotion1: formData.mindsetEmotion1 || null,
       mindsetEmotion2: formData.mindsetEmotion2 || null,
@@ -175,10 +165,8 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       mindsetLimitingAction: formData.mindsetLimitingAction || null,
       mindsetEmpoweringBelief: formData.mindsetEmpoweringBelief || null,
       mindsetEmpoweringAction: formData.mindsetEmpoweringAction || null,
-
       prepTomorrowJson: formData.prepTomorrow ? JSON.stringify(formData.prepTomorrow) : null,
 
-      // Nivel 3: Legado y Mayordomía
       legacyReflection: formData.legacyReflection || null,
       dominantFocusCompleted: formData.dominantFocusCompleted ? 1 : 0,
       createdAt: existingEntry?.createdAt || new Date().toISOString(),
@@ -210,7 +198,6 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         .where(eq(users.id, user.id));
     }
 
-    // Evaluación de nivel en los últimos 30 días
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - 30);
     const dateLimitStr = dateLimit.toISOString().split('T')[0];
