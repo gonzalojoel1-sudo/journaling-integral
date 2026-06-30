@@ -14,24 +14,36 @@ const DEMO_USER_ID = 'demo-user-id';
  */
 export async function getOrCreateUserProfile() {
   try {
+    // 1. Buscar primero por el ID estático de demostración
     let user = await db.query.users.findFirst({
       where: eq(users.id, DEMO_USER_ID),
     });
 
     if (!user) {
-      const newUser = {
-        id: DEMO_USER_ID,
-        name: 'Joel Pacheco',
-        email: 'joel@journalingintegral.demo',
-        password: 'demo-password-hash', // Especificado para cumplir la restricción NOT NULL del esquema
-        currentLevel: 1,
-        streakCurrent: 0,
-        streakMax: 0,
-        lastEntryDate: null,
-        createdAt: new Date().toISOString(),
-      };
-      await db.insert(users).values(newUser);
-      user = newUser;
+      // 2. Si no existe por ID, verificar si el email ya está registrado en la base de datos
+      const existingByEmail = await db.query.users.findFirst({
+        where: eq(users.email, 'joel@journalingintegral.demo'),
+      });
+
+      if (existingByEmail) {
+        // Si el correo ya existe, adoptamos ese usuario para evitar el error UNIQUE
+        user = existingByEmail;
+      } else {
+        // 3. Si el correo tampoco existe, es un entorno limpio; creamos el usuario
+        const newUser = {
+          id: DEMO_USER_ID,
+          name: 'Joel Pacheco',
+          email: 'joel@journalingintegral.demo',
+          password: 'demo-password-hash',
+          currentLevel: 1,
+          streakCurrent: 0,
+          streakMax: 0,
+          lastEntryDate: null,
+          createdAt: new Date().toISOString(),
+        };
+        await db.insert(users).values(newUser);
+        user = newUser;
+      }
     }
 
     return { success: true, user };
@@ -186,7 +198,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         .where(eq(users.id, user.id));
     }
 
-    // Evaluación de nivel en los últimos 30 días
+    // Evaluación automática de progreso
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - 30);
     const dateLimitStr = dateLimit.toISOString().split('T')[0];
