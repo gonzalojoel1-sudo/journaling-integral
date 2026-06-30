@@ -12,8 +12,10 @@ async function seed() {
     console.log('Limpieza previa de versículos omitida.');
   }
 
-  // --- SECCIÓN 1: FINANZAS Y MAYORDOMÍA (30 Versículos) ---
-  const finanzasVerses = [
+  const verses = [
+    // =========================================================================
+    // TÓPICO: FINANZAS Y MAYORDOMÍA (30 Versículos)
+    // =========================================================================
     {
       id: randomUUID(),
       reference: 'Proverbios 21:5',
@@ -26,7 +28,7 @@ async function seed() {
       id: randomUUID(),
       reference: 'Proverbios 22:7',
       text: 'El rico se enseñorea de los pobres, y el que toma prestado es siervo del que presta.',
-      interpretation: 'La deuda limita tu libertad de acción y tu capacidad de dejar legado. Diseña un plan de desapalancamiento financiero.',
+      interpretation: 'La deuda limita tu libertad y tu capacidad de dejar un legado. Diseña un plan de salida inmediato.',
       recommendedLevel: 2,
       topic: 'Finanzas',
     },
@@ -57,7 +59,7 @@ async function seed() {
     {
       id: randomUUID(),
       reference: 'Hebreos 13:5',
-      text: 'Sean vuestras costumbres sin avaricia, contentos con lo que tenéis ahora; porque él dijo: No te desampararé, ni te dejaré.',
+      text: 'Sean vuestras costumbres sin avaricia, contentos con lo que tenéis ahora; porque el dijo: No te desampararé, ni te dejaré.',
       interpretation: 'El contentamiento rompe el ciclo del consumo reactivo que destruye el flujo de caja de tu negocio.',
       recommendedLevel: 2,
       topic: 'Finanzas',
@@ -192,7 +194,7 @@ async function seed() {
     },
     {
       id: randomUUID(),
-      reference: 'Malaquías 3:10',
+      reference: 'Malatías 3:10',
       text: 'Traed todos los diezmos al alfolí y haya alimento en mi casa; y probadme ahora en esto...',
       interpretation: 'La generosidad sistemática abre ventanas de discernimiento y rompe las ataduras de la avaricia personal.',
       recommendedLevel: 2,
@@ -253,11 +255,9 @@ async function seed() {
       interpretation: 'Principio de mayordomía: eres un administrador temporal de sus recursos para expandir bienestar.',
       recommendedLevel: 1,
       topic: 'Finanzas',
-    }
-  ];
+    },
 
-  // --- SECCIÓN 2: DOMINIO PROPIO Y TEMPLANZA (30 Versículos) ---
-  const dominioPropioVerses = [
+    // TÓPICO: DOMINIO PROPIO (30 Versículos)
     {
       id: randomUUID(),
       reference: 'Proverbios 25:28',
@@ -497,11 +497,9 @@ async function seed() {
       interpretation: 'Mantente alerta. El caos y la reactividad son trampas para sacarte del propósito diario. Vela y haz tu diario.',
       recommendedLevel: 1,
       topic: 'Dominio Propio',
-    }
-  ];
+    },
 
-  // --- SECCIÓN 3: CRECIMIENTO Y TRABAJO (30 Versículos) ---
-  const crecimientoVerses = [
+    // TÓPICO: CRECIMIENTO Y TRABAJO (30 Versículos)
     {
       id: randomUUID(),
       reference: 'Colosenses 3:23',
@@ -741,11 +739,9 @@ async function seed() {
       interpretation: 'Principio de productividad: el uso activo de tus capacidades genera multiplicación; la pasividad causa atrofia.',
       recommendedLevel: 2,
       topic: 'Crecimiento',
-    }
-  ];
+    },
 
-  // --- SECCIÓN 4: IDENTIDAD Y AUTOCONFIANZA (30 Versículos) ---
-  const identidadVerses = [
+    // TÓPICO: IDENTIDAD Y AUTOCONFIANZA (30 Versículos)
     {
       id: randomUUID(),
       reference: 'Jeremías 31:3',
@@ -988,17 +984,9 @@ async function seed() {
     }
   ];
 
-  const verses = [
-    ...finanzasVerses,
-    ...dominioPropioVerses,
-    ...crecimientoVerses,
-    ...identidadVerses
-  ];
-
-  for (const verse of verses) {
-    await db.insert(bibleVerses).values(verse);
-  }
-  console.log(`Librería cargada con ${verses.length} versículos de alto rendimiento.`);
+  // Inserción Masiva Única (Evita timeouts)
+  await db.insert(bibleVerses).values(verses);
+  console.log(`Librería cargada con éxito con ${verses.length} versículos de alto rendimiento.`);
 
   const demoUserId = 'demo-user-id';
   
@@ -1007,7 +995,7 @@ async function seed() {
       id: demoUserId,
       name: 'Joel Pacheco',
       email: 'joel@journalingintegral.demo',
-      password: 'demo-password-hash',
+      password: 'demo-password-hash', // Contraseña para bypass local de administrador
       currentLevel: 1,
       streakCurrent: 5,
       streakMax: 12,
@@ -1079,7 +1067,7 @@ async function seed() {
     createdAt: new Date().toISOString(),
   });
 
-  console.log('Planeamiento trimestral demo cargado exitosamente.');
+  console.log('Planeamiento trimestral de demostración cargado exitosamente.');
   console.log('Inicialización completada.');
 }
 

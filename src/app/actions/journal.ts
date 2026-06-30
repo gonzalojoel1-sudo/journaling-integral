@@ -5,34 +5,64 @@ import { users, dailyEntries, quarterlyPlans, habits, bibleVerses } from '../../
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
+import { getServerSession } from 'next-auth'; 
 import { authOptions } from '../api/auth/[...nextauth]/options';
 
-// ID de usuario estático para la versión de demostración local
 const DEMO_USER_ID = 'demo-user-id';
+
+/**
+ * Resuelve de manera segura el ID del usuario en sesión activa o retorna el demo por defecto
+ */
+export async function getCurrentUserId(): Promise<string> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (session?.user?.email) {
+      const dbUser = await db.query.users.findFirst({
+        where: eq(users.email, session.user.email),
+      });
+      if (dbUser) {
+        return dbUser.id;
+      }
+    }
+  } catch (error) {
+    console.error('Error al resolver ID de usuario en sesión:', error);
+  }
+  return DEMO_USER_ID; // Fallback para desarrollo local o modo demo
+}
 
 /**
  * Obtiene el perfil del usuario actual o crea uno por defecto si no existe.
  */
 export async function getOrCreateUserProfile() {
   try {
+    const userId = await getCurrentUserId();
+
     let user = await db.query.users.findFirst({
-      where: eq(users.id, DEMO_USER_ID),
+      where: eq(users.id, userId),
     });
 
     if (!user) {
-      const newUser = {
-        id: DEMO_USER_ID,
-        name: 'Joel Pacheco',
-        email: 'joel@journalingintegral.demo',
-        password: 'demo-password-hash', // Especificado para cumplir la restricción NOT NULL del esquema
-        currentLevel: 1,
-        streakCurrent: 0,
-        streakMax: 0,
-        lastEntryDate: null,
-        createdAt: new Date().toISOString(),
-      };
-      await db.insert(users).values(newUser);
-      user = newUser;
+      const existingByEmail = await db.query.users.findFirst({
+        where: eq(users.email, 'joel@journalingintegral.demo'),
+      });
+
+      if (existingByEmail) {
+        user = existingByEmail;
+      } else {
+        const newUser = {
+          id: DEMO_USER_ID,
+          name: 'Joel Pacheco',
+          email: 'joel@journalingintegral.demo',
+          password: 'demo-password-hash',
+          currentLevel: 1,
+          streakCurrent: 0,
+          streakMax: 0,
+          lastEntryDate: null,
+          createdAt: new Date().toISOString(),
+        };
+        await db.insert(users).values(newUser);
+        user = newUser;
+      }
     }
 
     return { success: true, user };
@@ -44,7 +74,6 @@ export async function getOrCreateUserProfile() {
 
 /**
  * Obtiene un versículo bíblico diario de manera aleatoria.
- * Si se especifica un nivel, prioriza versículos sugeridos para dicho nivel.
  */
 export async function getRandomVerse(level: number = 1) {
   try {
@@ -93,14 +122,12 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       levelAtEntry: user.currentLevel,
       isPlanBUsed: formData.isPlanBUsed ? 1 : 0,
 
-      // Nivel 1: Energía
       sleepRating: formData.sleepRating ? Number(formData.sleepRating) : null,
       energyRating: formData.energyRating ? Number(formData.energyRating) : null,
       focusRating: formData.focusRating ? Number(formData.focusRating) : null,
       stressRating: formData.stressRating ? Number(formData.stressRating) : null,
       quickEnergyAction: formData.quickEnergyAction || null,
 
-      // Nivel 1: Oración, gratitud e identidad
       gratitude1: formData.gratitude1 || null,
       gratitude2: formData.gratitude2 || null,
       gratitude3: formData.gratitude3 || null,
@@ -108,15 +135,11 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       chooseToBeIdentity: formData.chooseToBeIdentity || null,
       identityAction: formData.identityAction || null,
       dailyMicroAchievement: formData.dailyMicroAchievement || null,
-
-      // Devocional Diario (Guardado de notas)
       devotionalNotes: formData.devotionalNotes || null,
 
-      // Nivel 2: Autoeducación
       autoeducation: formData.autoeducation ? JSON.stringify(formData.autoeducation) : null,
       implementationIntentions: formData.implementationIntentions ? JSON.stringify(formData.implementationIntentions) : null,
 
-      // Nivel 2: MITs
       mitSer: formData.mitSer || null,
       mitSerCompleted: formData.mitSerCompleted ? 1 : 0,
       mitNegocio: formData.mitNegocio || null,
@@ -124,14 +147,12 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       mitRelaciones: formData.mitRelaciones || null,
       mitRelacionesCompleted: formData.mitRelacionesCompleted ? 1 : 0,
 
-      // Nivel 2: Hábitos e historial
       dailyHabitsJson: formData.dailyHabits ? JSON.stringify(formData.dailyHabits) : null,
       achievementsTop3: formData.achievementsTop3 ? JSON.stringify(formData.achievementsTop3) : null,
       whatWorked: formData.whatWorked || null,
       whatDidNotWork: formData.whatDidNotWork || null,
       improvementIdea: formData.improvementIdea || null,
 
-      // Nivel 2 & 3: Negocio y Mentalidad
       bizProspectCompleted: formData.bizProspectCompleted ? 1 : 0,
       bizFollowUpCompleted: formData.bizFollowUpCompleted ? 1 : 0,
       bizMktActionCompleted: formData.bizMktActionCompleted ? 1 : 0,
@@ -228,13 +249,14 @@ export async function submitDailyEntry(formData: Record<string, any>) {
 }
 
 /**
- * Obtiene el plan trimestral activo del usuario.
+ * Obtiene el plan trimestral activo del usuario de forma dinámica.
  */
 export async function getActiveQuarterlyPlan() {
   try {
+    const userId = await getCurrentUserId();
     const plan = await db.query.quarterlyPlans.findFirst({
       where: and(
-        eq(quarterlyPlans.userId, DEMO_USER_ID),
+        eq(quarterlyPlans.userId, userId),
         eq(quarterlyPlans.isActive, 1)
       ),
     });
@@ -246,16 +268,17 @@ export async function getActiveQuarterlyPlan() {
 }
 
 /**
- * Registra o actualiza el Planeamiento Trimestral.
+ * Registra o actualiza el Planeamiento Trimestral bajo el usuario activo.
  */
 export async function saveQuarterlyPlan(formData: Record<string, any>) {
   try {
+    const userId = await getCurrentUserId();
     const activePlanRes = await getActiveQuarterlyPlan();
     const planId = activePlanRes.plan?.id || randomUUID();
 
     const planData = {
       id: planId,
-      userId: DEMO_USER_ID,
+      userId: userId,
       quarterLabel: formData.quarterLabel || 'Q1/2026',
       year: formData.year ? Number(formData.year) : new Date().getFullYear(),
       isActive: 1,
@@ -291,13 +314,14 @@ export async function saveQuarterlyPlan(formData: Record<string, any>) {
 }
 
 /**
- * Obtiene el listado de hábitos activos del usuario bajo la estructura EOR.
+ * Obtiene el listado de hábitos activos del usuario en sesión.
  */
 export async function getActiveHabits() {
   try {
+    const userId = await getCurrentUserId();
     const list = await db.query.habits.findMany({
       where: and(
-        eq(habits.userId, DEMO_USER_ID),
+        eq(habits.userId, userId),
         eq(habits.isActive, 1)
       ),
     });
@@ -309,13 +333,14 @@ export async function getActiveHabits() {
 }
 
 /**
- * Crea un nuevo hábito dentro de la estructura EOR.
+ * Crea un nuevo hábito dentro de la estructura EOR para el usuario activo.
  */
 export async function createHabit(name: string, type: string, strategyDetails: string) {
   try {
+    const userId = await getCurrentUserId();
     await db.insert(habits).values({
       id: randomUUID(),
-      userId: DEMO_USER_ID,
+      userId: userId,
       name,
       type,
       strategyDetails,
@@ -347,12 +372,13 @@ export async function archiveHabit(habitId: string) {
 }
 
 /**
- * Obtiene las entradas de los últimos 30 días para paneles y gráficas de progreso.
+ * Obtiene las entradas históricas del usuario activo.
  */
 export async function getAnalyticsData() {
   try {
+    const userId = await getCurrentUserId();
     const entries = await db.query.dailyEntries.findMany({
-      where: eq(dailyEntries.userId, DEMO_USER_ID),
+      where: eq(dailyEntries.userId, userId),
       orderBy: [desc(dailyEntries.date)],
       limit: 30,
     });
@@ -368,10 +394,11 @@ export async function getAnalyticsData() {
  */
 export async function updateUserLevel(level: number) {
   try {
+    const userId = await getCurrentUserId();
     await db
       .update(users)
       .set({ currentLevel: level })
-      .where(eq(users.id, DEMO_USER_ID));
+      .where(eq(users.id, userId));
     
     revalidatePath('/');
     revalidatePath('/journal');
@@ -385,7 +412,7 @@ export async function updateUserLevel(level: number) {
 }
 
 /**
- * Obtiene versículos de la biblioteca filtrados por un tópico específico o seleccionados aleatoriamente.
+ * Obtiene versículos de la biblioteca filtrados por un tópico específico con fallback dinámico.
  */
 export async function getVersesByTopic(topic?: string) {
   try {
@@ -399,13 +426,22 @@ export async function getVersesByTopic(topic?: string) {
     }
     
     if (!list || list.length === 0) {
-      return db.query.bibleVerses.findFirst();
+      const fallback = await db.query.bibleVerses.findFirst();
+      if (fallback) return fallback;
+      throw new Error();
     }
     
     const randomIndex = Math.floor(Math.random() * list.length);
     return list[randomIndex];
   } catch (error) {
-    console.error('Error al obtener versículos por tópico:', error);
-    return null;
+    // Retorno preventivo (Fallback resiliente) para que la UI de la app jamás se quede en "Cargando..."
+    return {
+      id: 'fallback-guided-id',
+      reference: 'Josué 1:9',
+      text: 'Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas.',
+      interpretation: 'Tu fortaleza está garantizada hoy. Camina con valentía y asume las tareas con diligencia y fe.',
+      recommendedLevel: 1,
+      topic: 'Dominio Propio'
+    };
   }
 }
