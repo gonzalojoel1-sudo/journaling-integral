@@ -13,6 +13,7 @@ const DEMO_USER_ID = 'demo-user-id';
 
 /**
  * Calcula de manera estándar el número de semana ISO-8601 actual para el reset
+ * Implementado en concatenación limpia para evitar errores de análisis de ESBuild
  */
 export function getISOWeekLabel(date: Date = new Date()): string {
   const tempDate = new Date(date.getTime());
@@ -20,7 +21,7 @@ export function getISOWeekLabel(date: Date = new Date()): string {
   tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
   const week1 = new Date(tempDate.getFullYear(), 0, 4);
   const weekNum = 1 + Math.round(((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-  return `${tempDate.getFullYear()}-W${weekNum}`;
+  return tempDate.getFullYear().toString() + '-W' + weekNum.toString();
 }
 
 /**
@@ -66,7 +67,7 @@ export const getOrCreateUserProfile = cache(async () => {
           id: DEMO_USER_ID,
           name: 'Joel Pacheco',
           email: 'joel@journalingintegral.demo',
-          password: '64cbe39276226f3044a69e7cf8db172ff2753177894d075276e0537482fc60f97970d47343e57140e4f8ff169997193d56bc080922896564619965da4970633b',
+          password: '64cbe39276226f3044a69e7cf8db172ff2753177894d075276e0537482fc60f97970d47343e57140e4f8ff169997193d56bc080922896564619965da4970633b', // Hash precalculado de 'admin123'
           currentLevel: 1,
           streakCurrent: 0,
           streakMax: 0,
@@ -460,7 +461,7 @@ export async function getVersesByTopic(topic?: string) {
         id: 'fallback-2',
         reference: 'Proverbios 21:5',
         text: 'Los pensamientos del diligente ciertamente tienden a la abundancia; mas todo el que se apresura alocadamente, de cierto va a la pobreza.',
-        interpretation: 'La disciplina en planificar vence a la reactividad de tus impulsos. Administra tu negocio con sobriedad hoy.',
+        interpretation: 'La disciplina en planificar vence a la reactividad de tus impulsos. Administra tu negocio con cobredad hoy.',
         recommendedLevel: 1,
         topic: 'Finanzas'
       },
