@@ -16,13 +16,15 @@ import {
   Loader2,
   CalendarDays,
   LogOut,
-  UserCheck
+  UserCheck,
+  ClipboardCheck // Importación corregida de Lucide
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Diario', href: '/journal', icon: BookOpen },
   { label: 'Historial', href: '/history', icon: CalendarDays },
+  { label: 'Revisión', href: '/review', icon: ClipboardCheck }, // Workspace dominical
   { label: 'Trimestre', href: '/quarterly', icon: Compass },
   { label: 'Hábitos', href: '/habits', icon: Activity },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
