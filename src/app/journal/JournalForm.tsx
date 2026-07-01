@@ -128,10 +128,15 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [bizExpenses, setBizExpenses] = useState<number>(existingEntry?.bizExpenses ?? 0);
   const [bizImprovementTomorrow, setBizImprovementTomorrow] = useState<string>(existingEntry?.bizImprovementTomorrow ?? '');
 
-  // Paso 5: Logros de Revisión
+  // Paso 5 & 6: Logros de Revisión y Reset Diario
   const [ach1, setAch1] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[0] : '');
   const [ach2, setAch2] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[1] : '');
   const [ach3, setAch3] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[2] : '');
+
+  // NUEVAS VARIABLES DE REVISIÓN SEMANAL/DIARIA (Faltaban declarar)
+  const [whatWorked, setWhatWorked] = useState<string>(existingEntry?.whatWorked ?? '');
+  const [whatDidNotWork, setWhatDidNotWork] = useState<string>(existingEntry?.whatDidNotWork ?? '');
+  const [improvementIdea, setImprovementIdea] = useState<string>(existingEntry?.improvementIdea ?? '');
 
   // Paso 6: Mentalidad (Nivel 2)
   const [mindsetStateRating, setMindsetStateRating] = useState<number>(existingEntry?.mindsetStateRating ?? 7);
@@ -172,7 +177,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     setDailyHabits(updated);
   };
 
-  // --- 3. FUNCIÓN DE GUARDADO (AL FINAL DEL ÁMBITO DEL COMPONENTE) ---
+  // --- 3. FUNCIÓN DE GUARDADO ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -321,7 +326,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <input
                 type="text" value={chooseToBeIdentity} onChange={(e) => setChooseToBeIdentity(e.target.value)}
                 placeholder="Ej. PACIENTE, PRESENTE, AGRADECIDO"
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -329,7 +334,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <input
                 type="text" value={identityAction} onChange={(e) => setIdentityAction(e.target.value)}
                 placeholder="Ej. Escuchar 5 mins sin mirar el celular"
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none"
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none"
               />
             </div>
             <div className="md:col-span-2">
@@ -440,7 +445,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </div>
           )}
 
-          {/* PASO 4: DEVOCIONAL Y HÁBITOS EOR (CON DOPAMINA) */}
+          {/* PASO 4: DEVOCIONAL Y HÁBITOS EOR */}
           {step === 4 && (
             <div className="space-y-6 animate-fade-in">
               <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
@@ -523,7 +528,6 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
                 </h3>
               </div>
               <div className="space-y-3">
-                {/* 1-1-1 */}
                 <div className={`p-4 rounded-xl border transition-all duration-300 flex items-center justify-between gap-4 ${bizActions.prospectCompleted ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/40 text-stone-500 line-through' : 'bg-stone-50 dark:bg-stone-950 border-stone-200 dark:border-stone-850'}`}>
                   <div className="flex-1"><label className="block text-[10px] font-bold text-stone-400 uppercase font-mono mb-1">1. Prospecto Nuevo:</label>
                   <input type="text" value={bizActions.prospectText} onChange={(e) => handleBizActionChange('prospectText', e.target.value)} placeholder="Ej. Buscar y contactar a 1 prospecto frío" className="bg-transparent w-full text-xs outline-none" /></div>
@@ -555,7 +559,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
                 <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
                   <Brain className="h-5 w-5 text-emerald-500 shrink-0" />
-                  Paso 6: Mentalidad y Plan Antirreactivo de Mañana
+                  Paso 6: Mentalidad, Revisión y Plan de Mañana
                 </h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -563,6 +567,26 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
                 <div><label className="block text-xs text-stone-500 font-bold mb-1">Gatillos (Triggers):</label><input type="text" value={mindsetTriggers} onChange={(e) => setMindsetTriggers(e.target.value)} placeholder="¿Qué originó esta emoción?" className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none" /></div>
                 <div className="sm:col-span-2"><label className="block text-xs text-stone-500 font-bold mb-1">Verdad Bíblica que confronta:</label><input type="text" value={mindsetBiblicalTruth} onChange={(e) => setMindsetBiblicalTruth(e.target.value)} placeholder="Ej. No temeré, pues Tú estás conmigo" className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none" /></div>
               </div>
+
+              {/* Módulo de Revisión Diaria Integrado */}
+              <div className="pt-4 border-t border-stone-200 dark:border-stone-800 space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 font-mono">Revisión Retrospectiva del Día:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-stone-500 font-bold mb-1">¿Qué funcionó hoy?:</label>
+                    <input type="text" value={whatWorked} onChange={(e) => setWhatWorked(e.target.value)} placeholder="Ej. El enfoque del trabajo profundo" className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 font-bold mb-1">¿Qué NO funcionó hoy?:</label>
+                    <input type="text" value={whatDidNotWork} onChange={(e) => setWhatDidNotWork(e.target.value)} placeholder="Ej. Revisé redes sociales por cansancio" className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 font-bold mb-1">Idea de mejora para mañana:</label>
+                    <input type="text" value={improvementIdea} onChange={(e) => setImprovementIdea(e.target.value)} placeholder="Ej. Mantener celular bloqueado a la tarde" className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-4 py-2.5 text-sm outline-none" />
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-4 border-t border-stone-200 dark:border-stone-800 space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-stone-500 font-mono">Planificación de Mañana (Evitar Reactividad):</h4>
                 <input type="text" value={prep1} onChange={(e) => setPrep1(e.target.value)} placeholder="1. Tarea unificadora 1" className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-4 py-2 text-sm outline-none" />
