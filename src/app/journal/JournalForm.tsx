@@ -20,7 +20,7 @@ import {
   BookOpen,
   TrendingUp,
   Award,
-  Briefcase // Importación corregida de forma estricta
+  Briefcase
 } from 'lucide-react';
 
 interface Habit {
@@ -38,22 +38,32 @@ interface JournalFormProps {
 
 export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFormProps) {
   const router = useRouter();
-
-  // --- 1. DECLARACIONES DE ESTADO ---
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
-  // Sistema de pasos (Wizard)
+  // --- SISTEMA DE PASOS (WIZARD DE DOPAMINA) ---
   const [step, setStep] = useState<number>(1);
   const totalSteps = userLevel === 1 ? 4 : 6;
 
-  // Guía Devocional
+  // --- ESTADO PARA LA GUÍA DE VERSÍCULOS EN EL DEVOCIONAL ---
   const [devotionalTopic, setDevotionalTopic] = useState<'Dominio Propio' | 'Finanzas' | 'Crecimiento' | 'Identidad'>('Dominio Propio');
   const [guidedVerse, setGuidedVerse] = useState<any | null>(null);
   const [loadingVerse, setLoadingVerse] = useState<boolean>(false);
 
-  // Activador de Plan B rápido
+  // Función para refrescar o rotar el versículo según el tópico activo
+  const refreshVerse = async () => {
+    setLoadingVerse(true);
+    const v = await getVersesByTopic(devotionalTopic);
+    setGuidedVerse(v);
+    setLoadingVerse(false);
+  };
+
+  useEffect(() => {
+    refreshVerse();
+  }, [devotionalTopic]);
+
+  // --- ESTADOS LOCALES DE CAMPOS DE ENTRADA ---
   const [isPlanB, setIsPlanB] = useState<boolean>(existingEntry?.isPlanBUsed === 1 || false);
   
   // Paso 1: Energía
@@ -161,26 +171,14 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [dominantFocusCompleted, setDominantFocusCompleted] = useState<boolean>(existingEntry?.dominantFocusCompleted === 1);
 
   // --- 2. FUNCIONES DE AYUDA Y EFECTOS ---
-  const refreshVerse = async () => {
-    setLoadingVerse(true);
-    const v = await getVersesByTopic(devotionalTopic);
-    setGuidedVerse(v);
-    setLoadingVerse(false);
-  };
-
-  useEffect(() => {
-    refreshVerse();
-  }, [devotionalTopic]);
-
   const handleHabitCheck = (index: number) => {
     const updated = [...dailyHabits];
     updated[index].completed = !updated[index].completed;
     setDailyHabits(updated);
   };
 
-  // --- 3. FUNCIÓN DE GUARDADO ---
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // --- 3. FUNCIÓN DE GUARDADO INDEPENDIENTE DE TIPO SUBMIT (EVITA AUTOMATIC SUBMIT) ---
+  const handleFormSubmit = async () => {
     setLoading(true);
     setError(null);
 
@@ -222,7 +220,6 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
       payload.whatDidNotWork = whatDidNotWork;
       payload.improvementIdea = improvementIdea;
 
-      // Guardado del Módulo de Negocio 1-1-1
       payload.bizProspectCompleted = bizActions.prospectCompleted ? 1 : 0;
       payload.bizFollowUpCompleted = bizActions.followUpCompleted ? 1 : 0;
       payload.bizMktActionCompleted = bizActions.mktCompleted ? 1 : 0;
@@ -268,7 +265,8 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const progressPercent = Math.min(Math.round((step / totalSteps) * 100), 100);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 relative max-w-4xl mx-auto">
+    // Se cambia de tag <form> a <div> para bloquear por completo los submits del teclado móvil
+    <div className="space-y-6 relative max-w-4xl mx-auto">
       
       {/* --- EFECTO DE GRADIENTES DE FONDO (FRESCO) --- */}
       <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-emerald-500/5 blur-3xl pointer-events-none"></div>
@@ -624,7 +622,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </button>
           ) : (
             <button
-              type="submit" disabled={loading}
+              type="button" onClick={handleFormSubmit} disabled={loading}
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-400 text-white font-bold px-6 py-3.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer shadow-emerald-900/30"
             >
               <Save className="h-4 w-4" /> {loading ? 'Guardando...' : 'Guardar Registro'}
@@ -636,7 +634,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
       {isPlanB && (
         <div className="flex justify-end p-4 bg-white/70 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-850 rounded-2xl shadow-soft backdrop-blur-md">
           <button
-            type="submit" disabled={loading}
+            type="button" onClick={handleFormSubmit} disabled={loading}
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-400 text-white font-bold px-6 py-3.5 rounded-xl text-xs transition-colors shadow-md cursor-pointer shadow-emerald-900/30"
           >
             <Save className="h-4 w-4" /> {loading ? 'Guardando...' : 'Guardar Registro Plan B'}
@@ -656,6 +654,6 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
         </div>
       )}
 
-    </form>
+    </div>
   );
 }
