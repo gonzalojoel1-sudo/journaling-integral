@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react'; // Hooks de sesión cliente
+import { useSession, signOut } from 'next-auth/react'; 
 import { ThemeToggle } from './ThemeToggle';
 import { updateUserLevel } from '../app/actions/journal';
 import { 
@@ -17,14 +17,14 @@ import {
   CalendarDays,
   LogOut,
   UserCheck,
-  ClipboardCheck // Importación corregida de Lucide
+  ClipboardCheck
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Inicio', href: '/', icon: LayoutDashboard },
   { label: 'Diario', href: '/journal', icon: BookOpen },
   { label: 'Historial', href: '/history', icon: CalendarDays },
-  { label: 'Revisión', href: '/review', icon: ClipboardCheck }, // Workspace dominical
+  { label: 'Revisión', href: '/review', icon: ClipboardCheck },
   { label: 'Trimestre', href: '/quarterly', icon: Compass },
   { label: 'Hábitos', href: '/habits', icon: Activity },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
@@ -33,7 +33,7 @@ const NAV_ITEMS = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession(); // Detectar sesión activa
+  const { data: session } = useSession(); 
   const [isPending, startTransition] = useTransition();
   const [adminLevel, setAdminLevel] = useState<number>(1);
   const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
@@ -47,7 +47,6 @@ export function Navigation() {
   };
 
   const handleSignOut = async () => {
-    // Redirigir directamente a /login evita colisiones con el middleware de seguridad
     await signOut({ callbackUrl: '/login' });
   };
 
@@ -91,7 +90,6 @@ export function Navigation() {
         {/* Controles de Administrador e Información de Usuario */}
         <div className="p-4 border-t border-stone-200 dark:border-stone-850 bg-stone-100/60 dark:bg-stone-950/30">
           
-          {/* Mostrar Panel de Pruebas EXCLUSIVAMENTE si el usuario en sesión es el administrador */}
           {session?.user?.email === 'joel@journalingintegral.demo' && (
             <div className="mb-3">
               <div className="flex items-center justify-between mb-2">
@@ -157,7 +155,7 @@ export function Navigation() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-350 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5" /> Cerrar Sesión
               </button>
@@ -174,8 +172,8 @@ export function Navigation() {
         </div>
       </aside>
 
-      {/* --- NAVEGACIÓN MÓVIL (BOTTOM BAR) --- */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-center justify-around px-2 pb-safe z-30 shadow-lg">
+      {/* --- NAVEGACIÓN MÓVIL (BOTTOM BAR CON THEME TOGGLE INTEGRADO) --- */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-center justify-around px-2 pb-safe z-30 shadow-lg transition-colors">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -194,6 +192,11 @@ export function Navigation() {
             </Link>
           );
         })}
+        
+        {/* Integración del Botón de Modo Claro/Oscuro directamente en el extremo de la barra móvil */}
+        <div className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center shrink-0">
+          <ThemeToggle />
+        </div>
       </nav>
     </>
   );
