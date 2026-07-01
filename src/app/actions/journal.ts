@@ -12,10 +12,11 @@ import { cache } from 'react';
 const DEMO_USER_ID = 'demo-user-id';
 
 /**
- * Calcula de manera estándar el número de semana ISO-8601 actual para el reset
- * Implementado en concatenación limpia para evitar errores de análisis de ESBuild
+ * Calcula de manera estándar el número de semana ISO-8601 actual para el reset.
+ * Se remueve la palabra 'export' para cumplir de forma estricta con el contrato
+ * de archivos 'use server' de Next.js (que exige que toda exportación sea asíncrona).
  */
-export function getISOWeekLabel(date: Date = new Date()): string {
+function getISOWeekLabel(date: Date = new Date()): string {
   const tempDate = new Date(date.getTime());
   tempDate.setHours(0, 0, 0, 0);
   tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
