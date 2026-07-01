@@ -7,13 +7,15 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth'; 
 import { authOptions } from '../api/auth/[...nextauth]/options';
+import { cache } from 'react'; // Importar optimizador de caché de React
 
 const DEMO_USER_ID = 'demo-user-id';
 
 /**
- * Resuelve de manera segura el ID del usuario en sesión activa o retorna el demo por defecto
+ * Resuelve el ID del usuario en sesión activa de forma cacheada (Memoized)
+ * Evita llamadas redundantes y secuenciales en el mismo renderizado de página.
  */
-export async function getCurrentUserId(): Promise<string> {
+export const getCurrentUserId = cache(async (): Promise<string> => {
   try {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
@@ -27,13 +29,13 @@ export async function getCurrentUserId(): Promise<string> {
   } catch (error) {
     console.error('Error al resolver ID de usuario en sesión:', error);
   }
-  return DEMO_USER_ID; // Fallback para desarrollo local o modo demo
-}
+  return DEMO_USER_ID; // Fallback modo demo
+});
 
 /**
- * Obtiene el perfil del usuario actual de manera ultra-rápida libre de sobrecarga de CPU.
+ * Obtiene el perfil del usuario actual de manera cacheada y ultra-rápida.
  */
-export async function getOrCreateUserProfile() {
+export const getOrCreateUserProfile = cache(async () => {
   try {
     const userId = await getCurrentUserId();
 
@@ -53,7 +55,7 @@ export async function getOrCreateUserProfile() {
           id: DEMO_USER_ID,
           name: 'Joel Pacheco',
           email: 'joel@journalingintegral.demo',
-          password: '64cbe39276226f3044a69e7cf8db172ff2753177894d075276e0537482fc60f97970d47343e57140e4f8ff169997193d56bc080922896564619965da4970633b', // Hash precalculado de 'admin123' para optimización de CPU
+          password: '64cbe39276226f3044a69e7cf8db172ff2753177894d075276e0537482fc60f97970d47343e57140e4f8ff169997193d56bc080922896564619965da4970633b',
           currentLevel: 1,
           streakCurrent: 0,
           streakMax: 0,
@@ -70,7 +72,7 @@ export async function getOrCreateUserProfile() {
     console.error('Error al obtener perfil de usuario:', error);
     return { success: false, error: 'No se pudo cargar el perfil del usuario.' };
   }
-}
+});
 
 /**
  * Obtiene un versículo bíblico diario de manera aleatoria.
