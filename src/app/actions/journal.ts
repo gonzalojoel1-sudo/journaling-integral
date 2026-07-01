@@ -7,17 +7,8 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth'; 
 import { authOptions } from '../api/auth/[...nextauth]/options';
-import { scryptSync } from 'crypto'; // Criptografía nativa
 
 const DEMO_USER_ID = 'demo-user-id';
-
-/**
- * Función de encriptación idéntica a la de opciones de Auth para validar contraseñas
- */
-function hashPassword(password: string): string {
-  const salt = 'journaling-integral-salt-key';
-  return scryptSync(password, salt, 64).toString('hex');
-}
 
 /**
  * Resuelve de manera segura el ID del usuario en sesión activa o retorna el demo por defecto
@@ -40,8 +31,7 @@ export async function getCurrentUserId(): Promise<string> {
 }
 
 /**
- * Obtiene el perfil del usuario actual o crea uno por defecto si no existe.
- * Incorpora un parche autocurativo de contraseñas de administrador.
+ * Obtiene el perfil del usuario actual de manera ultra-rápida libre de sobrecarga de CPU.
  */
 export async function getOrCreateUserProfile() {
   try {
@@ -63,7 +53,7 @@ export async function getOrCreateUserProfile() {
           id: DEMO_USER_ID,
           name: 'Joel Pacheco',
           email: 'joel@journalingintegral.demo',
-          password: hashPassword('admin123'), // Creado proactivamente con la encriptación correcta de 'admin123'
+          password: '64cbe39276226f3044a69e7cf8db172ff2753177894d075276e0537482fc60f97970d47343e57140e4f8ff169997193d56bc080922896564619965da4970633b', // Hash precalculado de 'admin123' para optimización de CPU
           currentLevel: 1,
           streakCurrent: 0,
           streakMax: 0,
@@ -73,19 +63,6 @@ export async function getOrCreateUserProfile() {
         await db.insert(users).values(newUser);
         user = newUser;
       }
-    }
-
-    // --- PARCHE AUTOCURATIVO DE CREDENCIALES ---
-    // Si el usuario existe pero conserva la firma de contraseña demo vieja, la actualiza a 'admin123' en Turso
-    if (user && (user.password === 'demo-password-hash' || user.password === '')) {
-      const correctHash = hashPassword('admin123');
-      await db
-        .update(users)
-        .set({ password: correctHash })
-        .where(eq(users.id, user.id));
-      
-      user.password = correctHash; // Actualizar referencia en memoria
-      console.log('Firma de contraseña de administrador actualizada con éxito.');
     }
 
     return { success: true, user };

@@ -45,7 +45,8 @@ export function Navigation() {
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' });
+    // Redirigir directamente a /login evita colisiones con el middleware de seguridad
+    await signOut({ callbackUrl: '/login' });
   };
 
   return (
@@ -88,40 +89,45 @@ export function Navigation() {
         {/* Controles de Administrador e Información de Usuario */}
         <div className="p-4 border-t border-stone-200 dark:border-stone-850 bg-stone-100/60 dark:bg-stone-950/30">
           
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-bold font-mono tracking-wider text-stone-500 uppercase">Panel de Pruebas</span>
-            <button 
-              onClick={() => setShowAdminPanel(!showAdminPanel)}
-              className="text-stone-500 hover:text-emerald-600 dark:hover:text-emerald-400"
-              title="Abrir selector de niveles"
-            >
-              <Settings2 className="h-4 w-4" />
-            </button>
-          </div>
-
-          {showAdminPanel && (
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-2.5 rounded-xl mb-4 space-y-2 shadow-sm">
-              <span className="text-[9px] font-bold text-stone-500 uppercase block font-mono">Simular Nivel:</span>
-              <div className="grid grid-cols-3 gap-1">
-                {[1, 2, 3].map((lvl) => (
-                  <button
-                    key={lvl}
-                    type="button"
-                    onClick={() => handleLevelChange(lvl)}
-                    className={`py-1 rounded text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-                      adminLevel === lvl 
-                        ? 'bg-emerald-600 text-white shadow' 
-                        : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-400 hover:bg-stone-200'
-                    }`}
-                  >
-                    {isPending && adminLevel === lvl ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      `Lvl ${lvl}`
-                    )}
-                  </button>
-                ))}
+          {/* Mostrar Panel de Pruebas EXCLUSIVAMENTE si el usuario en sesión es el administrador */}
+          {session?.user?.email === 'joel@journalingintegral.demo' && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold font-mono tracking-wider text-stone-500 uppercase">Panel de Pruebas</span>
+                <button 
+                  onClick={() => setShowAdminPanel(!showAdminPanel)}
+                  className="text-stone-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                  title="Abrir selector de niveles"
+                >
+                  <Settings2 className="h-4 w-4" />
+                </button>
               </div>
+
+              {showAdminPanel && (
+                <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-2.5 rounded-xl mb-4 space-y-2 shadow-sm">
+                  <span className="text-[9px] font-bold text-stone-500 uppercase block font-mono">Simular Nivel:</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[1, 2, 3].map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => handleLevelChange(lvl)}
+                        className={`py-1 rounded text-xs font-bold transition-all flex items-center justify-center gap-1 ${
+                          adminLevel === lvl 
+                            ? 'bg-emerald-600 text-white shadow' 
+                            : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-400 hover:bg-stone-200'
+                        }`}
+                      >
+                        {isPending && adminLevel === lvl ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          `Lvl ${lvl}`
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -149,7 +155,7 @@ export function Navigation() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-350 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5" /> Cerrar Sesión
               </button>
