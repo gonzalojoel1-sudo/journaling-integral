@@ -15,7 +15,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Smile,
-  CheckCircle2,
+  CheckCircle,
   CheckSquare,
   BookOpen,
   TrendingUp,
@@ -50,6 +50,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [guidedVerse, setGuidedVerse] = useState<any | null>(null);
   const [loadingVerse, setLoadingVerse] = useState<boolean>(false);
 
+  // Función para refrescar o rotar el versículo según el tópico activo
   const refreshVerse = async () => {
     setLoadingVerse(true);
     const v = await getVersesByTopic(devotionalTopic);
@@ -206,7 +207,6 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
       payload.whatDidNotWork = whatDidNotWork;
       payload.improvementIdea = improvementIdea;
 
-      // Guardado del Módulo de Negocio 1-1-1
       payload.bizProspectCompleted = bizActions.prospectCompleted ? 1 : 0;
       payload.bizFollowUpCompleted = bizActions.followUpCompleted ? 1 : 0;
       payload.bizMktActionCompleted = bizActions.mktCompleted ? 1 : 0;
@@ -252,7 +252,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const progressPercent = Math.min(Math.round((step / totalSteps) * 100), 100);
 
   return (
-    <div className="space-y-6 relative max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-6 relative max-w-4xl mx-auto">
       
       {/* --- EFECTO DE GRADIENTES DE FONDO (FRESCO) --- */}
       <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-emerald-500/5 blur-3xl pointer-events-none"></div>
@@ -311,7 +311,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <input
                 type="text" value={chooseToBeIdentity} onChange={(e) => setChooseToBeIdentity(e.target.value)}
                 placeholder="Ej. PACIENTE, PRESENTE, AGRADECIDO"
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
               />
             </div>
             <div>
@@ -334,7 +334,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
         </div>
       ) : (
         /* --- RENDERIZADO DEL ASISTENTE PASO A PASO (WIZARD) --- */
-        <div className="p-6 sm:p-8 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white/80 dark:bg-stone-900/70 backdrop-blur-md shadow-soft">
+        <div className="p-6 sm:p-8 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white/80 dark:bg-stone-900/70 backdrop-blur-md shadow-soft w-full">
           
           {/* PASO 1: CHEQUEO DE ENERGÍA */}
           {step === 1 && (
