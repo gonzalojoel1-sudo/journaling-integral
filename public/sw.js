@@ -1,12 +1,11 @@
-const CACHE_NAME = 'journaling-v1';
+const CACHE_NAME = 'journaling-static-v2';
 const ASSETS_TO_CACHE = [
-  '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'
 ];
 
-// Instalar Service Worker y cachear elementos estáticos principales
+// Instalar Service Worker y cachear sólo iconos y manifiesto estáticos
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,7 +15,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activar Service Worker y limpiar cachés antiguas
+// Activar y limpiar cachés de versiones antiguas
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -32,12 +31,18 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interceptar peticiones para servir activos desde caché cuando sea posible
+// Interceptar peticiones para servir de caché SÓLO archivos estáticos reales
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // NO cachear peticiones POST (Guardados del diario), llamadas API o archivos de Drizzle Studio
-  if (event.request.method !== 'GET' || url.pathname.includes('/api') || url.hostname.includes('drizzle')) {
+  // EVITAR INTERCEPTAR páginas HTML dinámicas, llamadas a APIs o consola de Drizzle
+  if (
+    event.request.method !== 'GET' ||
+    event.request.headers.get('accept')?.includes('text/html') ||
+    url.pathname.includes('/api') ||
+    url.pathname.includes('/_next/data') ||
+    url.hostname.includes('drizzle')
+  ) {
     return;
   }
 
@@ -47,8 +52,11 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).then((response) => {
-        // Guardar en caché solo peticiones estáticas exitosas
-        if (response.status === 200 && event.request.url.startsWith(self.location.origin)) {
+        // Cachear estáticos reales (librerías css, js empaquetados e imágenes)
+        if (
+          response.status === 200 &&
+          (url.pathname.startsWith('/_next/static') || url.pathname.endsWith('.png') || url.pathname.endsWith('.json'))
+        ) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
@@ -57,8 +65,8 @@ self.addEventListener('fetch', (event) => {
         return response;
       });
     }).catch(() => {
-      // Retorno preventivo si el dispositivo está offline
-      return caches.match('/');
+      // Si falla, delegar a la red ordinaria de forma nativa sin romper la página
+      return fetch(event.request);
     })
   );
 });
