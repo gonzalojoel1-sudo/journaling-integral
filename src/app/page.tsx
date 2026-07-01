@@ -14,7 +14,8 @@ import {
   Clock, 
   Compass,
   CheckSquare,
-  AlertTriangle
+  AlertTriangle,
+  Target // Importación corregida de forma estricta
 } from 'lucide-react';
 
 export default async function DashboardPage() {
