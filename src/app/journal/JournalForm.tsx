@@ -19,7 +19,8 @@ import {
   CheckSquare,
   BookOpen,
   TrendingUp,
-  Award
+  Award,
+  Briefcase // Importación corregida de forma estricta
 } from 'lucide-react';
 
 interface Habit {
@@ -38,7 +39,7 @@ interface JournalFormProps {
 export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFormProps) {
   const router = useRouter();
 
-  // --- 1. DECLARACIONES DE ESTADO (SIEMPRE AL INICIO DEL COMPONENTE) ---
+  // --- 1. DECLARACIONES DE ESTADO ---
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -133,7 +134,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [ach2, setAch2] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[1] : '');
   const [ach3, setAch3] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[2] : '');
 
-  // NUEVAS VARIABLES DE REVISIÓN SEMANAL/DIARIA (Faltaban declarar)
+  // Variables de Revisión
   const [whatWorked, setWhatWorked] = useState<string>(existingEntry?.whatWorked ?? '');
   const [whatDidNotWork, setWhatDidNotWork] = useState<string>(existingEntry?.whatDidNotWork ?? '');
   const [improvementIdea, setImprovementIdea] = useState<string>(existingEntry?.improvementIdea ?? '');
@@ -445,7 +446,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </div>
           )}
 
-          {/* PASO 4: DEVOCIONAL Y HÁBITOS EOR */}
+          {/* PASO 4: DEVOCIONAL Y HÁBITOS EOR (CON DOPAMINA) */}
           {step === 4 && (
             <div className="space-y-6 animate-fade-in">
               <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
@@ -528,6 +529,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
                 </h3>
               </div>
               <div className="space-y-3">
+                {/* 1-1-1 */}
                 <div className={`p-4 rounded-xl border transition-all duration-300 flex items-center justify-between gap-4 ${bizActions.prospectCompleted ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/40 text-stone-500 line-through' : 'bg-stone-50 dark:bg-stone-950 border-stone-200 dark:border-stone-850'}`}>
                   <div className="flex-1"><label className="block text-[10px] font-bold text-stone-400 uppercase font-mono mb-1">1. Prospecto Nuevo:</label>
                   <input type="text" value={bizActions.prospectText} onChange={(e) => handleBizActionChange('prospectText', e.target.value)} placeholder="Ej. Buscar y contactar a 1 prospecto frío" className="bg-transparent w-full text-xs outline-none" /></div>
