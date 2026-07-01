@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveQuarterlyPlan } from '../actions/journal';
 import { 
@@ -9,8 +9,7 @@ import {
   Target, 
   Activity, 
   Plus, 
-  Trash2,
-  BookOpen
+  Trash2
 } from 'lucide-react';
 
 interface SMARTObjective {
@@ -34,32 +33,38 @@ interface MetaPlan {
 
 interface QuarterlyPlanFormProps {
   initialPlan: any | null;
+  userLevel: number;
 }
 
-export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
+export function QuarterlyPlanForm({ initialPlan, userLevel }: QuarterlyPlanFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'vision' | 'smart' | 'acciones'>('vision');
 
-  // --- ESTADOS LOCALES DE IDENTIFICADORES ---
+  // Inicializar pestaña por defecto según el nivel para evitar renderizar tabs ocultas
+  const [activeTab, setActiveTab] = useState<'smart' | 'vision' | 'acciones'>('smart');
+
+  useEffect(() => {
+    if (userLevel === 1) {
+      setActiveTab('smart'); // Forzar pestaña SMART si es Nivel 1
+    }
+  }, [userLevel]);
+
+  // --- ESTADOS LOCALES ---
   const [quarterLabel, setQuarterLabel] = useState<string>(initialPlan?.quarterLabel ?? 'Q1/2026');
   const [year, setYear] = useState<number>(initialPlan?.year ?? new Date().getFullYear());
 
-  // --- ESTADOS: VISIÓN A 5 AÑOS ---
   const [fiveYearSpiritual, setFiveYearSpiritual] = useState<string>(initialPlan?.fiveYearSpiritual ?? '');
   const [fiveYearBeing, setFiveYearBeing] = useState<string>(initialPlan?.fiveYearBeing ?? '');
   const [fiveYearBusiness, setFiveYearBusiness] = useState<string>(initialPlan?.fiveYearBusiness ?? '');
   const [fiveYearRelations, setFiveYearRelations] = useState<string>(initialPlan?.fiveYearRelations ?? '');
 
-  // --- ESTADOS: VISIÓN DEL TRIMESTRE ---
   const [quarterlySpiritual, setQuarterlySpiritual] = useState<string>(initialPlan?.quarterlySpiritual ?? '');
   const [quarterlyBeing, setQuarterlyBeing] = useState<string>(initialPlan?.quarterlyBeing ?? '');
   const [quarterlyBusiness, setQuarterlyBusiness] = useState<string>(initialPlan?.quarterlyBusiness ?? '');
   const [quarterlyRelations, setQuarterlyRelations] = useState<string>(initialPlan?.quarterlyRelations ?? '');
 
-  // --- ESTADOS: OBJETIVOS SMART (Hasta 5 objetivos por defecto) ---
   const defaultSmartObjectives: SMARTObjective[] = [
     { id: '1', objective: '', targetDate: '', isCompleted: false },
     { id: '2', objective: '', targetDate: '', isCompleted: false },
@@ -72,7 +77,6 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
     initialPlan?.smartObjectivesJson ? JSON.parse(initialPlan.smartObjectivesJson) : defaultSmartObjectives
   );
 
-  // --- ESTADOS: PLANES DE ACCIÓN (Meta 1 a 5, con filas editables de 3 columnas) ---
   const createDefaultMetaPlan = (index: number, title: string): MetaPlan => ({
     metaIndex: index,
     metaTitle: title,
@@ -95,14 +99,12 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
     initialPlan?.actionsPlanJson ? JSON.parse(initialPlan.actionsPlanJson) : defaultMetaPlans
   );
 
-  // --- MANEJADORES DE ACTUALIZACIÓN SMART ---
   const handleSmartChange = (index: number, field: keyof SMARTObjective, value: any) => {
     const updated = [...smartObjectives];
     updated[index] = { ...updated[index], [field]: value };
     setSmartObjectives(updated);
   };
 
-  // --- MANEJADORES DE ACCIONES POR META ---
   const handleActionChange = (metaIdx: number, actionRowIdx: number, field: keyof ActionRow, value: string) => {
     const updatedPlans = [...metaPlans];
     updatedPlans[metaIdx].actions[actionRowIdx] = {
@@ -130,7 +132,6 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
     setMetaPlans(updatedPlans);
   };
 
-  // --- GUARDADO GENERAL DEL PLAN ---
   const handleSave = async () => {
     setLoading(true);
     setError(null);
@@ -138,16 +139,16 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
     const payload = {
       quarterLabel,
       year,
-      fiveYearSpiritual,
-      fiveYearBeing,
-      fiveYearBusiness,
-      fiveYearRelations,
-      quarterlySpiritual,
-      quarterlyBeing,
-      quarterlyBusiness,
-      quarterlyRelations,
+      fiveYearSpiritual: userLevel >= 2 ? fiveYearSpiritual : null,
+      fiveYearBeing: userLevel >= 2 ? fiveYearBeing : null,
+      fiveYearBusiness: userLevel >= 2 ? fiveYearBusiness : null,
+      fiveYearRelations: userLevel >= 2 ? fiveYearRelations : null,
+      quarterlySpiritual: userLevel >= 2 ? quarterlySpiritual : null,
+      quarterlyBeing: userLevel >= 2 ? quarterlyBeing : null,
+      quarterlyBusiness: userLevel >= 2 ? quarterlyBusiness : null,
+      quarterlyRelations: userLevel >= 2 ? quarterlyRelations : null,
       smartObjectives: smartObjectives.filter(obj => obj.objective.trim() !== ''),
-      actionsPlan: metaPlans
+      actionsPlan: userLevel >= 2 ? metaPlans : []
     };
 
     const res = await saveQuarterlyPlan(payload);
@@ -167,14 +168,14 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
   return (
     <div className="space-y-6">
       
-      {/* Cabecera del Trimestre actual */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-850 p-4 rounded-xl">
+      {/* Cabecera del Trimestre */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-stone-100/60 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-850 p-4 rounded-xl">
         <div className="flex items-center gap-4">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-500 font-mono">Trimestre Activo</label>
             <input
               type="text" value={quarterLabel} onChange={(e) => setQuarterLabel(e.target.value)}
-              placeholder="E.g., Q1/2026"
+              placeholder="Ej. Q1/2026"
               className="bg-transparent text-lg font-bold text-stone-800 dark:text-stone-200 border-b border-stone-300 dark:border-stone-700 focus:border-emerald-500 outline-none w-28"
             />
           </div>
@@ -187,134 +188,53 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
           </div>
         </div>
         
-        {/* Guardado flotante/rápido */}
         <button
           type="button" onClick={handleSave} disabled={loading}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-400 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-colors shadow"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-400 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-colors shadow cursor-pointer"
         >
           <Save className="h-4 w-4" />
           {loading ? 'Guardando...' : 'Guardar Plan'}
         </button>
       </div>
 
-      {/* --- BOTONES DE PESTAÑAS (TABS) --- */}
-      <div className="flex border-b border-stone-200 dark:border-stone-800 overflow-x-auto gap-2">
-        <button
-          type="button" onClick={() => setActiveTab('vision')}
-          className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'vision' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold' : 'border-transparent text-stone-500'
-          }`}
-        >
-          <Compass className="h-4 w-4" /> 1. Visión a 5 Años y Trimestre
-        </button>
+      {/* --- BOTONES DE PESTAÑAS (OCULTACIÓN DINÁMICA DE TABS) --- */}
+      <div className="flex border-b border-stone-200 dark:border-stone-850 overflow-x-auto gap-2">
         <button
           type="button" onClick={() => setActiveTab('smart')}
-          className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'smart' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold' : 'border-transparent text-stone-500'
+          className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+            activeTab === 'smart' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-stone-500'
           }`}
         >
-          <Target className="h-4 w-4" /> 2. Objetivos SMART
+          <Target className="h-4 w-4" /> 1. Objetivos del Trimestre (SMART)
         </button>
-        <button
-          type="button" onClick={() => setActiveTab('acciones')}
-          className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === 'acciones' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold' : 'border-transparent text-stone-500'
-          }`}
-        >
-          <Activity className="h-4 w-4" /> 3. Planes de Acción (Meta 1-5)
-        </button>
+
+        {/* Solo mostrar visiones complejas si el usuario es Nivel 2 o Superior */}
+        {userLevel >= 2 && (
+          <>
+            <button
+              type="button" onClick={() => setActiveTab('vision')}
+              className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'vision' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-stone-500'
+              }`}
+            >
+              <Compass className="h-4 w-4" /> 2. Visión a 5 Años y Trimestre
+            </button>
+            <button
+              type="button" onClick={() => setActiveTab('acciones')}
+              className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === 'acciones' ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-stone-500'
+              }`}
+            >
+              <Activity className="h-4 w-4" /> 3. Planes de Acción (Meta 1-5)
+            </button>
+          </>
+        )}
       </div>
 
-      {/* --- CONTENIDO DE PESTAÑA 1: VISIÓN A 5 AÑOS vs TRIMESTRAL --- */}
-      {activeTab === 'vision' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Bloque Izquierdo: Visión a 5 Años */}
-          <div className="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 border-b border-stone-200 dark:border-stone-850 pb-2">
-              Visión a 5 Años (Brújula de Legado)
-            </h3>
-            
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Espiritual:</label>
-              <textarea
-                value={fiveYearSpiritual} onChange={(e) => setFiveYearSpiritual(e.target.value)}
-                placeholder="E.g., ¿Quién quiero ser en mi intimidad con Dios en 5 años?" rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Ser (Identidad/Estilo de Vida):</label>
-              <textarea
-                value={fiveYearBeing} onChange={(e) => setFiveYearBeing(e.target.value)}
-                placeholder="E.g., Hábitos de descanso, salud integral y carácter." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Negocio (Contribución/Liderazgo):</label>
-              <textarea
-                value={fiveYearBusiness} onChange={(e) => setFiveYearBusiness(e.target.value)}
-                placeholder="E.g., Metas financieras, impacto comercial y ministerial." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Relaciones (Familia/Mentoría):</label>
-              <textarea
-                value={fiveYearRelations} onChange={(e) => setFiveYearRelations(e.target.value)}
-                placeholder="E.g., Calidad de relaciones familiares y círculos de multiplicación." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Bloque Derecho: Visión del Trimestre */}
-          <div className="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-6 space-y-4">
-            <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 border-b border-stone-200 dark:border-stone-850 pb-2">
-              Visión del Trimestre (¿Qué logros concretos me acercan a mi visión?)
-            </h3>
-            
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Espiritual:</label>
-              <textarea
-                value={quarterlySpiritual} onChange={(e) => setQuarterlySpiritual(e.target.value)}
-                placeholder="E.g., Consolidar devocional diario de 15 minutos en paz." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Ser (Identidad/Estilo de Vida):</label>
-              <textarea
-                value={quarterlyBeing} onChange={(e) => setQuarterlyBeing(e.target.value)}
-                placeholder="E.g., Retomar rutina de sueño consistente durmiendo a las 10 PM." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Negocio (Contribución/Liderazgo):</label>
-              <textarea
-                value={quarterlyBusiness} onChange={(e) => setQuarterlyBusiness(e.target.value)}
-                placeholder="E.g., Validar propuesta de consultoría con 3 llamadas de diagnóstico." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Relaciones (Familia/Mentoría):</label>
-              <textarea
-                value={quarterlyRelations} onChange={(e) => setQuarterlyRelations(e.target.value)}
-                placeholder="E.g., Asegurar salida quincenal exclusiva con mi cónyuge sin celulares." rows={2}
-                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- CONTENIDO DE PESTAÑA 2: OBJETIVOS SMART --- */}
+      {/* --- PESTAÑA: OBJETIVOS SMART (Única visible para Nivel 1) --- */}
       {activeTab === 'smart' && (
-        <div className="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-6 space-y-6">
-          <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 border-b border-stone-200 dark:border-stone-850 pb-2">
+        <div className="bg-white/80 dark:bg-stone-900/70 backdrop-blur-md border border-stone-200 dark:border-stone-850 rounded-2xl p-6 space-y-6">
+          <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 border-b border-stone-150 dark:border-stone-850 pb-2">
             Objetivos del Trimestre — SMART
           </h3>
           <p className="text-xs text-stone-500 mt-1">
@@ -323,20 +243,20 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
 
           <div className="space-y-4">
             {smartObjectives.map((obj, idx) => (
-              <div key={obj.id || idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center bg-white dark:bg-stone-950 p-4 border border-stone-200 dark:border-stone-800 rounded-xl">
+              <div key={obj.id || idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center bg-stone-50/50 dark:bg-stone-950 p-4 border border-stone-200 dark:border-stone-850 rounded-xl">
                 <div className="md:col-span-3">
                   <label className="block text-[10px] font-bold text-stone-500 uppercase font-mono mb-1">Objetivo {idx + 1}</label>
                   <input
                     type="text" value={obj.objective} onChange={(e) => handleSmartChange(idx, 'objective', e.target.value)}
-                    placeholder="E.g., Completar 20 días de journaling de nivel 1 con constancia."
-                    className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg px-3 py-2 text-sm"
+                    placeholder="Ej. Completar 20 días de journaling de nivel 1 con constancia."
+                    className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg px-3 py-2 text-sm outline-none"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-stone-500 uppercase font-mono mb-1">Fecha Vencimiento</label>
                   <input
                     type="date" value={obj.targetDate} onChange={(e) => handleSmartChange(idx, 'targetDate', e.target.value)}
-                    className="w-full bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg px-3 py-2 text-sm"
+                    className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg px-3 py-2 text-sm outline-none"
                   />
                 </div>
               </div>
@@ -345,26 +265,103 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
         </div>
       )}
 
-      {/* --- CONTENIDO DE PESTAÑA 3: PLANES DE ACCIÓN DINÁMICOS --- */}
-      {activeTab === 'acciones' && (
-        <div className="space-y-8">
-          {metaPlans.map((meta, metaIdx) => (
-            <div key={meta.metaIndex} className="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-6 space-y-4">
-              
-              {/* Título de la Meta Principal editable */}
+      {/* --- PESTAÑA: VISIÓN A 5 AÑOS (Oculta para Nivel 1) --- */}
+      {userLevel >= 2 && activeTab === 'vision' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
+          <div className="bg-white/80 dark:bg-stone-900/70 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 space-y-4 shadow-sm">
+            <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 border-b border-stone-150 dark:border-stone-850 pb-2">
+              Visión a 5 Años (Brújula de Legado)
+            </h3>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Espiritual:</label>
+              <textarea
+                value={fiveYearSpiritual} onChange={(e) => setFiveYearSpiritual(e.target.value)}
+                placeholder="Ej. ¿Quién quiero ser en mi intimidad con Dios en 5 años?" rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Ser (Identidad/Estilo de Vida):</label>
+              <textarea
+                value={fiveYearBeing} onChange={(e) => setFiveYearBeing(e.target.value)}
+                placeholder="Ej. Hábitos de descanso, salud integral y carácter." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Negocio (Contribución/Liderazgo):</label>
+              <textarea
+                value={fiveYearBusiness} onChange={(e) => setFiveYearBusiness(e.target.value)}
+                placeholder="Ej. Metas financieras, impacto comercial y ministerial." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Relaciones (Familia/Mentoría):</label>
+              <textarea
+                value={fiveYearRelations} onChange={(e) => setFiveYearRelations(e.target.value)}
+                placeholder="Ej. Calidad de relaciones familiares y círculos de multiplicación." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="bg-white/80 dark:bg-stone-900/70 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 space-y-4 shadow-sm">
+            <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 border-b border-stone-150 dark:border-stone-850 pb-2">
+              Visión del Trimestre (Logros Concretos)
+            </h3>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Espiritual:</label>
+              <textarea
+                value={quarterlySpiritual} onChange={(e) => setQuarterlySpiritual(e.target.value)}
+                placeholder="Ej. Consolidar devocional diario de 15 minutos en paz." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Ser (Identidad/Estilo de Vida):</label>
+              <textarea
+                value={quarterlyBeing} onChange={(e) => setQuarterlyBeing(e.target.value)}
+                placeholder="Ej. Retomar rutina de sueño consistente durmiendo a las 10 PM." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Negocio (Contribución/Liderazgo):</label>
+              <textarea
+                value={quarterlyBusiness} onChange={(e) => setQuarterlyBusiness(e.target.value)}
+                placeholder="Ej. Validar propuesta de consultoría con 3 llamadas de diagnóstico." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-stone-500 uppercase font-mono">Relaciones (Familia/Mentoría):</label>
+              <textarea
+                value={quarterlyRelations} onChange={(e) => setQuarterlyRelations(e.target.value)}
+                placeholder="Ej. Asegurar salida quincenal exclusiva con mi cónyuge sin celulares." rows={2}
+                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 rounded-xl px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- PESTAÑA: PLAN DE ACCIÓN (Oculta para Nivel 1) --- */}
+      {userLevel >= 2 && activeTab === 'acciones' && (
+        <div className="space-y-8 animate-fade-in">
+          {metaPlans.map((meta: any, metaIdx: number) => (
+            <div key={meta.metaIndex} className="bg-white/80 dark:bg-stone-900/70 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 space-y-4">
               <div className="border-b border-stone-200 dark:border-stone-850 pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="flex-1 max-w-sm">
                   <span className="block text-[10px] font-bold text-stone-500 uppercase font-mono">Título de la Meta</span>
                   <input
                     type="text" value={meta.metaTitle} onChange={(e) => handleMetaTitleChange(metaIdx, e.target.value)}
-                    placeholder={`E.g., Meta ${meta.metaIndex}`}
+                    placeholder={`Ej. Meta ${meta.metaIndex}`}
                     className="w-full bg-transparent text-lg font-extrabold text-stone-800 dark:text-stone-200 border-b border-transparent focus:border-emerald-500 outline-none pb-0.5"
                   />
                 </div>
-                <span className="text-xs text-stone-400 font-mono">Plan de Acción / Ejecución</span>
               </div>
 
-              {/* Tabla de Acciones Claves */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -372,23 +369,23 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
                       <th className="py-2 text-xs font-bold uppercase tracking-wider text-stone-500 font-mono w-[55%]">Acción Clave</th>
                       <th className="py-2 text-xs font-bold uppercase tracking-wider text-stone-500 font-mono w-[20%]">Frecuencia</th>
                       <th className="py-2 text-xs font-bold uppercase tracking-wider text-stone-500 font-mono w-[20%]">Indicador</th>
-                      <th className="py-2 text-xs text-center w-[5%]"></th>
+                      <th className="py-2 text-center w-[5%]"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100 dark:divide-stone-800/60">
-                    {meta.actions.map((row, rowIdx) => (
+                    {meta.actions.map((row: any, rowIdx: number) => (
                       <tr key={rowIdx}>
                         <td className="py-2.5 pr-4">
                           <input
                             type="text" value={row.action} onChange={(e) => handleActionChange(metaIdx, rowIdx, 'action', e.target.value)}
                             placeholder="¿Qué acción concreta sostendrá esta meta?"
-                            className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg px-2 py-1.5 text-xs"
+                            className="w-full bg-white dark:bg-stone-950 border border-stone-200 rounded-lg px-2 py-1.5 text-xs outline-none"
                           />
                         </td>
                         <td className="py-2.5 pr-4">
                           <select
                             value={row.frequency} onChange={(e) => handleActionChange(metaIdx, rowIdx, 'frequency', e.target.value)}
-                            className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg px-2 py-1.5 text-xs"
+                            className="w-full bg-white dark:bg-stone-950 border border-stone-200 rounded-lg px-2 py-1.5 text-xs outline-none"
                           >
                             <option value="Diaria">Diaria</option>
                             <option value="Semanal">Semanal</option>
@@ -399,8 +396,8 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
                         <td className="py-2.5 pr-2">
                           <input
                             type="text" value={row.indicator} onChange={(e) => handleActionChange(metaIdx, rowIdx, 'indicator', e.target.value)}
-                            placeholder="E.g., Check en App"
-                            className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg px-2 py-1.5 text-xs"
+                            placeholder="Ej. Check en App"
+                            className="w-full bg-white dark:bg-stone-950 border border-stone-200 rounded-lg px-2 py-1.5 text-xs outline-none"
                           />
                         </td>
                         <td className="py-2.5 text-center">
@@ -417,16 +414,14 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
                 </table>
               </div>
 
-              {/* Añadir nueva fila de acción clave */}
               <div className="pt-2">
                 <button
                   type="button" onClick={() => addActionRow(metaIdx)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 transition-colors cursor-pointer"
                 >
                   <Plus className="h-4 w-4" /> Añadir acción clave
                 </button>
               </div>
-
             </div>
           ))}
         </div>
@@ -434,7 +429,7 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
 
       {/* --- PANEL DE FEEDBACK DE ACCIONES --- */}
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 rounded-xl text-sm font-semibold">
+        <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 rounded-xl text-sm font-semibold animate-shake">
           {error}
         </div>
       )}
@@ -444,17 +439,6 @@ export function QuarterlyPlanForm({ initialPlan }: QuarterlyPlanFormProps) {
           ¡Plan trimestral guardado con éxito!
         </div>
       )}
-
-      {/* --- FOOTER DE GUARDADO GENERAL --- */}
-      <div className="flex justify-end pt-4 border-t border-stone-200 dark:border-stone-800">
-        <button
-          type="button" onClick={handleSave} disabled={loading}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-stone-400 text-white font-bold px-6 py-3.5 rounded-xl transition-colors text-sm shadow shadow-emerald-900"
-        >
-          <Save className="h-4 w-4" />
-          {loading ? 'Guardando...' : 'Guardar Planeamiento Trimestral'}
-        </button>
-      </div>
 
     </div>
   );

@@ -17,7 +17,8 @@ import {
   CalendarDays,
   LogOut,
   UserCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  ShieldAlert // Icono exclusivo de administrador
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -50,11 +51,24 @@ export function Navigation() {
     await signOut({ callbackUrl: '/login' });
   };
 
+  // Agregar dinámicamente la pestaña de administración de forma exclusiva en memoria si es Joel Pacheco
+  const dynamicNavItems = [...NAV_ITEMS];
+  if (session?.user?.email === 'joel@journalingintegral.demo') {
+    dynamicNavItems.push({ label: 'Usuarios (Admin)', href: '/admin/users', icon: ShieldAlert });
+  }
+
   return (
     <>
+      {/* --- BOTÓN FLOTANTE TEMA MÓVIL --- */}
+      <div className="md:hidden fixed top-4 right-4 z-40 print:hidden animate-fade-in">
+        <div className="glass-panel shadow-soft rounded-xl p-1">
+          <ThemeToggle />
+        </div>
+      </div>
+
       {/* --- NAVEGACIÓN DESKTOP (SIDEBAR) --- */}
       <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-stone-50 dark:bg-stone-900 text-stone-800 dark:text-stone-100 border-r border-stone-200 dark:border-stone-850 z-20 transition-colors">
-        {/* Cabecera / Identidad */}
+        {/* Cabecera */}
         <div className="p-6 border-b border-stone-200 dark:border-stone-850 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
@@ -65,9 +79,9 @@ export function Navigation() {
           <ThemeToggle />
         </div>
 
-        {/* Menú de Opciones */}
+        {/* Menú de Opciones con soporte dinámico de roles */}
         <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
+          {dynamicNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             return (
@@ -87,7 +101,7 @@ export function Navigation() {
           })}
         </nav>
 
-        {/* Controles de Administrador e Información de Usuario */}
+        {/* Controles de Administrador */}
         <div className="p-4 border-t border-stone-200 dark:border-stone-850 bg-stone-100/60 dark:bg-stone-950/30">
           
           {session?.user?.email === 'joel@journalingintegral.demo' && (
@@ -155,7 +169,7 @@ export function Navigation() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-350 text-stone-700 dark:text-stone-300 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5" /> Cerrar Sesión
               </button>
@@ -172,9 +186,9 @@ export function Navigation() {
         </div>
       </aside>
 
-      {/* --- NAVEGACIÓN MÓVIL (BOTTOM BAR CON THEME TOGGLE INTEGRADO) --- */}
+      {/* --- NAVEGACIÓN MÓVIL --- */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-center justify-around px-2 pb-safe z-30 shadow-lg transition-colors">
-        {NAV_ITEMS.map((item) => {
+        {dynamicNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -193,7 +207,6 @@ export function Navigation() {
           );
         })}
         
-        {/* Integración del Botón de Modo Claro/Oscuro directamente en el extremo de la barra móvil */}
         <div className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center shrink-0">
           <ThemeToggle />
         </div>
