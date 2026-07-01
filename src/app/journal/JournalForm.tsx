@@ -37,32 +37,22 @@ interface JournalFormProps {
 
 export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFormProps) {
   const router = useRouter();
+
+  // --- 1. DECLARACIONES DE ESTADO (SIEMPRE AL INICIO DEL COMPONENTE) ---
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
-  // --- SISTEMA DE PASOS (WIZARD DE DOPAMINA) ---
+  // Sistema de pasos (Wizard)
   const [step, setStep] = useState<number>(1);
   const totalSteps = userLevel === 1 ? 4 : 6;
 
-  // --- ESTADO PARA LA GUÍA DE VERSÍCULOS EN EL DEVOCIONAL ---
+  // Guía Devocional
   const [devotionalTopic, setDevotionalTopic] = useState<'Dominio Propio' | 'Finanzas' | 'Crecimiento' | 'Identidad'>('Dominio Propio');
   const [guidedVerse, setGuidedVerse] = useState<any | null>(null);
   const [loadingVerse, setLoadingVerse] = useState<boolean>(false);
 
-  // Función para refrescar o rotar el versículo según el tópico activo
-  const refreshVerse = async () => {
-    setLoadingVerse(true);
-    const v = await getVersesByTopic(devotionalTopic);
-    setGuidedVerse(v);
-    setLoadingVerse(false);
-  };
-
-  useEffect(() => {
-    refreshVerse();
-  }, [devotionalTopic]);
-
-  // --- ESTADOS LOCALES DE CAMPOS DE ENTRADA ---
+  // Activador de Plan B rápido
   const [isPlanB, setIsPlanB] = useState<boolean>(existingEntry?.isPlanBUsed === 1 || false);
   
   // Paso 1: Energía
@@ -85,6 +75,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   // Paso 4: Devocional Diario y Hábitos
   const [devotionalNotes, setDevotionalNotes] = useState<string>(existingEntry?.devotionalNotes ?? '');
+  
   const parseSavedHabits = () => {
     if (existingEntry?.dailyHabitsJson) {
       return JSON.parse(existingEntry.dailyHabitsJson);
@@ -137,6 +128,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [bizExpenses, setBizExpenses] = useState<number>(existingEntry?.bizExpenses ?? 0);
   const [bizImprovementTomorrow, setBizImprovementTomorrow] = useState<string>(existingEntry?.bizImprovementTomorrow ?? '');
 
+  // Paso 5: Logros de Revisión
+  const [ach1, setAch1] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[0] : '');
+  const [ach2, setAch2] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[1] : '');
+  const [ach3, setAch3] = useState<string>(existingEntry?.achievementsTop3 ? JSON.parse(existingEntry.achievementsTop3)[2] : '');
+
   // Paso 6: Mentalidad (Nivel 2)
   const [mindsetStateRating, setMindsetStateRating] = useState<number>(existingEntry?.mindsetStateRating ?? 7);
   const [mindsetEmotion1, setMindsetEmotion1] = useState<string>(existingEntry?.mindsetEmotion1 ?? '');
@@ -158,12 +154,25 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [legacyReflection, setLegacyReflection] = useState<string>(existingEntry?.legacyReflection ?? '');
   const [dominantFocusCompleted, setDominantFocusCompleted] = useState<boolean>(existingEntry?.dominantFocusCompleted === 1);
 
+  // --- 2. FUNCIONES DE AYUDA Y EFECTOS ---
+  const refreshVerse = async () => {
+    setLoadingVerse(true);
+    const v = await getVersesByTopic(devotionalTopic);
+    setGuidedVerse(v);
+    setLoadingVerse(false);
+  };
+
+  useEffect(() => {
+    refreshVerse();
+  }, [devotionalTopic]);
+
   const handleHabitCheck = (index: number) => {
     const updated = [...dailyHabits];
     updated[index].completed = !updated[index].completed;
     setDailyHabits(updated);
   };
 
+  // --- 3. FUNCIÓN DE GUARDADO (AL FINAL DEL ÁMBITO DEL COMPONENTE) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -207,6 +216,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
       payload.whatDidNotWork = whatDidNotWork;
       payload.improvementIdea = improvementIdea;
 
+      // Guardado del Módulo de Negocio 1-1-1
       payload.bizProspectCompleted = bizActions.prospectCompleted ? 1 : 0;
       payload.bizFollowUpCompleted = bizActions.followUpCompleted ? 1 : 0;
       payload.bizMktActionCompleted = bizActions.mktCompleted ? 1 : 0;
@@ -311,7 +321,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <input
                 type="text" value={chooseToBeIdentity} onChange={(e) => setChooseToBeIdentity(e.target.value)}
                 placeholder="Ej. PACIENTE, PRESENTE, AGRADECIDO"
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -319,7 +329,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <input
                 type="text" value={identityAction} onChange={(e) => setIdentityAction(e.target.value)}
                 placeholder="Ej. Escuchar 5 mins sin mirar el celular"
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none"
+                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none"
               />
             </div>
             <div className="md:col-span-2">
@@ -327,7 +337,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
               <input
                 type="text" value={gratitude1} onChange={(e) => setGratitude1(e.target.value)}
                 placeholder="Ej. Por la salud de mi familia hoy."
-                className="w-full bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none"
+                className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none"
               />
             </div>
           </div>
