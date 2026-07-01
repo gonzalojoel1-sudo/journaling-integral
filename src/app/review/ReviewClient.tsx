@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { saveWeeklyPlan } from '../actions/journal';
 import { 
   Award, 
   Activity, 
@@ -13,13 +14,8 @@ import {
   Heart,
   Thermometer,
   User,
-  Percent,
-  Calendar,
   Zap,
-  Target,
-  Clock,
-  ChevronRight,
-  Smile
+  Target
 } from 'lucide-react';
 
 interface DailyEntry {
@@ -118,10 +114,31 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
   const [task3, setPrep3] = useState('');
   const [day3, setDay3] = useState('Viernes');
 
-  const handleFinishReset = () => {
-    alert('Planificación Semanal registrada con éxito. Tu enfoque, metas temporizadas y el termómetro relacional han sido configurados.');
-    router.push('/');
-    router.refresh();
+  // --- GUARDAR RESET EN LA NUBE ---
+  const handleFinishReset = async () => {
+    try {
+      const payload = {
+        focus: weeklyFocus,
+        relationToNutre: '', // Removido por solicitud del usuario
+        tasks: [
+          { day: day1, task: task1 },
+          { day: day2, task: task2 },
+          { day: day3, task: task3 }
+        ].filter(t => t.task.trim() !== '')
+      };
+
+      const res = await saveWeeklyPlan(payload);
+      if (res.success) {
+        alert('Planificación Dominical registrada y guardada con éxito en tu base de datos de Turso.');
+        router.push('/');
+        router.refresh();
+      } else {
+        alert('Error al guardar la planificación.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión.');
+    }
   };
 
   // Estilos de temperatura relacional
@@ -157,7 +174,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8 relative">
       
-      {/* --- EFECTO DE GRADIENTES ABSTRACTOS DE FONDO (Ocultos al imprimir) --- */}
+      {/* --- EFECTO DE GRADIENTES ABSTRACTOS DE FONDO (FRESCO) --- */}
       <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-emerald-500/10 dark:bg-emerald-500/5 blur-3xl pointer-events-none print:hidden"></div>
       <div className="absolute -bottom-20 right-0 h-96 w-96 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-3xl pointer-events-none print:hidden"></div>
 
@@ -257,7 +274,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
             </div>
 
             {/* Conversión Real (Glass Amber) */}
-            <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 shadow-amber-500/5 text-center space-y-2">
+            <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/5 shadow-amber-500/5 text-center space-y-2">
               <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 font-mono block uppercase">Tasa de Conversión</span>
               <p className="text-4xl font-extrabold text-amber-600 dark:text-amber-500">{conversionRate.toFixed(1)}%</p>
               <p className="text-[10px] text-stone-400 italic">Porcentaje de éxito comercial</p>
@@ -419,7 +436,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
         {step > 1 ? (
           <button
             type="button" onClick={() => setStep(step - 1)}
-            className="flex items-center gap-1.5 text-xs font-bold text-stone-500 dark:text-stone-300 hover:text-stone-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-bold text-stone-600 dark:text-stone-300 hover:text-stone-800 transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" /> Anterior
           </button>

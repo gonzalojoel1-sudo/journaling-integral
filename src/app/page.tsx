@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { db } from '../db/db';
 import { dailyEntries, users } from '../db/schema';
-import { getOrCreateUserProfile, getRandomVerse } from './actions/journal';
+import { getOrCreateUserProfile, getRandomVerse, getActiveWeeklyPlan } from './actions/journal';
 import { eq, and, gte } from 'drizzle-orm';
 import { 
   Flame, 
@@ -14,11 +14,10 @@ import {
   Clock, 
   Compass,
   CheckSquare,
-  AlertCircle
+  AlertTriangle
 } from 'lucide-react';
 
 export default async function DashboardPage() {
-  // 1. Obtener perfil de usuario
   const profileRes = await getOrCreateUserProfile();
   const user = profileRes.user;
 
@@ -32,7 +31,7 @@ export default async function DashboardPage() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // 2. Comprobar si ya completó el diario de hoy
+  // 1. Comprobar si ya completó el diario de hoy
   const todayEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
@@ -40,8 +39,7 @@ export default async function DashboardPage() {
     ),
   });
 
-  // 3. RECUPERAR LA "PREPARACIÓN PARA MAÑANA" DE AYER
-  // Restamos 24 horas a la fecha actual para obtener el registro de anoche
+  // 2. RECUPERAR LA "PREPARACIÓN PARA MAÑANA" DE AYER
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -53,10 +51,35 @@ export default async function DashboardPage() {
     ),
   });
 
-  // Parsear las tareas programadas anoche (si existen)
   const antiReactivityTasks: string[] = yesterdayEntry?.prepTomorrowJson 
     ? JSON.parse(yesterdayEntry.prepTomorrowJson) 
     : [];
+
+  // --- 3. NUEVO MOTOR DE INTEGRACIÓN: AUTOMATIZACIÓN DE DESTRABE SEMANAL ---
+  const weeklyPlanRes = await getActiveWeeklyPlan();
+  const activeWeeklyPlan = weeklyPlanRes.plan;
+
+  let todayWeeklyDestrabeAction = '';
+  let weeklyFocusText = '';
+
+  if (activeWeeklyPlan) {
+    weeklyFocusText = activeWeeklyPlan.focus;
+    try {
+      const parsedTasks = JSON.parse(activeWeeklyPlan.tasksJson);
+      
+      // Obtener el nombre del día actual en español
+      const daysInSpanish = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const todayDayName = daysInSpanish[new Date().getDay()];
+
+      // Buscar si el usuario planificó una tarea de destrabe para el día de hoy
+      const foundTask = parsedTasks.find((t: any) => t.day === todayDayName);
+      if (foundTask && foundTask.task.trim() !== '') {
+        todayWeeklyDestrabeAction = foundTask.task;
+      }
+    } catch (e) {
+      console.error('Error al parsear tareas semanales:', e);
+    }
+  }
 
   // 4. Versículo de anclaje diario
   const verse = await getRandomVerse(user.currentLevel);
@@ -111,7 +134,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {/* Nivel de desarrollo actual */}
+        {/* Nivel actual */}
         <div className="flex items-center gap-3 bg-stone-100/80 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-850 rounded-2xl p-4 self-start md:self-auto shadow-sm">
           <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
             <Award className="h-6 w-6" />
@@ -129,7 +152,6 @@ export default async function DashboardPage() {
 
       {/* --- GRID DE ESTADÍSTICAS --- */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Racha actual */}
         <div className="bg-gradient-to-br from-amber-500/5 to-orange-500/5 dark:from-stone-900/40 dark:to-stone-950/40 border border-amber-200/60 dark:border-stone-850 rounded-2xl p-6 relative overflow-hidden shadow-sm">
           <div className="flex justify-between items-start">
             <div>
@@ -149,7 +171,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Constancia de los últimos 30 días */}
         <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 shadow-sm">
           <div className="flex justify-between items-start">
             <div>
@@ -169,10 +190,9 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Desbloqueo del siguiente nivel */}
         <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 flex flex-col justify-between shadow-sm">
           <div>
-            <div className="flex justify-between text-xs font-semibold uppercase tracking-wider font-mono text-stone-500 mb-2">
+            <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2">
               <span>Progreso de Nivel</span>
               <span>{progressPercent}%</span>
             </div>
@@ -196,13 +216,46 @@ export default async function DashboardPage() {
       {/* --- SECCIÓN PRINCIPAL DE CONTROL --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Columna Izquierda: Tarjeta de Diario y Módulo Anti-Reactividad */}
+        {/* Columna Izquierda: Tarjetas de Planificación Semanal y Antirreactividad */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* --- NUEVO MÓDULO PREMIUM: ENFOQUE ANTI-REACTIVIDAD (Cargado desde ayer) --- */}
-          {antiReactivityTasks.length > 0 && (
+          {/* --- NUEVO MÓDULO INTELIGENTE: ENFOQUE SEMANAL Y ACCIÓN DE DESTRABE AUTOMATIZADA --- */}
+          {activeWeeklyPlan && (
             <div className="p-6 rounded-3xl border border-emerald-500/20 bg-emerald-50/5 dark:bg-emerald-950/5 shadow-soft space-y-4">
               <div className="flex items-center gap-2 border-b border-emerald-500/10 pb-2">
+                <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-200">
+                    Tu Planificación Semanal Activa
+                  </h3>
+                  <p className="text-[10px] text-stone-400 font-mono">INTEGRACIÓN DE ENFOQUES DOMINICALES</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                {/* Enfoque Dominante Semanal */}
+                <div className="p-4 bg-white dark:bg-stone-900 border border-stone-150 dark:border-stone-850 rounded-xl space-y-1">
+                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase font-mono">Enfoque Dominante (80/20):</span>
+                  <p className="font-bold text-stone-850 dark:text-stone-100">{weeklyFocusText || 'No definido aún.'}</p>
+                </div>
+
+                {/* Acción Automática de Destrabe de Hoy */}
+                <div className="p-4 bg-white dark:bg-stone-900 border border-stone-150 dark:border-stone-850 rounded-xl space-y-1">
+                  <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase font-mono flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3 animate-pulse" /> Acción de Destrabe para Hoy:
+                  </span>
+                  <p className="font-bold text-stone-850 dark:text-stone-100">
+                    {todayWeeklyDestrabeAction ? todayWeeklyDestrabeAction : 'No programaste ninguna acción de destrabe para hoy.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Enfoque Anti-Reactividad Diario */}
+          {antiReactivityTasks.length > 0 && (
+            <div className="p-6 rounded-3xl border border-stone-200/60 dark:border-stone-850 bg-stone-50/5 dark:bg-stone-950/5 shadow-soft space-y-4">
+              <div className="flex items-center gap-2 border-b border-stone-200 dark:border-stone-800 pb-2">
                 <CheckSquare className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 <div>
                   <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-200">
@@ -211,7 +264,6 @@ export default async function DashboardPage() {
                   <p className="text-[10px] text-stone-400 font-mono">DISEÑADO POR TI ANOCHE PARA BLINDAR TU DÍA</p>
                 </div>
               </div>
-              
               <div className="space-y-2">
                 {antiReactivityTasks.map((task, idx) => (
                   <div key={idx} className="flex items-center gap-3 p-3 bg-white dark:bg-stone-900/60 border border-stone-150 dark:border-stone-850 rounded-xl">
@@ -272,7 +324,7 @@ export default async function DashboardPage() {
                   <div className="pt-4">
                     <Link 
                       href="/journal" 
-                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-950/50 text-sm cursor-pointer"
+                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-950/50 text-sm cursor-pointer hover:opacity-90"
                     >
                       Iniciar Registro Diario <ArrowRight className="h-4 w-4" />
                     </Link>
@@ -284,40 +336,6 @@ export default async function DashboardPage() {
             {/* Elemento de diseño de fondo */}
             <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-y-1/4 translate-x-1/4">
               <BookOpen className="h-64 w-64 text-emerald-400" />
-            </div>
-          </div>
-
-          {/* Tarjeta de Guía del Nivel Actual */}
-          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              Guía Metodológica: Nivel {user.currentLevel}
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div className="bg-stone-50 dark:bg-stone-950/30 p-4 rounded-xl border border-stone-150 dark:border-stone-850/60">
-                <div className="flex items-center gap-2 text-stone-850 dark:text-stone-200 font-semibold text-xs">
-                  <Clock className="h-4 w-4 text-emerald-500" />
-                  Compromiso de Tiempo
-                </div>
-                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-2">
-                  {user.currentLevel === 1 
-                    ? 'Sólo requiere de 3 a 5 minutos diarios. Prioriza constancia sobre profundidad emocional.'
-                    : 'De 15 a 25 minutos diarios. Dedica espacio consciente para procesar tu visión y hábitos.'}
-                </p>
-              </div>
-
-              <div className="bg-stone-50 dark:bg-stone-950/30 p-4 rounded-xl border border-stone-150 dark:border-stone-850/60">
-                <div className="flex items-center gap-2 text-stone-850 dark:text-stone-200 font-semibold text-xs">
-                  <Compass className="h-4 w-4 text-emerald-500" />
-                  Métrica de Éxito
-                </div>
-                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-2">
-                  {user.currentLevel === 1 
-                    ? 'No buscamos perfección. Tu meta es registrar al menos 1 acción diaria coherente.'
-                    : 'Alineación de visión trimestral. Ejecutar renuncias e intenciones específicas.'}
-                </p>
-              </div>
             </div>
           </div>
         </div>

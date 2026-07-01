@@ -5,7 +5,7 @@ export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  password: text('password').notNull(), // Contraseña cifrada
+  password: text('password').notNull(),
   currentLevel: integer('current_level').default(1).notNull(),
   streakCurrent: integer('streak_current').default(0).notNull(),
   streakMax: integer('streak_max').default(0).notNull(),
@@ -16,6 +16,7 @@ export const users = sqliteTable('users', {
 export const usersRelations = relations(users, ({ many }) => ({
   dailyEntries: many(dailyEntries),
   quarterlyPlans: many(quarterlyPlans),
+  weeklyPlans: many(weeklyPlans), // Relación añadida para planes semanales
   habits: many(habits),
 }));
 
@@ -91,6 +92,26 @@ export const dailyEntries = sqliteTable('daily_entries', {
 export const dailyEntriesRelations = relations(dailyEntries, ({ one }) => ({
   user: one(users, {
     fields: [dailyEntries.userId],
+    references: [users.id],
+  }),
+}));
+
+// --- NUEVA TABLA: PLANES SEMANALES DE ENFOQUE (80/20) ---
+export const weeklyPlans = sqliteTable('weekly_plans', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  weekLabel: text('week_label').notNull(), // Formato YYYY-W[Semana] (ISO)
+  focus: text('focus').notNull(), // Enfoque Dominante
+  tasksJson: text('tasks_json').notNull(), // Las 3 acciones temporizadas { day, task }
+  relationToNutre: text('relation_to_nutre'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const weeklyPlansRelations = relations(weeklyPlans, ({ one }) => ({
+  user: one(users, {
+    fields: [weeklyPlans.userId],
     references: [users.id],
   }),
 }));

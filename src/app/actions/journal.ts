@@ -1,18 +1,30 @@
 'use server';
 
 import { db } from '../../db/db';
-import { users, dailyEntries, quarterlyPlans, habits, bibleVerses } from '../../db/schema';
+import { users, dailyEntries, quarterlyPlans, weeklyPlans, habits, bibleVerses } from '../../db/schema';
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth'; 
 import { authOptions } from '../api/auth/[...nextauth]/options';
-import { cache } from 'react'; // Importar optimizador de caché de React
+import { cache } from 'react';
 
 const DEMO_USER_ID = 'demo-user-id';
 
 /**
- * Resuelve el ID del usuario en sesión activa de forma cacheada (Memoized)
+ * Calcula de manera estándar el número de semana ISO-8601 actual para el reset
+ */
+export function getISOWeekLabel(date: Date = new Date()): string {
+  const tempDate = new Date(date.getTime());
+  tempDate.setHours(0, 0, 0, 0);
+  tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
+  const week1 = new Date(tempDate.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return `${tempDate.getFullYear()}-W${weekNum}`;
+}
+
+/**
+ * Resuelve el ID del usuario en sesión activa de forma cacheada
  */
 export const getCurrentUserId = cache(async (): Promise<string> => {
   try {
@@ -28,7 +40,7 @@ export const getCurrentUserId = cache(async (): Promise<string> => {
   } catch (error) {
     console.error('Error al resolver ID de usuario en sesión:', error);
   }
-  return DEMO_USER_ID; // Fallback modo demo
+  return DEMO_USER_ID; 
 });
 
 /**
@@ -435,8 +447,6 @@ export async function getVersesByTopic(topic?: string) {
     const randomIndex = Math.floor(Math.random() * list.length);
     return list[randomIndex];
   } catch (error) {
-    // --- POOL DE RESPALDO DE DOPAMINA MULTI-TÓPICO FUERA DE LÍNEA ---
-    // Si la base de datos está vacía, el sistema alternará reactivamente entre estos 3 versículos clave
     const offlineFallbacks = [
       {
         id: 'fallback-1',
@@ -466,5 +476,61 @@ export async function getVersesByTopic(topic?: string) {
 
     const randomIndex = Math.floor(Math.random() * offlineFallbacks.length);
     return offlineFallbacks[randomIndex];
+  }
+}
+
+/**
+ * Obtiene el plan semanal activo del usuario de forma dinámica para el reset.
+ */
+export async function getActiveWeeklyPlan() {
+  try {
+    const userId = await getCurrentUserId();
+    const currentWeekLabel = getISOWeekLabel();
+    const plan = await db.query.weeklyPlans.findFirst({
+      where: and(
+        eq(weeklyPlans.userId, userId),
+        eq(weeklyPlans.weekLabel, currentWeekLabel)
+      ),
+    });
+    return { success: true, plan: plan || null };
+  } catch (error) {
+    console.error('Error al obtener plan semanal:', error);
+    return { success: false, error: 'No se pudo cargar la planificación semanal.' };
+  }
+}
+
+/**
+ * Guarda o actualiza la planificación semanal (Sunday Reset).
+ */
+export async function saveWeeklyPlan(formData: Record<string, any>) {
+  try {
+    const userId = await getCurrentUserId();
+    const currentWeekLabel = getISOWeekLabel();
+    
+    const activePlanRes = await getActiveWeeklyPlan();
+    const planId = activePlanRes.plan?.id || randomUUID();
+
+    const planData = {
+      id: planId,
+      userId: userId,
+      weekLabel: currentWeekLabel,
+      focus: formData.focus || '',
+      tasksJson: formData.tasks ? JSON.stringify(formData.tasks) : '[]',
+      relationToNutre: formData.relationToNutre || null,
+      createdAt: activePlanRes.plan?.createdAt || new Date().toISOString(),
+    };
+
+    if (activePlanRes.plan) {
+      await db.update(weeklyPlans).set(planData).where(eq(weeklyPlans.id, activePlanRes.plan.id));
+    } else {
+      await db.insert(weeklyPlans).values(planData);
+    }
+
+    revalidatePath('/');
+    revalidatePath('/review');
+    return { success: true };
+  } catch (error) {
+    console.error('Error al guardar plan semanal:', error);
+    return { success: false, error: 'No se pudo guardar la planeación dominical.' };
   }
 }
