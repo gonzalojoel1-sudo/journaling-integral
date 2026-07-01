@@ -13,7 +13,6 @@ const DEMO_USER_ID = 'demo-user-id';
 
 /**
  * Resuelve el ID del usuario en sesión activa de forma cacheada (Memoized)
- * Evita llamadas redundantes y secuenciales en el mismo renderizado de página.
  */
 export const getCurrentUserId = cache(async (): Promise<string> => {
   try {
@@ -414,7 +413,7 @@ export async function updateUserLevel(level: number) {
 }
 
 /**
- * Obtiene versículos de la biblioteca filtrados por un tópico específico con fallback dinámico.
+ * Obtiene versículos de la biblioteca filtrados por un tópico específico con fallback dinámico de rotación.
  */
 export async function getVersesByTopic(topic?: string) {
   try {
@@ -436,13 +435,36 @@ export async function getVersesByTopic(topic?: string) {
     const randomIndex = Math.floor(Math.random() * list.length);
     return list[randomIndex];
   } catch (error) {
-    return {
-      id: 'fallback-guided-id',
-      reference: 'Josué 1:9',
-      text: 'Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas.',
-      interpretation: 'Tu fortaleza está garantizada hoy. Camina con valentía y asume las tareas con diligencia y fe.',
-      recommendedLevel: 1,
-      topic: 'Dominio Propio'
-    };
+    // --- POOL DE RESPALDO DE DOPAMINA MULTI-TÓPICO FUERA DE LÍNEA ---
+    // Si la base de datos está vacía, el sistema alternará reactivamente entre estos 3 versículos clave
+    const offlineFallbacks = [
+      {
+        id: 'fallback-1',
+        reference: 'Josué 1:9',
+        text: 'Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas.',
+        interpretation: 'Tu fortaleza está garantizada hoy. Camina con valentía y asume las tareas con diligencia y fe.',
+        recommendedLevel: 1,
+        topic: 'Dominio Propio'
+      },
+      {
+        id: 'fallback-2',
+        reference: 'Proverbios 21:5',
+        text: 'Los pensamientos del diligente ciertamente tienden a la abundancia; mas todo el que se apresura alocadamente, de cierto va a la pobreza.',
+        interpretation: 'La disciplina en planificar vence a la reactividad de tus impulsos. Administra tu negocio con sobriedad hoy.',
+        recommendedLevel: 1,
+        topic: 'Finanzas'
+      },
+      {
+        id: 'fallback-3',
+        reference: 'Jeremías 31:3',
+        text: 'Con amor eterno te he amado; por tanto, te prolongué mi misericordia.',
+        interpretation: 'Tu valor identitario como ser humano no depende de tu nivel de productividad diaria, sino del amor de tu creador.',
+        recommendedLevel: 1,
+        topic: 'Identidad'
+      }
+    ];
+
+    const randomIndex = Math.floor(Math.random() * offlineFallbacks.length);
+    return offlineFallbacks[randomIndex];
   }
 }

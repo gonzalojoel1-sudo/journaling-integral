@@ -3,16 +3,12 @@
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { db } from '../../db/db';
-import { users } from '../../db/schema';
-import { randomUUID } from 'crypto';
 import { 
   Sparkles, 
   Mail, 
   Lock, 
   User, 
   ArrowRight, 
-  CheckCircle,
   Loader2 
 } from 'lucide-react';
 
@@ -34,15 +30,12 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
-        // --- PROCESO DE REGISTRO MULTI-USUARIO ---
         if (!name.trim() || !email.trim() || !password.trim()) {
           setError('Todos los campos son obligatorios para el registro.');
           setLoading(false);
           return;
         }
 
-        // Llamamos a un Server Action o API local para registrar (para mantenerlo simple,
-        // enviaremos una petición rápida a un endpoint o guardamos de forma directa)
         const response = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -54,17 +47,20 @@ export default function LoginPage() {
           throw new Error(data.error || 'Ocurrió un error en el registro.');
         }
 
-        // Auto-login tras registro exitoso
-        await signIn('credentials', {
+        // Login automático tras registro exitoso
+        const res = await signIn('credentials', {
           email,
           password,
           redirect: false,
         });
 
-        router.push('/');
-        router.refresh();
+        if (res?.error) {
+          throw new Error('Error al iniciar sesión tras el registro.');
+        }
+
+        // window.location fuerza a NextAuth a recargar las cookies de sesión de forma instantánea y limpia
+        window.location.href = '/';
       } else {
-        // --- PROCESO DE INICIO DE SESIÓN ---
         const res = await signIn('credentials', {
           email,
           password,
@@ -75,8 +71,7 @@ export default function LoginPage() {
           throw new Error('Credenciales incorrectas. Verifica tu correo y contraseña.');
         }
 
-        router.push('/');
-        router.refresh();
+        window.location.href = '/';
       }
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error inesperado.');
