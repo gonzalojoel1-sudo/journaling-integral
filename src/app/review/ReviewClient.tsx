@@ -16,7 +16,10 @@ import {
   Percent,
   Calendar,
   Zap,
-  Target
+  Target,
+  Clock,
+  ChevronRight,
+  Smile
 } from 'lucide-react';
 
 interface DailyEntry {
@@ -54,17 +57,16 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
   // --- 1. COMPILACIÓN Y CLASIFICACIÓN DE LOGROS (Paso 1) ---
   const achievements = weeklyEntries
     .map(e => {
-      // Intentar clasificar el logro por el contenido de forma inteligente
       let category = 'Ser';
-      let badgeColor = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400';
+      let badgeColor = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/30';
       
       const txt = (e.dailyMicroAchievement || '').toLowerCase();
       if (txt.includes('venta') || txt.includes('dinero') || txt.includes('cliente') || txt.includes('reunión') || txt.includes('negocio') || txt.includes('prospecto')) {
         category = 'Negocio';
-        badgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
+        badgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/30';
       } else if (txt.includes('orar') || txt.includes('biblia') || txt.includes('dios') || txt.includes('iglesia') || txt.includes('devocional')) {
         category = 'Espiritual';
-        badgeColor = 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400';
+        badgeColor = 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30';
       }
 
       return {
@@ -81,7 +83,6 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
   const weeklySales = weeklyEntries.reduce((acc, e) => acc + e.bizSalesCount, 0);
   const weeklyContacts = weeklyEntries.reduce((acc, e) => acc + e.bizContactsCount, 0);
 
-  // Tasa de conversión de contactos a ventas (Cierres / Contactos * 100) en tiempo real
   const conversionRate = weeklyContacts > 0 ? (weeklySales / weeklyContacts) * 100 : 0;
 
   // --- 3. EL TERMÓMETRO DEL CÍRCULO ÍNTIMO NUCLEAR (Paso 3) ---
@@ -149,48 +150,69 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
     }
   };
 
+  const DAYS_OF_WEEK = [
+    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-8 relative">
       
-      {/* Indicador de pasos */}
-      <div className="flex items-center justify-between bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 p-4 rounded-2xl shadow-sm">
-        <span className="text-xs font-bold font-mono text-stone-500 uppercase">Alineación Estratégica Semanal</span>
-        <div className="flex gap-1.5">
-          {[1, 2, 3, 4].map((s) => (
-            <div 
-              key={s} 
-              className={`h-2.5 w-10 rounded-full transition-all duration-300 ${
-                step >= s ? 'bg-emerald-600 dark:bg-emerald-500' : 'bg-stone-200 dark:bg-stone-850'
-              }`}
-            ></div>
-          ))}
-        </div>
+      {/* --- EFECTO DE GRADIENTES ABSTRACTOS DE FONDO (Ocultos al imprimir) --- */}
+      <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-emerald-500/10 dark:bg-emerald-500/5 blur-3xl pointer-events-none print:hidden"></div>
+      <div className="absolute -bottom-20 right-0 h-96 w-96 rounded-full bg-indigo-500/10 dark:bg-indigo-500/5 blur-3xl pointer-events-none print:hidden"></div>
+
+      {/* --- ENCABEZADO DE PASOS ESTILIZADO (WIZARD PREMIUM) --- */}
+      <div className="grid grid-cols-4 gap-2 bg-white/70 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-850 p-3 rounded-2xl shadow-soft backdrop-blur-md print:hidden">
+        {[
+          { num: 1, label: '🏆 Logros', desc: 'Mis victorias' },
+          { num: 2, label: '💼 Negocio', desc: 'Mayordomía' },
+          { num: 3, label: '🤍 Familia', desc: 'Mi círculo' },
+          { num: 4, label: '🚀 Enfoque', desc: 'Reset semanal' }
+        ].map((s) => (
+          <button
+            key={s.num}
+            type="button"
+            onClick={() => setStep(s.num)}
+            className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all-fresco cursor-pointer text-center ${
+              step === s.num
+                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                : 'text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-850'
+            }`}
+          >
+            <span className="text-xs sm:text-sm font-extrabold">{s.label}</span>
+            <span className={`hidden sm:inline-block text-[9px] mt-0.5 ${step === s.num ? 'text-emerald-100' : 'text-stone-400'}`}>
+              {s.desc}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* ========================================================================= */}
       {/* PASO 1: MURO DE LOGROS COMPILADOS Y CATEGORIZADOS                         */}
       {/* ========================================================================= */}
       {step === 1 && (
-        <div className="p-6 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white dark:bg-stone-900 shadow-soft space-y-5 animate-fade-in">
-          <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
-            <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
-              <Award className="h-5 w-5 text-emerald-500 shrink-0" />
-              1. Muro de Logros Semanales (Clasificación Inteligente)
-            </h3>
-            <p className="text-xs text-stone-500 mt-1">
-              Aquí tienes la bitácora de tus victorias del diario de los últimos 7 días. El balance te ayuda a ver dónde estás teniendo más impacto.
-            </p>
+        <div className="p-8 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white/80 dark:bg-stone-900/70 backdrop-blur-md shadow-soft space-y-6 animate-fade-in">
+          <div className="border-b border-stone-200 dark:border-stone-800 pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
+                <Award className="h-5 w-5 text-emerald-500 shrink-0" />
+                1. Muro de Logros Semanales
+              </h3>
+              <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                Aquí tienes la bitácora de tus victorias del diario de los últimos 7 días. El balance te ayuda a ver dónde estás teniendo más impacto.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-1">
             {achievements.length > 0 ? (
               achievements.map((ach, idx) => (
-                <div key={idx} className="p-4 bg-stone-50 dark:bg-stone-950/40 border border-stone-150 dark:border-stone-850 rounded-2xl shadow-sm space-y-2 flex flex-col justify-between">
+                <div key={idx} className="p-4 bg-white/40 dark:bg-stone-950/40 border border-stone-200/50 dark:border-stone-850/60 rounded-2xl shadow-sm space-y-2 flex flex-col justify-between hover:shadow transition-all duration-300">
                   <p className="text-xs font-bold text-stone-800 dark:text-stone-300 italic leading-relaxed">
                     "{ach.text}"
                   </p>
-                  <div className="flex items-center justify-between border-t border-stone-100 dark:border-stone-850 pt-2.5 mt-2">
-                    <span className={`text-[9px] font-bold font-mono uppercase px-2 py-0.5 rounded ${ach.badgeColor}`}>
+                  <div className="flex items-center justify-between border-t border-stone-150 dark:border-stone-850 pt-2.5 mt-2">
+                    <span className={`text-[9px] font-bold font-mono uppercase px-2.5 py-0.5 rounded ${ach.badgeColor}`}>
                       {ach.category}
                     </span>
                     <span className="text-[9px] font-mono text-stone-400 font-bold">{ach.date}</span>
@@ -208,7 +230,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
       {/* PASO 2: MAYORDOMÍA COMERCIAL CON TASA DE CONVERSIÓN                       */}
       {/* ========================================================================= */}
       {step === 2 && (
-        <div className="p-6 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white dark:bg-stone-900 shadow-soft space-y-6 animate-fade-in">
+        <div className="p-8 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white/80 dark:bg-stone-900/70 backdrop-blur-md shadow-soft space-y-6 animate-fade-in">
           <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
             <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-emerald-500 shrink-0" />
@@ -221,21 +243,21 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Ingresos (Glass Emerald) */}
-            <div className="p-6 rounded-2xl border border-emerald-500/20 bg-emerald-50/5 dark:bg-emerald-950/5 shadow-emerald-500/5 text-center space-y-2">
+            <div className="p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/20 shadow-emerald-500/5 text-center space-y-2">
               <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono block uppercase">Ingresos Generados</span>
               <p className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">${weeklyIncome.toFixed(2)}</p>
               <p className="text-[10px] text-stone-400 italic">Mayordomía e ingresos totales</p>
             </div>
 
             {/* Ventas y Contactos (Glass Blue) */}
-            <div className="p-6 rounded-2xl border border-blue-500/20 bg-blue-50/5 dark:bg-blue-950/5 shadow-blue-500/5 text-center space-y-2">
+            <div className="p-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 dark:bg-blue-950/20 shadow-blue-500/5 text-center space-y-2">
               <span className="text-[10px] font-bold text-blue-500 dark:text-blue-400 font-mono block uppercase">Embudo Comercial</span>
               <p className="text-4xl font-extrabold text-stone-800 dark:text-stone-100">{weeklySales}</p>
               <p className="text-[10px] text-stone-400 italic">Cierres de un total de {weeklyContacts} prospectos</p>
             </div>
 
             {/* Conversión Real (Glass Amber) */}
-            <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-50/5 dark:bg-amber-950/5 shadow-amber-500/5 text-center space-y-2">
+            <div className="p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 shadow-amber-500/5 text-center space-y-2">
               <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 font-mono block uppercase">Tasa de Conversión</span>
               <p className="text-4xl font-extrabold text-amber-600 dark:text-amber-500">{conversionRate.toFixed(1)}%</p>
               <p className="text-[10px] text-stone-400 italic">Porcentaje de éxito comercial</p>
@@ -248,7 +270,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
       {/* PASO 3: EL TERMÓMETRO DEL CÍRCULO ÍNTIMO NUCLEAR                          */}
       {/* ========================================================================= */}
       {step === 3 && (
-        <div className="p-6 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white dark:bg-stone-900 shadow-soft space-y-6 animate-fade-in">
+        <div className="p-8 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white/80 dark:bg-stone-900/70 backdrop-blur-md shadow-soft space-y-6 animate-fade-in">
           <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
             <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
               <Heart className="h-5 w-5 text-rose-500 shrink-0" />
@@ -313,7 +335,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
       {/* PASO 4: PLANIFICACIÓN SEMANAL ANTIRREACTIVA Y DE DESTRABE                 */}
       {/* ========================================================================= */}
       {step === 4 && (
-        <div className="p-6 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white dark:bg-stone-900 shadow-soft space-y-5 animate-fade-in">
+        <div className="p-8 rounded-3xl border border-stone-200 dark:border-stone-850 bg-white/80 dark:bg-stone-900/70 backdrop-blur-md shadow-soft space-y-5 animate-fade-in">
           <div className="border-b border-stone-200 dark:border-stone-800 pb-3">
             <h3 className="text-md font-bold text-stone-800 dark:text-stone-200 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-500" />
@@ -333,7 +355,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
               <input
                 type="text" value={weeklyFocus} onChange={(e) => setWeeklyFocus(e.target.value)}
                 placeholder="Ej. Consolidar el MVP del servicio comercial con llamadas de diagnóstico"
-                className="w-full bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none font-bold"
+                className="w-full bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-3 text-sm outline-none font-bold focus:ring-1 focus:ring-emerald-500"
               />
             </div>
 
@@ -347,16 +369,14 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
               <div className="flex gap-2 items-center">
                 <select
                   value={day1} onChange={(e) => setDay1(e.target.value)}
-                  className="bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-3 py-2 text-xs font-bold w-28"
+                  className="bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-3 py-2.5 text-xs font-bold w-32 cursor-pointer"
                 >
-                  <option value="Lunes">Lunes</option>
-                  <option value="Martes">Martes</option>
-                  <option value="Miércoles">Miércoles</option>
+                  {DAYS_OF_WEEK.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
                 <input
                   type="text" value={task1} onChange={(e) => setPrep1(e.target.value)}
                   placeholder="Acción clave de destrabe 1"
-                  className="flex-1 bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2 text-xs outline-none"
+                  className="flex-1 bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
 
@@ -364,16 +384,14 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
               <div className="flex gap-2 items-center">
                 <select
                   value={day2} onChange={(e) => setDay2(e.target.value)}
-                  className="bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-3 py-2 text-xs font-bold w-28"
+                  className="bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-3 py-2.5 text-xs font-bold w-32 cursor-pointer"
                 >
-                  <option value="Miércoles">Miércoles</option>
-                  <option value="Martes">Martes</option>
-                  <option value="Jueves">Jueves</option>
+                  {DAYS_OF_WEEK.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
                 <input
                   type="text" value={task2} onChange={(e) => setPrep2(e.target.value)}
                   placeholder="Acción clave de destrabe 2"
-                  className="flex-1 bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2 text-xs outline-none"
+                  className="flex-1 bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
 
@@ -381,16 +399,14 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
               <div className="flex gap-2 items-center">
                 <select
                   value={day3} onChange={(e) => setDay3(e.target.value)}
-                  className="bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-3 py-2 text-xs font-bold w-28"
+                  className="bg-stone-100 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-3 py-2.5 text-xs font-bold w-32 cursor-pointer"
                 >
-                  <option value="Viernes">Viernes</option>
-                  <option value="Jueves">Jueves</option>
-                  <option value="Sábado">Sábado</option>
+                  {DAYS_OF_WEEK.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
                 <input
                   type="text" value={task3} onChange={(e) => setPrep3(e.target.value)}
                   placeholder="Acción clave de destrabe 3"
-                  className="flex-1 bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2 text-xs outline-none"
+                  className="flex-1 bg-stone-100/60 dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
             </div>
@@ -414,7 +430,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
         {step < 4 ? (
           <button
             type="button" onClick={() => setStep(step + 1)}
-            className="flex items-center gap-1.5 bg-stone-900 dark:bg-stone-100 text-stone-100 dark:text-stone-900 px-5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 bg-stone-900 dark:bg-stone-100 text-stone-100 dark:text-stone-900 px-5 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm hover:opacity-90"
           >
             Siguiente Paso <ArrowRight className="h-4 w-4" />
           </button>
