@@ -23,14 +23,14 @@ async function fetchJson(method: string, path: string, body?: unknown): Promise<
 }
 
 export const api = {
-  get: <T = unknown>(path: string) =>
-    fetchJson('GET', path) as Promise<{ success: boolean; data?: T; error?: string }>,
-  post: <T = unknown>(path: string, body: unknown) =>
-    fetchJson('POST', path, body) as Promise<{ success: boolean; data?: T; error?: string }>,
-  patch: <T = unknown>(path: string, body: unknown) =>
-    fetchJson('PATCH', path, body) as Promise<{ success: boolean; data?: T; error?: string }>,
-  del: <T = unknown>(path: string) =>
-    fetchJson('DELETE', path) as Promise<{ success: boolean; data?: T; error?: string }>,
+  get: (path: string) =>
+    fetchJson('GET', path) as Promise<{ success: boolean; data?: any; error?: string }>,
+  post: (path: string, body: unknown) =>
+    fetchJson('POST', path, body) as Promise<{ success: boolean; data?: any; error?: string }>,
+  patch: (path: string, body: unknown) =>
+    fetchJson('PATCH', path, body) as Promise<{ success: boolean; data?: any; error?: string }>,
+  del: (path: string) =>
+    fetchJson('DELETE', path) as Promise<{ success: boolean; data?: any; error?: string }>,
   rawGet: async (path: string): Promise<unknown> => {
     const headers: Record<string, string> = {};
     const token = getTokenFromCookie();
@@ -40,9 +40,9 @@ export const api = {
   },
 };
 
-export async function serverFetch<T = unknown>(path: string): Promise<{ success: boolean; data?: T; error?: string }> {
+export async function serverFetch(path: string): Promise<{ success: boolean; data?: any; error?: string }> {
   const { cookies } = await import('next/headers');
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('next-auth.session-token')?.value
     || cookieStore.get('__Secure-next-auth.session-token')?.value;
 

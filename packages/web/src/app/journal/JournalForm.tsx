@@ -248,7 +248,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
       payload.dominantFocusCompleted = dominantFocusCompleted;
     }
 
-    const res = await api.post<{ levelUpgraded: boolean; newLevel: number }>('/api/journal/entries', payload);
+    const res = await api.post('/api/journal/entries', payload);
     setLoading(false);
 
     if (res.success) {
