@@ -1,8 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import Navigation from '../components/Navigation';
-import { Providers } from './providers';
+import { Navigation } from '../components/Navigation';
+import { Providers } from './providers'; // Importar Proveedor de Sesión
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
