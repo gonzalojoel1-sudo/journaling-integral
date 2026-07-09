@@ -1,11 +1,11 @@
 import React from 'react';
-import { getActiveHabits } from '../actions/journal';
+import { serverFetch } from '@/lib/api-client';
 import { HabitsClient } from './HabitsClient';
 
 export default async function HabitsPage() {
   // Obtener hábitos activos del usuario demo
-  const res = await getActiveHabits();
-  const initialHabits = res.habits || [];
+  const res = await serverFetch('/api/habits');
+  const initialHabits = res.data || [];
 
   return (
     <div className="space-y-6">

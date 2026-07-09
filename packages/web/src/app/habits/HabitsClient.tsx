@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createHabit, archiveHabit } from '../actions/journal';
+import { api } from '@/lib/api-client';
 import { 
   Plus, 
   Trash2, 
@@ -52,7 +52,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
     setLoading(true);
     setError(null);
 
-    const res = await createHabit(name, type, strategyDetails);
+    const res = await api.post('/api/habits', { name, type, strategyDetails });
     setLoading(false);
 
     if (res.success) {
@@ -92,7 +92,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
       reward: stackReward
     });
 
-    const res = await createHabit(habitName, 'OPTIMIZAR', serializedStack);
+    const res = await api.post('/api/habits', { name: habitName, type: 'OPTIMIZAR', strategyDetails: serializedStack });
     setLoading(false);
 
     if (res.success) {
@@ -118,7 +118,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
   const handleArchive = async (habitId: string) => {
     if (!confirm('¿Deseas archivar este hábito del catálogo activo?')) return;
     setHabitsList(habitsList.filter(h => h.id !== habitId));
-    await archiveHabit(habitId);
+    await api.del(`/api/habits/${habitId}`);
   };
 
   // Filtrar hábitos para el catálogo

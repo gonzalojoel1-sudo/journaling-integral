@@ -1,12 +1,12 @@
 import React from 'react';
-import { getAnalyticsData } from '../actions/journal';
+import { serverFetch } from '@/lib/api-client';
 import { ReviewClient } from './ReviewClient';
 
 export default async function ReviewPage() {
-  const analyticsRes = await getAnalyticsData();
+  const analyticsRes = await serverFetch('/api/journal/analytics');
   
   // Filtrar los registros de los últimos 7 días
-  const entries = analyticsRes.entries || [];
+  const entries = analyticsRes.data || [];
   const weeklyEntries = entries.slice(0, 7);
 
   return (

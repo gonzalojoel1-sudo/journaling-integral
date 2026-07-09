@@ -1,10 +1,10 @@
 import React from 'react';
-import { getActiveQuarterlyPlan, getOrCreateUserProfile } from '../actions/journal';
+import { serverFetch } from '@/lib/api-client';
 import { QuarterlyPlanForm } from './QuarterlyPlanForm';
 
 export default async function QuarterlyPlanPage() {
-  const profileRes = await getOrCreateUserProfile();
-  const user = profileRes.user;
+  const profileRes = await serverFetch('/api/auth/me');
+  const user = profileRes.data;
 
   if (!user) {
     return (
@@ -15,8 +15,8 @@ export default async function QuarterlyPlanPage() {
   }
 
   // Consultar plan trimestral activo
-  const res = await getActiveQuarterlyPlan();
-  const activePlan = res.plan;
+  const res = await serverFetch('/api/planning/quarterly');
+  const activePlan = res.data;
 
   return (
     <div className="space-y-6">

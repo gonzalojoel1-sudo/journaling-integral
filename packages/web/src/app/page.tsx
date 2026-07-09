@@ -1,9 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { db } from '../db/db';
-import { dailyEntries, users } from '../db/schema';
-import { getOrCreateUserProfile, getRandomVerse, getActiveWeeklyPlan } from './actions/journal';
-import { eq, and, gte } from 'drizzle-orm';
+import { serverFetch } from '@/lib/api-client';
 import { 
   Flame, 
   Award, 
@@ -19,8 +16,8 @@ import {
 } from 'lucide-react';
 
 export default async function DashboardPage() {
-  const profileRes = await getOrCreateUserProfile();
-  const user = profileRes.user;
+  const profileRes = await serverFetch('/api/auth/me');
+  const user = profileRes.data;
 
   if (!user) {
     return (
@@ -32,33 +29,26 @@ export default async function DashboardPage() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const analyticsRes = await serverFetch('/api/journal/analytics');
+  const entries = analyticsRes.data || [];
+
   // 1. Comprobar si ya completó el diario de hoy
-  const todayEntry = await db.query.dailyEntries.findFirst({
-    where: and(
-      eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, todayStr)
-    ),
-  });
+  const todayEntry = entries.find((e: any) => e.date === todayStr) || null;
 
   // 2. RECUPERAR LA "PREPARACIÓN PARA MAÑANA" DE AYER
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-  const yesterdayEntry = await db.query.dailyEntries.findFirst({
-    where: and(
-      eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, yesterdayStr)
-    ),
-  });
+  const yesterdayEntry = entries.find((e: any) => e.date === yesterdayStr) || null;
 
   const antiReactivityTasks: string[] = yesterdayEntry?.prepTomorrowJson 
     ? JSON.parse(yesterdayEntry.prepTomorrowJson) 
     : [];
 
   // --- 3. NUEVO MOTOR DE INTEGRACIÓN: AUTOMATIZACIÓN DE DESTRABE SEMANAL ---
-  const weeklyPlanRes = await getActiveWeeklyPlan();
-  const activeWeeklyPlan = weeklyPlanRes.plan;
+  const weeklyPlanRes = await serverFetch('/api/planning/weekly');
+  const activeWeeklyPlan = weeklyPlanRes.data;
 
   let todayWeeklyDestrabeAction = '';
   let weeklyFocusText = '';
@@ -83,21 +73,12 @@ export default async function DashboardPage() {
   }
 
   // 4. Versículo de anclaje diario
-  const verse = await getRandomVerse(user.currentLevel);
+  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const verseRes = await fetch(`${API}/api/bible/random?level=${user.currentLevel}`);
+  const verse = await verseRes.json();
 
   // 5. Constancia últimos 30 días
-  const dateLimit = new Date();
-  dateLimit.setDate(dateLimit.getDate() - 30);
-  const dateLimitStr = dateLimit.toISOString().split('T')[0];
-
-  const entriesLast30Days = await db.query.dailyEntries.findMany({
-    where: and(
-      eq(dailyEntries.userId, user.id),
-      gte(dailyEntries.date, dateLimitStr)
-    ),
-  });
-
-  const completedDays = entriesLast30Days.length;
+  const completedDays = entries.length;
 
   const levelRequirements = {
     1: { target: 18, next: 'Nivel 2 (Dirección)' },

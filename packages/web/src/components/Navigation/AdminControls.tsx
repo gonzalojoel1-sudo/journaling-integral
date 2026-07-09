@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateUserLevel } from '../../app/actions/journal';
+import { api } from '@/lib/api-client';
 import { Settings2, Loader2 } from 'lucide-react';
 
 export function AdminControls() {
@@ -14,7 +14,7 @@ export function AdminControls() {
   const handleLevelChange = (level: number) => {
     setAdminLevel(level);
     startTransition(async () => {
-      await updateUserLevel(level);
+      const res = await api.patch('/api/auth/level', { level });
       router.refresh();
     });
   };

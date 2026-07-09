@@ -1,15 +1,15 @@
 import React from 'react';
-import { getAnalyticsData, getActiveQuarterlyPlan } from '../actions/journal';
+import { serverFetch } from '@/lib/api-client';
 import { ProgressClient } from './ProgressClient';
 
 export default async function ProgressPage() {
   // Obtener los datos históricos de los últimos 30 días
-  const analyticsRes = await getAnalyticsData();
-  const entries = analyticsRes.entries || [];
+  const analyticsRes = await serverFetch('/api/journal/analytics');
+  const entries = analyticsRes.data || [];
 
   // Obtener el plan trimestral activo para posibilitar su exportación
-  const planRes = await getActiveQuarterlyPlan();
-  const activePlan = planRes.plan;
+  const planRes = await serverFetch('/api/planning/quarterly');
+  const activePlan = planRes.data;
 
   return (
     <div className="space-y-6">

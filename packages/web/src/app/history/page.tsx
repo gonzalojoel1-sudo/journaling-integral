@@ -1,11 +1,11 @@
 import React from 'react';
-import { getAnalyticsData } from '../actions/journal';
+import { serverFetch } from '@/lib/api-client';
 import { HistoryClient } from './HistoryClient';
 
 export default async function HistoryPage() {
   // Cargar las entradas históricas de los últimos 30 días
-  const res = await getAnalyticsData();
-  const entries = res.entries || [];
+  const res = await serverFetch('/api/journal/analytics');
+  const entries = res.data || [];
 
   return (
     <div className="space-y-6">

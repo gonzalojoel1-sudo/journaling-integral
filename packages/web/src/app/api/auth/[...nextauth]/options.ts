@@ -64,5 +64,16 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: false,
+        sameSite: 'lax',
+        path: '/',
+        secure: false,
+      },
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET || 'journaling-nextauth-super-secret-key-12345',
 };

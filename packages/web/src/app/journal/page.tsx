@@ -1,13 +1,10 @@
 import React from 'react';
-import { getOrCreateUserProfile, getActiveHabits } from '../actions/journal';
-import { db } from '../../db/db';
-import { dailyEntries } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { serverFetch } from '@/lib/api-client';
 import { JournalForm } from './JournalForm';
 
 export default async function JournalPage() {
-  const profileRes = await getOrCreateUserProfile();
-  const user = profileRes.user;
+  const profileRes = await serverFetch('/api/auth/me');
+  const user = profileRes.data;
 
   if (!user) {
     return (
@@ -18,17 +15,14 @@ export default async function JournalPage() {
   }
 
   // 1. Obtener hábitos activos del catálogo del usuario
-  const habitsRes = await getActiveHabits();
-  const habitsList = habitsRes.habits || [];
+  const habitsRes = await serverFetch('/api/habits');
+  const habitsList = habitsRes.data || [];
 
   // 2. Verificar si ya existe un registro para hoy
   const todayStr = new Date().toISOString().split('T')[0];
-  const existingEntry = await db.query.dailyEntries.findFirst({
-    where: and(
-      eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, todayStr)
-    ),
-  });
+  const analyticsRes = await serverFetch('/api/journal/analytics');
+  const entries = analyticsRes.data || [];
+  const existingEntry = entries.find((e: any) => e.date === todayStr) || null;
 
   return (
     <div className="space-y-6">

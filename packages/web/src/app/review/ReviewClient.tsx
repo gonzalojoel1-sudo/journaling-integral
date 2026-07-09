@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveWeeklyPlan } from '../actions/journal';
+import { api } from '@/lib/api-client';
 import { 
   Award, 
   Activity, 
@@ -127,7 +127,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
         ].filter(t => t.task.trim() !== '')
       };
 
-      const res = await saveWeeklyPlan(payload);
+      const res = await api.post('/api/planning/weekly', payload);
       if (res.success) {
         alert('Planificación Dominical registrada y guardada con éxito en tu base de datos de Turso.');
         router.push('/');

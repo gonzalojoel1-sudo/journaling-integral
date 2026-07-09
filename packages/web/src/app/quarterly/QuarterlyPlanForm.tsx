@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveQuarterlyPlan } from '../actions/journal';
+import { api } from '@/lib/api-client';
 import { 
   Save, 
   Compass, 
@@ -151,7 +151,7 @@ export function QuarterlyPlanForm({ initialPlan, userLevel }: QuarterlyPlanFormP
       actionsPlan: userLevel >= 2 ? metaPlans : []
     };
 
-    const res = await saveQuarterlyPlan(payload);
+    const res = await api.post('/api/planning/quarterly', payload);
     setLoading(false);
 
     if (res.success) {
