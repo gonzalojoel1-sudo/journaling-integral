@@ -35,7 +35,7 @@ export function MobileNav({ isAdmin }: MobileNavProps) {
   const pathname = usePathname();
 
   const dynamicNavItems = isAdmin
-    ? [...NAV_ITEMS, { label: 'Usuarios (Admin)', href: '/admin/users', icon: ShieldAlert }]
+    ? [...NAV_ITEMS, { label: 'Admin', href: '/admin/users', icon: ShieldAlert }]
     : NAV_ITEMS;
 
   return (
