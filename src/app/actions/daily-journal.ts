@@ -6,6 +6,7 @@ import { eq, and, desc, gte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getOrCreateUserProfile } from './auth';
+import { validateActiveChallenges } from './challenges';
 
 function calculateStreak(
   lastEntryDate: string | null,
@@ -25,6 +26,7 @@ function calculateStreak(
 function checkLevelProgression(currentLevel: number, activeDaysCount: number): number {
   if (currentLevel === 1 && activeDaysCount >= 18) return 2;
   if (currentLevel === 2 && activeDaysCount >= 25) return 3;
+  if (currentLevel === 3 && activeDaysCount >= 28) return 3; // Lvl 4-5 requieren badges, no dias
   return currentLevel;
 }
 
@@ -164,11 +166,15 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     revalidatePath('/');
     revalidatePath('/journal');
     revalidatePath('/progress');
+    revalidatePath('/challenges');
+
+    const challengeResult = await validateActiveChallenges(entryData, user);
 
     return {
       success: true,
       levelUpgraded: targetLevel > user.currentLevel,
       newLevel: targetLevel,
+      badgeUnlocked: challengeResult.badgeUnlocked || null,
     };
   } catch (error) {
     console.error('Error al guardar el diario:', error);

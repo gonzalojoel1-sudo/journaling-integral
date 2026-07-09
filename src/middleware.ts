@@ -8,6 +8,7 @@ export const config = {
     '/history',
     '/quarterly',
     '/habits',
+    '/challenges',
     '/progress',
     '/review'
   ]

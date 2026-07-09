@@ -176,3 +176,41 @@ export const bibleVerses = sqliteTable('bible_verses', {
   recommendedLevel: integer('recommended_level').default(1).notNull(),
   topic: text('topic'),
 });
+
+export const challenges = sqliteTable('challenges', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  templateId: text('template_id').notNull(),
+  status: text('status').notNull().default('active'),
+  currentDay: integer('current_day').notNull().default(1),
+  progressJson: text('progress_json'),
+  startedAt: text('started_at').notNull(),
+  completedAt: text('completed_at'),
+});
+
+export const challengesRelations = relations(challenges, ({ one }) => ({
+  user: one(users, {
+    fields: [challenges.userId],
+    references: [users.id],
+  }),
+}));
+
+export const badges = sqliteTable('badges', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  badgeId: text('badge_id').notNull(),
+  area: text('area').notNull(),
+  mineral: text('mineral').notNull(),
+  unlockedAt: text('unlocked_at').notNull(),
+});
+
+export const badgesRelations = relations(badges, ({ one }) => ({
+  user: one(users, {
+    fields: [badges.userId],
+    references: [users.id],
+  }),
+}));

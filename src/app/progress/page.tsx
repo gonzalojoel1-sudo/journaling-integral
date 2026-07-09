@@ -1,29 +1,30 @@
 import React from 'react';
 import { getAnalyticsData, getActiveQuarterlyPlan } from '../actions/journal';
+import { getBadges } from '../actions/challenges';
 import { ProgressClient } from './ProgressClient';
 
 export default async function ProgressPage() {
-  // Obtener los datos históricos de los últimos 30 días
   const analyticsRes = await getAnalyticsData();
   const entries = analyticsRes.entries || [];
 
-  // Obtener el plan trimestral activo para posibilitar su exportación
   const planRes = await getActiveQuarterlyPlan();
   const activePlan = planRes.plan;
 
+  const badgesRes = await getBadges();
+  const badges = badgesRes.badges || [];
+
   return (
     <div className="space-y-6">
-      {/* Cabecera oculta al imprimir */}
       <header className="border-b border-stone-200 dark:border-stone-800 pb-4 print:hidden">
         <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-          Progreso y Análisis
+          Progreso y Analisis
         </h1>
         <p className="text-sm text-stone-500 mt-1">
-          Visualiza tus métricas de bienestar, correlaciones conductuales y exporta tu planeamiento estratégico trimestral.
+          Visualiza tus metricas de bienestar, insignias desbloqueadas y tu planeamiento estrategico.
         </p>
       </header>
 
-      <ProgressClient entries={entries} activePlan={activePlan} />
+      <ProgressClient entries={entries} activePlan={activePlan} badges={badges} />
     </div>
   );
 }

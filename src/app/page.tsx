@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { db } from '../db/db';
 import { dailyEntries, users } from '../db/schema';
 import { getOrCreateUserProfile, getRandomVerse, getActiveWeeklyPlan } from './actions/journal';
+import { getActiveChallenges } from './actions/challenges';
+import { ALL_TEMPLATES } from '@/lib/challenge-templates';
 import { eq, and, gte } from 'drizzle-orm';
 import { 
   Flame, 
@@ -15,7 +17,8 @@ import {
   Compass,
   CheckSquare,
   AlertTriangle,
-  Target // Importación corregida de forma estricta
+  Target,
+  Trophy,
 } from 'lucide-react';
 
 export default async function DashboardPage() {
@@ -85,7 +88,11 @@ export default async function DashboardPage() {
   // 4. Versículo de anclaje diario
   const verse = await getRandomVerse(user.currentLevel);
 
-  // 5. Constancia últimos 30 días
+  // 5. Desafios activos
+  const challengesRes = await getActiveChallenges();
+  const activeChallenges = challengesRes.challenges || [];
+
+  // 6. Constancia últimos 30 días
   const dateLimit = new Date();
   dateLimit.setDate(dateLimit.getDate() - 30);
   const dateLimitStr = dateLimit.toISOString().split('T')[0];
@@ -100,12 +107,14 @@ export default async function DashboardPage() {
   const completedDays = entriesLast30Days.length;
 
   const levelRequirements = {
-    1: { target: 18, next: 'Nivel 2 (Dirección)' },
+    1: { target: 18, next: 'Nivel 2 (Direccion)' },
     2: { target: 25, next: 'Nivel 3 (Legado)' },
-    3: { target: 30, next: 'Máximo nivel alcanzado' },
+    3: { target: 30, next: 'Nivel 4 (Maestro) - requiere insignias Diamante' },
+    4: { target: 30, next: 'Nivel 5 (Leyenda) - requiere insignia Legendaria' },
+    5: { target: 30, next: 'Maximo nivel alcanzado' },
   };
 
-  const currentRequirement = levelRequirements[user.currentLevel as 1 | 2 | 3] || { target: 18, next: 'Nivel 2' };
+  const currentRequirement = levelRequirements[user.currentLevel as 1 | 2 | 3 | 4 | 5] || { target: 18, next: 'Nivel 2' };
   const progressPercent = Math.min(Math.round((completedDays / currentRequirement.target) * 100), 100);
 
   const formattedDate = new Date().toLocaleDateString('es-ES', {
@@ -128,10 +137,14 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
             {user.currentLevel === 1 
-              ? 'Enfoque de hoy: Interrumpir el piloto automático y crear orden consciente.'
+              ? 'Enfoque de hoy: Interrumpir el piloto automatico y crear orden consciente.'
               : user.currentLevel === 2
-              ? 'Enfoque de hoy: Alinear tus prioridades y hábitos con la visión a 5 años.'
-              : 'Enfoque de hoy: Medir el impacto generacional, legado y mayordomía integral.'}
+              ? 'Enfoque de hoy: Alinear tus prioridades y habitos con la vision a 5 anos.'
+              : user.currentLevel === 3
+              ? 'Enfoque de hoy: Medir el impacto generacional, legado y mayordomia integral.'
+              : user.currentLevel === 4
+              ? 'Enfoque de hoy: Maestria — multiplica tu impacto, mentorea a otros.'
+              : 'Enfoque de hoy: Leyenda — tu vida es un legado que trasciende generaciones.'}
           </p>
         </div>
 
@@ -145,7 +158,7 @@ export default async function DashboardPage() {
               Nivel Actual
             </span>
             <p className="text-sm font-bold text-stone-850 dark:text-stone-200">
-              Nivel {user.currentLevel}: {user.currentLevel === 1 ? 'Fundamentos' : user.currentLevel === 2 ? 'Dirección' : 'Legado'}
+              Nivel {user.currentLevel}: {['', 'Fundamentos', 'Direccion', 'Legado', 'Maestro', 'Leyenda'][user.currentLevel] || 'Fundamentos'}
             </p>
           </div>
         </div>
@@ -341,8 +354,30 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Columna Derecha: Tarjeta de Versículo de Anclaje Diario */}
+        {/* Columna Derecha: Desafio Activo + Versiculo */}
         <div className="space-y-6">
+          {activeChallenges.length > 0 && (() => {
+            const ch = activeChallenges[0];
+            const template = ALL_TEMPLATES.find((t) => t.id === ch.templateId);
+            if (!template) return null;
+            return (
+              <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-stone-900/40 dark:to-stone-950/40 border border-emerald-200/60 dark:border-stone-850 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Trophy className="h-4 w-4 text-emerald-600" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 font-mono">Desafio Activo</span>
+                </div>
+                <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">{template.title}</h3>
+                <p className="text-xs text-stone-500 mt-1">Dia {ch.currentDay} de {template.days} · {template.mineral}</p>
+                <div className="mt-3 w-full bg-stone-200 dark:bg-stone-800 h-2 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${((ch.currentDay - 1) / template.days) * 100}%` }} />
+                </div>
+                <Link href="/challenges" className="text-[10px] font-bold text-emerald-600 hover:text-emerald-500 mt-3 inline-block">
+                  Ver todos los desafios →
+                </Link>
+              </div>
+            );
+          })()}
+
           {verse && (
             <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 flex flex-col justify-between h-full min-h-[350px] shadow-sm">
               <div>

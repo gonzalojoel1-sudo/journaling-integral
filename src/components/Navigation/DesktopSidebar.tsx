@@ -17,6 +17,7 @@ import {
   UserCheck,
   ClipboardCheck,
   ShieldAlert,
+  Trophy,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { label: 'Historial', href: '/history', icon: CalendarDays },
   { label: 'Revisión', href: '/review', icon: ClipboardCheck },
   { label: 'Trimestre', href: '/quarterly', icon: Compass },
+  { label: 'Desafios', href: '/challenges', icon: Trophy },
   { label: 'Hábitos', href: '/habits', icon: Activity },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
 ];

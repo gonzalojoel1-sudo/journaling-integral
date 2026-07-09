@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
+import {
   TrendingUp, 
   Activity, 
   Moon, 
@@ -17,7 +17,8 @@ import {
   LineChart,
   Target,
   ShieldCheck,
-  Bookmark
+  Bookmark,
+  Trophy,
 } from 'lucide-react';
 
 interface DailyEntry {
@@ -42,9 +43,10 @@ interface DailyEntry {
 interface ProgressClientProps {
   entries: DailyEntry[];
   activePlan: any | null;
+  badges: any[];
 }
 
-export function ProgressClient({ entries, activePlan }: ProgressClientProps) {
+export function ProgressClient({ entries, activePlan, badges }: ProgressClientProps) {
   const [activeTab, setActiveTab] = useState<'fisiologia' | 'habitos' | 'mentalidad'>('fisiologia');
 
   const validEntries = entries.filter(
@@ -89,6 +91,27 @@ export function ProgressClient({ entries, activePlan }: ProgressClientProps) {
   return (
     <div className="space-y-6">
       
+      {/* Insignias desbloqueadas */}
+      {badges.length > 0 && (
+        <div className="p-6 rounded-2xl border border-stone-200 dark:border-stone-850 bg-white dark:bg-stone-900 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Trophy className="h-5 w-5 text-emerald-600" />
+            <h2 className="text-lg font-bold text-stone-800 dark:text-stone-200">Insignias Desbloqueadas</h2>
+            <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 px-2 py-0.5 rounded-full">{badges.length} / 50</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {badges.map((b: any) => (
+              <div key={b.id} className="text-center p-3 rounded-xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-850">
+                <div className="h-8 w-8 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center mb-1">
+                  <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <p className="text-[10px] font-bold text-stone-600 dark:text-stone-400 leading-tight truncate">{b.area} · {b.mineral}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Botones de navegación interna */}
       <div className="flex border-b border-stone-200 dark:border-stone-850 overflow-x-auto gap-4 print:hidden">
         <button
