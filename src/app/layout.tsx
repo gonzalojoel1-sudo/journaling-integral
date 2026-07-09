@@ -27,7 +27,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <meta name="theme-color" content="#0c0a09" />
       </head>
-      <body className={`${inter.className} h-full antialiased text-stone-900 bg-stone-50 dark:text-stone-100 dark:bg-stone-950`}>
+      <body className={`${inter.className} h-full antialiased text-stone-900 bg-stone-50 dark:text-stone-100 dark:bg-stone-950`} suppressHydrationWarning>
         <Providers> {/* Envolver toda la aplicación para soporte Multiusuario */}
           <div className="min-h-screen flex flex-col md:flex-row">
             {/* Navegación dual responsiva */}
