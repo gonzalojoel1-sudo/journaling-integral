@@ -28,11 +28,7 @@ const NAV_ITEMS = [
   { label: 'Admin', href: '/admin/users', icon: ShieldAlert },
 ];
 
-interface MobileNavProps {
-  isAdmin: boolean;
-}
-
-export function MobileNav({ isAdmin: _isAdmin }: MobileNavProps) {
+export function MobileNav() {
   const pathname = usePathname();
 
   return (

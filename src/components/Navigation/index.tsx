@@ -2,19 +2,12 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { DesktopSidebar } from './DesktopSidebar';
 import { MobileNav } from './MobileNav';
 import { ThemeToggle } from '../ThemeToggle';
-import { DEMO_USER_EMAIL } from '@/lib/constants';
 
 export function Navigation() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-
-  const isAdmin = session?.user?.email === DEMO_USER_EMAIL;
-  const userName = session?.user?.name || 'Joel Pacheco';
-  const isLoggedIn = !!session;
 
   return (
     <>
@@ -26,12 +19,12 @@ export function Navigation() {
 
       <DesktopSidebar
         pathname={pathname}
-        isAdmin={isAdmin}
-        userName={userName}
-        isLoggedIn={isLoggedIn}
+        isAdmin={true}
+        userName="Joel Pacheco"
+        isLoggedIn={true}
       />
 
-      <MobileNav isAdmin={isAdmin} />
+      <MobileNav />
     </>
   );
 }
