@@ -8,7 +8,10 @@ export async function serverFetch(path: string): Promise<{ success: boolean; dat
     || cookieStore.get('__Secure-next-auth.session-token')?.value;
 
   const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['Cookie'] = `next-auth.session-token=${token}`;
+  }
 
   const res = await fetch(`${API_URL}${path}`, { headers });
   return res.json();

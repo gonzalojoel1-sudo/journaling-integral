@@ -12,7 +12,8 @@
     "@journaling/shared": "*",
     "@libsql/client": "^0.14.0",
     "drizzle-orm": "^0.38.3",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "jose": "^5.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
