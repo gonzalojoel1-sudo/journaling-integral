@@ -9,9 +9,8 @@ dotenv.config({
 export default defineConfig({
   schema: './src/db/schema.ts',
   out: './drizzle',
-  dialect: 'turso', // Cambiado a 'turso' para que inicialice el protocolo de seguridad de internet de forma nativa
+  dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
-    authToken: process.env.DATABASE_AUTH_TOKEN!,
+    url: process.env.DATABASE_URL || 'file:local.db',
   },
 });
