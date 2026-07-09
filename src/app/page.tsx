@@ -117,12 +117,10 @@ export default async function DashboardPage() {
   const currentRequirement = levelRequirements[user.currentLevel as 1 | 2 | 3 | 4 | 5] || { target: 18, next: 'Nivel 2' };
   const progressPercent = Math.min(Math.round((completedDays / currentRequirement.target) * 100), 100);
 
-  const formattedDate = new Date().toLocaleDateString('es-ES', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const daysOfWeek = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const now = new Date();
+  const formattedDate = `${daysOfWeek[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
 
   return (
     <div className="space-y-8 animate-fade-in">
