@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { label: 'Desafios', href: '/challenges', icon: Trophy },
   { label: 'Hábitos', href: '/habits', icon: Activity },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
+  { label: 'Usuarios (Admin)', href: '/admin/users', icon: ShieldAlert },
 ];
 
 interface DesktopSidebarProps {
@@ -39,9 +40,6 @@ interface DesktopSidebarProps {
 }
 
 export function DesktopSidebar({ pathname, isAdmin, userName, isLoggedIn }: DesktopSidebarProps) {
-  const dynamicNavItems = isAdmin
-    ? [...NAV_ITEMS, { label: 'Usuarios (Admin)', href: '/admin/users', icon: ShieldAlert }]
-    : NAV_ITEMS;
 
   return (
     <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-64 bg-stone-50 dark:bg-stone-900 text-stone-800 dark:text-stone-100 border-r border-stone-200 dark:border-stone-850 z-20 transition-colors">
@@ -56,7 +54,7 @@ export function DesktopSidebar({ pathname, isAdmin, userName, isLoggedIn }: Desk
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {dynamicNavItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (

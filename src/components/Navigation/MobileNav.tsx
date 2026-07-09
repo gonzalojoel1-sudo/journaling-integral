@@ -25,22 +25,19 @@ const NAV_ITEMS = [
   { label: 'Desafios', href: '/challenges', icon: Trophy },
   { label: 'Hábitos', href: '/habits', icon: Activity },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
+  { label: 'Admin', href: '/admin/users', icon: ShieldAlert },
 ];
 
 interface MobileNavProps {
   isAdmin: boolean;
 }
 
-export function MobileNav({ isAdmin }: MobileNavProps) {
+export function MobileNav({ isAdmin: _isAdmin }: MobileNavProps) {
   const pathname = usePathname();
-
-  const dynamicNavItems = isAdmin
-    ? [...NAV_ITEMS, { label: 'Admin', href: '/admin/users', icon: ShieldAlert }]
-    : NAV_ITEMS;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-center justify-around px-2 pb-safe z-30 shadow-lg transition-colors">
-      {dynamicNavItems.map((item) => {
+      {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
         return (
