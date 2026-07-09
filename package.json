@@ -2,9 +2,10 @@
   "name": "journaling-integral",
   "version": "0.1.0",
   "private": true,
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "next dev",
-    "dev:api": "tsx watch packages/api/src/index.ts",
+    "dev:api": "npm -w @journaling/api run dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:api\"",
     "build": "next build",
     "start": "next start",
