@@ -39,17 +39,3 @@ export const api = {
     return res.json();
   },
 };
-
-export async function serverFetch(path: string): Promise<{ success: boolean; data?: any; error?: string }> {
-  const { cookies } = await import('next/headers');
-  const cookieStore = await cookies();
-  const token = cookieStore.get('next-auth.session-token')?.value
-    || cookieStore.get('__Secure-next-auth.session-token')?.value;
-
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const res = await fetch(`${API}${path}`, { headers });
-  return res.json();
-}

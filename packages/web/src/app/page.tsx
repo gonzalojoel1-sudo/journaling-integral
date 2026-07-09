@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { serverFetch } from '@/lib/api-client';
+import { serverFetch } from '@/lib/server-fetch';
 import { 
   Flame, 
   Award, 

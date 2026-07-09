@@ -1,5 +1,5 @@
 import React from 'react';
-import { serverFetch } from '@/lib/api-client';
+import { serverFetch } from '@/lib/server-fetch';
 import { JournalForm } from './JournalForm';
 
 export default async function JournalPage() {
