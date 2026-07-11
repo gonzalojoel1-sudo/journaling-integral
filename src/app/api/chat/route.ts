@@ -1,10 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
-
-const groq = createOpenAI({
-  baseURL: 'https://api.groq.com/openai/v1',
-  apiKey: process.env.GROQ_API_KEY,
-});
+import { GROQ_MODEL } from '@/config/ai';
+import { getApiKeys } from '@/config/ai';
 
 const SYSTEM_PROMPT = `Actua como un mentor sabio, combinando la compasion psicologica con la profundidad biblica. Tu objetivo es consolar y guiar.
 
@@ -15,11 +12,40 @@ Estructura todas tus respuestas asi:
 Restriccion: No des consejos medicos; si detectas una crisis grave, recomienda buscar ayuda profesional inmediata. Se conciso y acogedor.`;
 
 export async function POST(req: Request) {
+  const { groq: groqKey } = getApiKeys();
+  if (!groqKey) {
+    return new Response(JSON.stringify({ error: 'Service not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let body;
   try {
-    const { messages } = await req.json();
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid request' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { messages } = body;
+  if (!messages || !Array.isArray(messages)) {
+    return new Response(JSON.stringify({ error: 'Messages required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const groq = createOpenAI({
+      baseURL: 'https://api.groq.com/openai/v1',
+      apiKey: groqKey,
+    });
 
     const result = streamText({
-      model: groq('llama-3.1-8b-instant'),
+      model: groq(GROQ_MODEL),
       system: SYSTEM_PROMPT,
       messages,
       temperature: 0.7,
@@ -27,8 +53,11 @@ export async function POST(req: Request) {
     });
 
     return result.toDataStreamResponse();
-  } catch (error) {
-    console.error('[CHAT] Error:', error);
-    return new Response('Error processing chat request', { status: 500 });
+  } catch (err: any) {
+    console.error('[CHAT] Error:', err?.message || err);
+    return new Response(
+      JSON.stringify({ error: 'Service unavailable' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 }

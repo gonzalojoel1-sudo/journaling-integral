@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import Groq from 'groq-sdk';
+import { GEMINI_MODEL, GROQ_MODEL, TIMEOUT_MS, getApiKeys } from '@/config/ai';
 
 const JOURNAL_RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT as const,
@@ -114,77 +115,38 @@ const SYSTEM_PROMPT = `Eres un extractor de datos para un diario personal de des
 Extrae UNICAMENTE los datos mencionados explicitamente en la transcripcion. No inventes nada.
 
 Reglas:
-- Ratings de energia/sueno/enfoque/estres: escala 1-10. Solo si el usuario menciona un numero o describe su nivel (ej. "dormi bien" = sleepRating 8, "estoy agotado" = energyRating 3).
+- Ratings de energia/sueno/enfoque/estres: escala 1-10.
 - Gratitud (gratitude.items): frases especificas de agradecimiento mencionadas (max 3).
-- Habitos (habits.completedNames): array de nombres/descripciones de habitos que el usuario dijo haber completado. Se preciso con los nombres.
+- Habitos (habits.completedNames): array de nombres de habitos completados.
 - MIT (mit.*): tareas importantes y si fueron completadas.
 - Cierre (closure.*): lo que funciono, lo que no, ideas de mejora, preparacion para manana.
-- Negocio (business.*): ingresos totales, gastos, contactos, ventas. Si el usuario menciona transacciones de negocio (ventas, proveedores, clientes), extraelas en business.transactions[]. Cada transaccion requiere amount y type ('ingreso' o 'gasto'). Campos opcionales: cost, description, source, isSale.
-- Finanzas Personales (personal.*): gastos cotidianos e ingresos personales. Si el usuario menciona gastos del dia a dia (ej. "gaste en el supermercado", "pague la luz", "compre comida") o ingresos personales (ej. "me depositaron", "cobre un freelance"), extraelos en personal.transactions[]. Usa category para clasificar (Supermercado, Servicios, Inversiones, Ocio, Transporte, Salud, Educacion, Retiro Negocio, Otros). Usa account para identificar de donde salio o entro el dinero (Banco, Efectivo, Billetera Virtual).
+- Negocio (business.*): transacciones de negocio (ventas, proveedores, clientes).
+- Finanzas Personales (personal.*): gastos cotidianos e ingresos personales.
 
-Campos no mencionados: retornalos como null (para strings/numeros) o array vacio (para arrays).`;
+Campos no mencionados: retornalos como null o array vacio.`;
 
 const GROQ_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 
 Responde EXCLUSIVAMENTE con un objeto JSON que siga esta estructura exacta:
 {
-  "energy": {
-    "sleepRating": <number|null>,
-    "energyRating": <number|null>,
-    "focusRating": <number|null>,
-    "stressRating": <number|null>,
-    "quickEnergyAction": <string|null>
-  },
-  "gratitude": {
-    "items": <string[]>,
-    "wisdomRequest": <string|null>
-  },
-  "identity": {
-    "chooseToBe": <string|null>,
-    "action": <string|null>,
-    "microAchievement": <string|null>
-  },
-  "devotional": {
-    "notes": <string|null>
-  },
-  "habits": {
-    "completedNames": <string[]>
-  },
-  "mit": {
-    "ser": <string|null>,
-    "serCompleted": <boolean|null>,
-    "negocio": <string|null>,
-    "negocioCompleted": <boolean|null>,
-    "relaciones": <string|null>,
-    "relacionesCompleted": <boolean|null>
-  },
-  "closure": {
-    "whatWorked": <string|null>,
-    "whatDidNotWork": <string|null>,
-    "improvementIdea": <string|null>,
-    "prepTomorrow": <string[]>
-  },
-  "business": {
-    "income": <number|null>,
-    "expenses": <number|null>,
-    "contactsCount": <number|null>,
-    "salesCount": <number|null>,
-    "transactions": <array|null>
-  },
-  "personal": {
-    "income": <number|null>,
-    "expenses": <number|null>,
-    "transactions": <array|null>
-  }
+  "energy": { "sleepRating": <number|null>, "energyRating": <number|null>, "focusRating": <number|null>, "stressRating": <number|null>, "quickEnergyAction": <string|null> },
+  "gratitude": { "items": <string[]>, "wisdomRequest": <string|null> },
+  "identity": { "chooseToBe": <string|null>, "action": <string|null>, "microAchievement": <string|null> },
+  "devotional": { "notes": <string|null> },
+  "habits": { "completedNames": <string[]> },
+  "mit": { "ser": <string|null>, "serCompleted": <boolean|null>, "negocio": <string|null>, "negocioCompleted": <boolean|null>, "relaciones": <string|null>, "relacionesCompleted": <boolean|null> },
+  "closure": { "whatWorked": <string|null>, "whatDidNotWork": <string|null>, "improvementIdea": <string|null>, "prepTomorrow": <string[]> },
+  "business": { "income": <number|null>, "expenses": <number|null>, "contactsCount": <number|null>, "salesCount": <number|null>, "transactions": <array|null> },
+  "personal": { "income": <number|null>, "expenses": <number|null>, "transactions": <array|null> }
 }`;
 
-async function tryGoogle(transcript: string): Promise<any> {
-  const apiKey = process.env.GOOGLE_AI_STUDIO_KEY;
-  if (!apiKey) throw new Error('Google API key not configured');
+async function tryGemini(transcript: string): Promise<any> {
+  const { gemini } = getApiKeys();
+  if (!gemini) throw new Error('Google API key not configured');
 
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = new GoogleGenerativeAI(gemini);
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash-8b',
+    model: GEMINI_MODEL,
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: JOURNAL_RESPONSE_SCHEMA,
@@ -194,27 +156,24 @@ async function tryGoogle(transcript: string): Promise<any> {
     systemInstruction: SYSTEM_PROMPT,
   });
 
-  const GOOGLE_TIMEOUT_MS = 5000;
-
   const result = await Promise.race([
     model.generateContent(transcript),
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Google Gemini timeout after 5s')), GOOGLE_TIMEOUT_MS)
+      setTimeout(() => reject(new Error(`Gemini timeout after ${TIMEOUT_MS}ms`)), TIMEOUT_MS),
     ),
   ]);
 
-  const text = result.response.text();
-  return JSON.parse(text);
+  return JSON.parse(result.response.text());
 }
 
 async function tryGroq(transcript: string): Promise<any> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('Groq API key not configured');
+  const { groq: groqKey } = getApiKeys();
+  if (!groqKey) throw new Error('Groq API key not configured');
 
-  const groq = new Groq({ apiKey });
+  const groq = new Groq({ apiKey: groqKey });
 
   const completion = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: GROQ_MODEL,
     messages: [
       { role: 'system', content: GROQ_SYSTEM_PROMPT },
       { role: 'user', content: transcript },
@@ -237,31 +196,20 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Transcript is required' }, { status: 400 });
   }
 
-  console.log('[SMART-ENTRY] API Key Google:', !!process.env.GOOGLE_AI_STUDIO_KEY);
-  console.log('[SMART-ENTRY] API Key Groq:', !!process.env.GROQ_API_KEY);
-
-  // --- Intent 1: Google Gemini ---
   try {
-    console.log('[SMART-ENTRY] Trying Google Gemini...');
-    const data = await tryGoogle(transcript.trim());
-    console.log('[SMART-ENTRY] Google Gemini success');
+    const data = await tryGemini(transcript.trim());
     return Response.json({ success: true, data });
-  } catch (googleError: any) {
-    console.warn('[SMART-ENTRY] Google Gemini failed, falling back to Groq...');
-    console.warn('[SMART-ENTRY] Google error:', googleError?.message || googleError);
+  } catch (geminiErr: any) {
+    console.warn('[SMART-ENTRY] Gemini failed, using Groq fallback:', geminiErr?.message || geminiErr);
   }
 
-  // --- Intent 2: Groq Fallback ---
   try {
-    console.log('[SMART-ENTRY] Attempting Groq fallback...');
     const data = await tryGroq(transcript.trim());
-    console.log('[SMART-ENTRY] Groq fallback success');
     return Response.json({ success: true, data });
-  } catch (groqError: any) {
-    console.error('[SMART-ENTRY] Groq fallback also failed:', groqError?.message || groqError);
-
+  } catch (groqErr: any) {
+    console.error('[SMART-ENTRY] Both providers failed. Groq:', groqErr?.message || groqErr);
     return Response.json(
-      { error: 'Both Google Gemini and Groq failed to process the entry' },
+      { error: 'Service temporarily unavailable. Please try again.' },
       { status: 500 },
     );
   }

@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { MessageCircle } from 'lucide-react';
-import { ChatAssistant } from '@/components/ChatAssistant';
+
+const ChatAssistant = dynamic(
+  () => import('@/components/ChatAssistant').then((mod) => mod.ChatAssistant),
+  { ssr: false },
+);
 
 interface ChatTriggerProps {
   enabled: boolean;
