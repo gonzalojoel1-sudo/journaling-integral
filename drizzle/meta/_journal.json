@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1783796596992,
+      "tag": "0000_charming_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783799158732,
+      "tag": "0001_sparkling_firebrand",
+      "breakpoints": true
+    }
+  ]
+}

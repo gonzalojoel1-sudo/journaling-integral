@@ -52,6 +52,7 @@ export const getOrCreateUserProfile = cache(async () => {
           name: DEMO_USER_NAME,
           email: DEMO_USER_EMAIL,
           password: DEMO_USER_PASSWORD_HASH,
+          role: 'user',
           currentLevel: 1,
           streakCurrent: 0,
           streakMax: 0,

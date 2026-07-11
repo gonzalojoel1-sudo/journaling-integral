@@ -67,6 +67,8 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
   const [showQuarterly, setShowQuarterly] = useState(true);
   const [showChallenges, setShowChallenges] = useState(true);
 
+  const isAdmin = (session?.user as any)?.role === 'admin';
+
   useEffect(() => {
     setMounted(true);
     getUserSettings().then((s) => {
@@ -84,6 +86,7 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
   if (!showHabits) hiddenHrefs.add('/habits');
   if (!showQuarterly) hiddenHrefs.add('/quarterly');
   if (!showChallenges) hiddenHrefs.add('/challenges');
+  if (!isAdmin) hiddenHrefs.add('/admin/users');
 
   const visibleItems = DESKTOP_NAV_ITEMS.filter((item) => !hiddenHrefs.has(item.href));
 
@@ -166,6 +169,8 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
 
 function MobileNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === 'admin';
   const [showBusiness, setShowBusiness] = useState(true);
   const [showFinance, setShowFinance] = useState(true);
   const [showHabits, setShowHabits] = useState(true);
@@ -188,6 +193,7 @@ function MobileNav() {
   if (!showHabits) hiddenHrefs.add('/habits');
   if (!showQuarterly) hiddenHrefs.add('/quarterly');
   if (!showChallenges) hiddenHrefs.add('/challenges');
+  if (!isAdmin) hiddenHrefs.add('/admin/users');
 
   const visibleItems = MOBILE_NAV_ITEMS.filter((item) => !hiddenHrefs.has(item.href));
 

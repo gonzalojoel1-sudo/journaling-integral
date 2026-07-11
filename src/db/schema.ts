@@ -6,6 +6,7 @@ export const users = sqliteTable('users', {
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
+  role: text('role').default('user').notNull(),
   currentLevel: integer('current_level').default(1).notNull(),
   streakCurrent: integer('streak_current').default(0).notNull(),
   streakMax: integer('streak_max').default(0).notNull(),

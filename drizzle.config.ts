@@ -1,9 +1,17 @@
 import { defineConfig } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
+import { config } from 'dotenv';
+import { resolve } from 'path';
 
-// Forzamos a la terminal a buscar y leer físicamente el archivo .env de la raíz
-dotenv.config({
-  path: '.env'
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+
+config({
+  path: resolve(process.cwd(), envFile),
+  override: false,
+});
+
+config({
+  path: resolve(process.cwd(), '.env'),
+  override: false,
 });
 
 export default defineConfig({

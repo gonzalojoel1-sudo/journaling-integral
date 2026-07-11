@@ -7,23 +7,22 @@ import { users, dailyEntries, habits } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { AdminUsersClient } from './AdminUsersClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminUsersPage() {
-  // 1. BLOQUEO ESTRICTO DEL SERVIDOR: Si no es el Administrador, se expulsa inmediatamente
   const session = await getServerSession(authOptions);
-  if (session?.user?.email !== 'joel@journalingintegral.demo') {
+
+  if ((session?.user as any)?.role !== 'admin') {
     redirect('/');
   }
 
-  // 2. CONSULTAR TODOS LOS USUARIOS REGISTRADOS
   const allUsers = await db.query.users.findMany({
-    orderBy: [users.createdAt]
+    orderBy: [users.createdAt],
   });
 
   const usersWithStats = [];
 
-  // 3. CALCULAR MÉTRICAS DE COOPERACIÓN Y USO POR USUARIO
   for (const u of allUsers) {
-    // Consultar las entradas de diario de este usuario
     const entries = await db.select({
       id: dailyEntries.id,
       devotionalNotes: dailyEntries.devotionalNotes,
@@ -32,23 +31,19 @@ export default async function AdminUsersPage() {
     .from(dailyEntries)
     .where(eq(dailyEntries.userId, u.id));
 
-    // Consultar catálogo de hábitos activos
     const userHabits = await db.query.habits.findMany({
-      where: eq(habits.userId, u.id)
+      where: eq(habits.userId, u.id),
     });
 
     const totalEntries = entries.length;
-    
-    // Contar cuántas veces usaron la sección devocional
     const devotionalsCompleted = entries.filter(e => e.devotionalNotes && e.devotionalNotes.trim() !== '').length;
-    
-    // Contar cuántas veces usaron el módulo de negocio 1-1-1
     const businessCompleted = entries.filter(e => e.bizActionsSpecific && e.bizActionsSpecific.includes('completed')).length;
 
     usersWithStats.push({
       id: u.id,
       name: u.name,
       email: u.email,
+      role: u.role || 'user',
       currentLevel: u.currentLevel,
       streakCurrent: u.streakCurrent,
       streakMax: u.streakMax,
@@ -57,8 +52,8 @@ export default async function AdminUsersPage() {
         totalEntries,
         devotionalsCompleted,
         businessCompleted,
-        habitsCount: userHabits.length
-      }
+        habitsCount: userHabits.length,
+      },
     });
   }
 
@@ -69,7 +64,7 @@ export default async function AdminUsersPage() {
           Panel de Control de Usuarios
         </h1>
         <p className="text-sm text-stone-500 mt-1">
-          Administración oficial del SaaS: Monitorea el uso de los módulos y las métricas de engagement.
+          Administración de usuarios y roles
         </p>
       </header>
 
