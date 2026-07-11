@@ -29,6 +29,8 @@ export async function createHabit(name: string, type: string, strategyDetails: s
       name,
       type,
       strategyDetails,
+      currentStrength: 0.0,
+      lastStrengthDate: null,
       isActive: 1,
       createdAt: new Date().toISOString(),
     });

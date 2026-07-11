@@ -1,8 +1,9 @@
 'use server';
 
 import { db } from '../../db/db';
-import { dailyEntries, users } from '../../db/schema';
-import { eq, and, desc, gte } from 'drizzle-orm';
+import { dailyEntries, users, habits, businessTransactions } from '../../db/schema';
+import { applyDecayAndBonus } from '../../lib/habit-strength';
+import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getOrCreateUserProfile } from './auth';
@@ -49,6 +50,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     });
 
     const entryId = existingEntry?.id || randomUUID();
+    const isUpdate = !!existingEntry;
 
     const entryData = {
       id: entryId,
@@ -163,18 +165,54 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         .where(eq(users.id, user.id));
     }
 
+    if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      for (const habitEntry of formData.dailyHabits) {
+        if (!habitEntry.habitId) continue;
+
+        const habitRecord = await db.query.habits.findFirst({
+          where: eq(habits.id, habitEntry.habitId),
+        });
+
+        if (!habitRecord) continue;
+
+        const { newStrength, newDate } = applyDecayAndBonus(
+          habitRecord.currentStrength ?? 0,
+          habitRecord.lastStrengthDate,
+          todayStr,
+          habitEntry.completed === true,
+        );
+
+        await db
+          .update(habits)
+          .set({
+            currentStrength: newStrength,
+            lastStrengthDate: newDate,
+          })
+          .where(eq(habits.id, habitEntry.habitId));
+      }
+    }
+
     revalidatePath('/');
     revalidatePath('/journal');
     revalidatePath('/progress');
     revalidatePath('/challenges');
+    revalidatePath('/habits');
+    revalidatePath('/negocio');
 
-    const challengeResult = await validateActiveChallenges(entryData, user);
+    let badgeUnlocked: string | null = null;
+    if (!isUpdate) {
+      const cr = await validateActiveChallenges(entryData, user);
+      badgeUnlocked = cr.badgeUnlocked ?? null;
+    }
 
     return {
       success: true,
+      isUpdate,
       levelUpgraded: targetLevel > user.currentLevel,
       newLevel: targetLevel,
-      badgeUnlocked: challengeResult.badgeUnlocked || null,
+      badgeUnlocked,
     };
   } catch (error) {
     console.error('Error al guardar el diario:', error);
@@ -194,5 +232,155 @@ export async function getAnalyticsData() {
   } catch (error) {
     console.error('Error al obtener analíticas:', error);
     return { success: false, error: 'No se pudo generar el reporte de analíticas.' };
+  }
+}
+
+export async function getDailyBusinessMetrics(date?: string) {
+  try {
+    const userId = await getCurrentUserId();
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    const txns = await db.query.businessTransactions.findMany({
+      where: and(
+        eq(businessTransactions.userId, userId),
+        eq(businessTransactions.date, targetDate),
+      ),
+    });
+
+    const totalIncome = txns
+      .filter((t) => t.type === 'ingreso')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalExpenses = txns
+      .filter((t) => t.type === 'gasto')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalSales = txns.filter((t) => t.isSale === 1).length;
+
+    const netMargin = totalIncome > 0
+      ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100 * 100) / 100
+      : 0;
+
+    return {
+      success: true,
+      totalIncome,
+      totalExpenses,
+      totalSales,
+      netMargin,
+      transactionCount: txns.length,
+      transactions: txns,
+    };
+  } catch (error) {
+    console.error('Error al obtener métricas de negocio:', error);
+    return { success: false, error: 'No se pudieron obtener las métricas.' };
+  }
+}
+
+export async function getBusinessMetricsRange(startDate: string, endDate: string) {
+  try {
+    const userId = await getCurrentUserId();
+
+    const txns = await db.query.businessTransactions.findMany({
+      where: and(
+        eq(businessTransactions.userId, userId),
+        gte(businessTransactions.date, startDate),
+        lte(businessTransactions.date, endDate),
+      ),
+    });
+
+    const entries = await db.query.dailyEntries.findMany({
+      where: and(
+        eq(dailyEntries.userId, userId),
+        gte(dailyEntries.date, startDate),
+        lte(dailyEntries.date, endDate),
+      ),
+    });
+
+    const totalIncome = txns
+      .filter((t) => t.type === 'ingreso')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalExpenses = txns
+      .filter((t) => t.type === 'gasto')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalSales = txns.filter((t) => t.isSale === 1).length;
+    const totalContacts = entries.reduce((sum, e) => sum + e.bizContactsCount, 0);
+
+    const netMargin = totalIncome > 0
+      ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100 * 100) / 100
+      : 0;
+
+    const pipelineConversion = totalContacts > 0
+      ? Math.round((totalSales / totalContacts) * 100 * 100) / 100
+      : 0;
+
+    const weeklyData = entries.reduce((acc: Record<string, any>, e) => {
+      const date = new Date(e.date);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      if (!acc[weekKey]) {
+        acc[weekKey] = { week: weekKey, income: 0, prospectDone: 0, followUpDone: 0, mktDone: 0, days: 0 };
+      }
+      acc[weekKey].income += e.bizIncome;
+      acc[weekKey].prospectDone += e.bizProspectCompleted ? 1 : 0;
+      acc[weekKey].followUpDone += e.bizFollowUpCompleted ? 1 : 0;
+      acc[weekKey].mktDone += e.bizMktActionCompleted ? 1 : 0;
+      acc[weekKey].days += 1;
+      return acc;
+    }, {});
+
+    return {
+      success: true,
+      totalIncome,
+      totalExpenses,
+      totalSales,
+      totalContacts,
+      netMargin,
+      pipelineConversion,
+      transactions: txns,
+      weeklyData: Object.values(weeklyData),
+    };
+  } catch (error) {
+    console.error('Error al obtener métricas de negocio:', error);
+    return { success: false, error: 'No se pudieron obtener las métricas.' };
+  }
+}
+
+export async function createBusinessTransaction(data: {
+  amount: number;
+  cost?: number;
+  type: string;
+  description?: string;
+  source?: string;
+  isSale?: boolean;
+  date?: string;
+}) {
+  try {
+    const userId = await getCurrentUserId();
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    await db.insert(businessTransactions).values({
+      id: randomUUID(),
+      userId,
+      amount: data.amount,
+      cost: data.cost ?? 0,
+      type: data.type,
+      description: data.description || null,
+      source: data.source || 'General',
+      isSale: data.isSale ? 1 : 0,
+      date: data.date || todayStr,
+      dailyEntryId: null,
+      createdAt: new Date().toISOString(),
+    });
+
+    revalidatePath('/negocio');
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error('Error al crear transacción:', error);
+    return { success: false, error: 'No se pudo crear la transacción.' };
   }
 }

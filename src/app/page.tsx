@@ -7,6 +7,9 @@ import { getRandomVerse } from './actions/bible';
 import { getActiveWeeklyPlan } from './actions/weekly-planning';
 import { getActiveChallenges, getBadges } from './actions/challenges';
 import { getActiveHabits } from './actions/habits';
+import { getDailyBusinessMetrics } from './actions/daily-journal';
+import { getBusinessSettingsList } from './actions/business';
+import { getUserSettings } from './actions/user-settings';
 import { ALL_TEMPLATES } from '@/lib/challenge-templates';
 import { eq, and, gte } from 'drizzle-orm';
 import {
@@ -23,6 +26,7 @@ import {
 import { PriorityChecklist } from './dashboard/PriorityChecklist';
 import { HabitProgress } from './dashboard/HabitProgress';
 import { BizCompactPanel } from './dashboard/BizCompactPanel';
+import { PersonalFinanceWidget } from './dashboard/PersonalFinanceWidget';
 
 export default async function DashboardPage() {
   const profileRes = await getOrCreateUserProfile();
@@ -92,27 +96,39 @@ export default async function DashboardPage() {
   const habitsRes = await getActiveHabits();
   const habitsList = habitsRes.habits || [];
 
-  let parsedHabits: { id: string; name: string; type: string; completed?: boolean }[] = [];
+  const todayBizMetrics = await getDailyBusinessMetrics(todayStr);
+  const bizUnitsRes = await getBusinessSettingsList();
+  const bizUnits = Array.isArray(bizUnitsRes) ? bizUnitsRes : [];
+  const todayIncome = todayBizMetrics.success ? (todayBizMetrics.totalIncome ?? 0) : 0;
+
+  const userSettings = await getUserSettings();
+
+  let parsedHabits: { id: string; name: string; type: string; completed?: boolean; currentStrength?: number; lastStrengthDate?: string | null }[] = [];
   let initialCompletedIds: string[] = [];
 
   if (habitsList.length > 0) {
     if (todayEntry?.dailyHabitsJson) {
       try {
         const savedHabits = JSON.parse(todayEntry.dailyHabitsJson);
-        parsedHabits = savedHabits.map((h: any) => ({
-          id: h.habitId,
-          name: h.name,
-          type: h.type,
-          completed: h.completed,
-        }));
+        parsedHabits = savedHabits.map((h: any) => {
+          const dbHabit = habitsList.find(dbh => dbh.id === h.habitId);
+          return {
+            id: h.habitId,
+            name: h.name,
+            type: h.type,
+            completed: h.completed,
+            currentStrength: dbHabit?.currentStrength ?? 0,
+            lastStrengthDate: dbHabit?.lastStrengthDate ?? null,
+          };
+        });
         initialCompletedIds = savedHabits
           .filter((h: any) => h.completed)
           .map((h: any) => h.habitId);
       } catch {
-        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type }));
+        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
       }
     } else {
-      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type }));
+      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
     }
   }
 
@@ -220,21 +236,27 @@ export default async function DashboardPage() {
       </section>
 
       {/* ── GRID DE ECOSISTEMA COMPACTO ── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
         {/* Panel Negocio 1-1-1 */}
-        <BizCompactPanel
-          prospectDone={bizProspectDone}
-          followUpDone={bizFollowUpDone}
-          mktDone={bizMktDone}
-          prospectText={bizProspectText}
-          followUpText={bizFollowUpText}
-          mktText={bizMktText}
-          contacts={todayEntry?.bizContactsCount ?? 0}
-          sales={todayEntry?.bizSalesCount ?? 0}
-          income={todayEntry?.bizIncome ?? 0}
-          hasEntry={!!todayEntry}
-        />
+        {userSettings.showBusinessPanel && (
+          <BizCompactPanel
+            prospectDone={bizProspectDone}
+            followUpDone={bizFollowUpDone}
+            mktDone={bizMktDone}
+            prospectText={bizProspectText}
+            followUpText={bizFollowUpText}
+            mktText={bizMktText}
+            contacts={todayEntry?.bizContactsCount ?? 0}
+            sales={todayEntry?.bizSalesCount ?? 0}
+            income={todayIncome}
+            hasEntry={!!todayEntry}
+            businessUnits={bizUnits}
+          />
+        )}
+
+        {/* Capital Personal */}
+        {userSettings.showFinancePanel && <PersonalFinanceWidget />}
 
         {/* Hábitos EOR */}
         <HabitProgress habits={parsedHabits} initialCompletedIds={initialCompletedIds} />

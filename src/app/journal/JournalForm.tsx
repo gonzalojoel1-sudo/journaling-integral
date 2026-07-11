@@ -13,6 +13,7 @@ import { StepNegocio, getNegocioSummary } from './steps/StepNegocio';
 import { StepCierre, getCierreSummary } from './steps/StepCierre';
 import { useAutosave } from './useAutosave';
 import { submitDailyEntry } from '../actions/daily-journal';
+import { SmartDictationButton } from '@/components/SmartDictationButton';
 
 interface Habit {
   id: string;
@@ -40,7 +41,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [success, setSuccess] = useState(false);
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
 
-  const [showPlanBModal, setShowPlanBModal] = useState(true);
+  const [showPlanBModal, setShowPlanBModal] = useState(!existingEntry);
   const [isPlanB, setIsPlanB] = useState(false);
 
   const [activeStep, setActiveStep] = useState<number>(1);
@@ -156,6 +157,64 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     if (stepNumber === activeStep) return 'active';
     return 'pending';
   };
+
+  const handleSmartDictation = useCallback((data: any) => {
+    if (data.energy) {
+      if (data.energy.sleepRating != null) setSleepRating(data.energy.sleepRating);
+      if (data.energy.energyRating != null) setEnergyRating(data.energy.energyRating);
+      if (data.energy.focusRating != null) setFocusRating(data.energy.focusRating);
+      if (data.energy.stressRating != null) setStressRating(data.energy.stressRating);
+      if (data.energy.quickEnergyAction) setQuickEnergyAction(data.energy.quickEnergyAction);
+    }
+    if (data.gratitude) {
+      if (data.gratitude.items?.length) {
+        setGratitude1(data.gratitude.items[0] || '');
+        setGratitude2(data.gratitude.items[1] || '');
+        setGratitude3(data.gratitude.items[2] || '');
+      }
+      if (data.gratitude.wisdomRequest) setWisdomRequest(data.gratitude.wisdomRequest);
+    }
+    if (data.identity) {
+      if (data.identity.chooseToBe) setChooseToBeIdentity(data.identity.chooseToBe);
+      if (data.identity.action) setIdentityAction(data.identity.action);
+      if (data.identity.microAchievement) setDailyMicroAchievement(data.identity.microAchievement);
+    }
+    if (data.devotional?.notes) {
+      setDevotionalNotes(data.devotional.notes);
+    }
+    if (data.habits?.completedNames?.length) {
+      setDailyHabits((prev) =>
+        prev.map((h) => {
+          const matched = data.habits.completedNames.some(
+            (name: string) => {
+              const lower = name.toLowerCase();
+              const habitLower = h.name.toLowerCase();
+              return lower.includes(habitLower) || habitLower.includes(lower);
+            }
+          );
+          return matched ? { ...h, completed: true } : h;
+        })
+      );
+    }
+    if (data.mit) {
+      if (data.mit.ser) setMitSer(data.mit.ser);
+      if (data.mit.serCompleted != null) setMitSerCompleted(data.mit.serCompleted);
+      if (data.mit.negocio) setMitNegocio(data.mit.negocio);
+      if (data.mit.negocioCompleted != null) setMitNegocioCompleted(data.mit.negocioCompleted);
+      if (data.mit.relaciones) setMitRelaciones(data.mit.relaciones);
+      if (data.mit.relacionesCompleted != null) setMitRelacionesCompleted(data.mit.relacionesCompleted);
+    }
+    if (data.closure) {
+      if (data.closure.whatWorked) setWhatWorked(data.closure.whatWorked);
+      if (data.closure.whatDidNotWork) setWhatDidNotWork(data.closure.whatDidNotWork);
+      if (data.closure.improvementIdea) setImprovementIdea(data.closure.improvementIdea);
+      if (data.closure.prepTomorrow?.length) {
+        setPrep1(data.closure.prepTomorrow[0] || '');
+        setPrep2(data.closure.prepTomorrow[1] || '');
+        setPrep3(data.closure.prepTomorrow[2] || '');
+      }
+    }
+  }, []);
 
   const buildFormData = (): Record<string, any> => ({
     isPlanBUsed,
@@ -289,7 +348,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             ) : (
               <Save className="h-5 w-5" />
             )}
-            {loading ? 'Guardando...' : 'Guardar Registro Plan B'}
+            {loading ? 'Guardando...' : existingEntry ? 'Actualizar Plan B' : 'Guardar Registro Plan B'}
           </button>
         </div>
       </div>
@@ -300,9 +359,15 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     <div className="max-w-4xl mx-auto space-y-4">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-100">
-            Diario del Día
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-100">
+              Diario del Día
+            </h1>
+            <SmartDictationButton
+              dailyHabits={dailyHabits}
+              onDataExtracted={handleSmartDictation}
+            />
+          </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             {completedSteps.size} de {totalSteps} pasos completados
           </p>
@@ -532,7 +597,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             ) : (
               <Save className="h-5 w-5" />
             )}
-            {loading ? 'Guardando...' : 'Guardar y Cerrar Día'}
+            {loading ? 'Guardando...' : existingEntry ? 'Actualizar Diario' : 'Guardar y Cerrar Día'}
           </button>
         </div>
       )}

@@ -16,8 +16,11 @@ export const users = sqliteTable('users', {
 export const usersRelations = relations(users, ({ many }) => ({
   dailyEntries: many(dailyEntries),
   quarterlyPlans: many(quarterlyPlans),
-  weeklyPlans: many(weeklyPlans), // Relación añadida para planes semanales
+  weeklyPlans: many(weeklyPlans),
   habits: many(habits),
+  businessTransactions: many(businessTransactions),
+  businessSettings: many(businessSettings),
+  personalTransactions: many(personalTransactions),
 }));
 
 export const dailyEntries = sqliteTable('daily_entries', {
@@ -157,6 +160,8 @@ export const habits = sqliteTable('habits', {
   name: text('name').notNull(),
   type: text('type').notNull(),
   strategyDetails: text('strategy_details'),
+  currentStrength: real('current_strength').default(0.0),
+  lastStrengthDate: text('last_strength_date'),
   createdAt: text('created_at').notNull(),
   isActive: integer('is_active').default(1).notNull(),
 });
@@ -211,6 +216,92 @@ export const badges = sqliteTable('badges', {
 export const badgesRelations = relations(badges, ({ one }) => ({
   user: one(users, {
     fields: [badges.userId],
+    references: [users.id],
+  }),
+}));
+
+export const businessTransactions = sqliteTable('business_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  amount: real('amount').notNull(),
+  cost: real('cost').default(0.0).notNull(),
+  type: text('type').notNull(),
+  description: text('description'),
+  source: text('source').default('General').notNull(),
+  isSale: integer('is_sale').default(0).notNull(),
+  date: text('date').notNull(),
+  dailyEntryId: text('daily_entry_id'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const businessTransactionsRelations = relations(businessTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [businessTransactions.userId],
+    references: [users.id],
+  }),
+  dailyEntry: one(dailyEntries, {
+    fields: [businessTransactions.dailyEntryId],
+    references: [dailyEntries.id],
+  }),
+}));
+
+export const businessSettings = sqliteTable('business_settings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull().default('General'),
+  defaultSaleAmount: real('default_sale_amount').default(0.0).notNull(),
+  defaultSaleCost: real('default_sale_cost').default(0.0).notNull(),
+  isActive: integer('is_active').default(1).notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const businessSettingsRelations = relations(businessSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [businessSettings.userId],
+    references: [users.id],
+  }),
+}));
+
+export const personalTransactions = sqliteTable('personal_transactions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  amount: real('amount').notNull(),
+  type: text('type').notNull(),
+  category: text('category').default('Otros').notNull(),
+  account: text('account').default('Efectivo').notNull(),
+  description: text('description'),
+  date: text('date').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const personalTransactionsRelations = relations(personalTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [personalTransactions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userSettings = sqliteTable('user_settings', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  showBusinessPanel: integer('show_business_panel').default(0).notNull(),
+  showFinancePanel: integer('show_finance_panel').default(0).notNull(),
+  showHabitsPanel: integer('show_habits_panel').default(0),
+  showQuarterlyPanel: integer('show_quarterly_panel').default(0),
+  showChallengesPanel: integer('show_challenges_panel').default(0),
+  onboardingCompleted: integer('onboarding_completed').default(0).notNull(),
+});
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+  user: one(users, {
+    fields: [userSettings.userId],
     references: [users.id],
   }),
 }));

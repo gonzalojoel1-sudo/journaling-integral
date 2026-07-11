@@ -5,7 +5,11 @@ import { HabitsClient } from './HabitsClient';
 export default async function HabitsPage() {
   // Obtener hábitos activos del usuario demo
   const res = await getActiveHabits();
-  const initialHabits = res.habits || [];
+  const initialHabits = (res.habits || []).map(h => ({
+    ...h,
+    currentStrength: h.currentStrength ?? 0,
+    lastStrengthDate: h.lastStrengthDate ?? null,
+  }));
 
   return (
     <div className="space-y-6">

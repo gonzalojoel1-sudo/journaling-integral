@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { createHabit, archiveHabit } from '../actions/habits';
+import { StrengthBar } from '@/components/StrengthBar';
 import { 
   Plus, 
   Trash2, 
@@ -21,6 +22,8 @@ interface Habit {
   type: string;
   strategyDetails: string | null;
   isActive: number;
+  currentStrength?: number;
+  lastStrengthDate?: string | null;
 }
 
 interface HabitsClientProps {
@@ -61,7 +64,9 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
         name,
         type,
         strategyDetails: strategyDetails || null,
-        isActive: 1
+        isActive: 1,
+        currentStrength: 0.0,
+        lastStrengthDate: null,
       };
       setHabitsList([newHabitLocal, ...habitsList]);
       setName('');
@@ -101,7 +106,9 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
         name: habitName,
         type: 'STACK',
         strategyDetails: serializedStack,
-        isActive: 1
+        isActive: 1,
+        currentStrength: 0.0,
+        lastStrengthDate: null,
       };
       setHabitsList([newHabitLocal, ...habitsList]);
       
@@ -224,6 +231,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
                   <div key={h.id} className="bg-stone-100/60 dark:bg-stone-950/40 p-3.5 border border-stone-200/50 dark:border-stone-850/60 rounded-xl flex justify-between items-start gap-4">
                     <div className="min-w-0 flex-1">
                       <h5 className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-snug">{h.name}</h5>
+                      <StrengthBar strength={h.currentStrength ?? 0} className="my-1.5" />
                       {h.strategyDetails && <p className="text-[10px] text-stone-400 mt-1">Estrategia: {h.strategyDetails}</p>}
                     </div>
                     <button onClick={() => handleArchive(h.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0">
@@ -242,6 +250,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
                   <div key={h.id} className="bg-stone-100/60 dark:bg-stone-950/40 p-3.5 border border-stone-200/50 dark:border-stone-850/60 rounded-xl flex justify-between items-start gap-4">
                     <div className="min-w-0 flex-1">
                       <h5 className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-snug">{h.name}</h5>
+                      <StrengthBar strength={h.currentStrength ?? 0} className="my-1.5" />
                       {h.strategyDetails && <p className="text-[10px] text-stone-400 mt-1">Estrategia: {h.strategyDetails}</p>}
                     </div>
                     <button onClick={() => handleArchive(h.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0">
@@ -260,6 +269,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
                   <div key={h.id} className="bg-stone-100/60 dark:bg-stone-950/40 p-3.5 border border-stone-200/50 dark:border-stone-850/60 rounded-xl flex justify-between items-start gap-4">
                     <div className="min-w-0 flex-1">
                       <h5 className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-snug">{h.name}</h5>
+                      <StrengthBar strength={h.currentStrength ?? 0} className="my-1.5" />
                       {h.strategyDetails && <p className="text-[10px] text-stone-400 mt-1">Estrategia: {h.strategyDetails}</p>}
                     </div>
                     <button onClick={() => handleArchive(h.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0">

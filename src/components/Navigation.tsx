@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { ThemeToggle } from './ThemeToggle';
 import { AdminControls } from './AdminControls';
+import { getUserSettings } from '@/app/actions/user-settings';
 import {
   LayoutDashboard,
   BookOpen,
@@ -18,6 +19,9 @@ import {
   ClipboardCheck,
   ShieldAlert,
   Trophy,
+  Briefcase,
+  Wallet,
+  Settings,
 } from 'lucide-react';
 
 const DESKTOP_NAV_ITEMS = [
@@ -28,7 +32,10 @@ const DESKTOP_NAV_ITEMS = [
   { label: 'Trimestre', href: '/quarterly', icon: Compass },
   { label: 'Desafios', href: '/challenges', icon: Trophy },
   { label: 'Hábitos', href: '/habits', icon: Activity },
+  { label: 'Negocio', href: '/negocio', icon: Briefcase },
+  { label: 'Finanzas', href: '/finanzas', icon: Wallet },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
+  { label: 'Config', href: '/configuracion', icon: Settings },
   { label: 'Usuarios (Admin)', href: '/admin/users', icon: ShieldAlert },
 ];
 
@@ -40,7 +47,10 @@ const MOBILE_NAV_ITEMS = [
   { label: 'Trimestre', href: '/quarterly', icon: Compass },
   { label: 'Desafios', href: '/challenges', icon: Trophy },
   { label: 'Hábitos', href: '/habits', icon: Activity },
+  { label: 'Negocio', href: '/negocio', icon: Briefcase },
+  { label: 'Finanzas', href: '/finanzas', icon: Wallet },
   { label: 'Progreso', href: '/progress', icon: TrendingUp },
+  { label: 'Config', href: '/configuracion', icon: Settings },
   { label: 'Admin', href: '/admin/users', icon: ShieldAlert },
 ];
 
@@ -51,10 +61,31 @@ interface DesktopSidebarProps {
 function DesktopSidebar({ pathname }: DesktopSidebarProps) {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [showBusiness, setShowBusiness] = useState(true);
+  const [showFinance, setShowFinance] = useState(true);
+  const [showHabits, setShowHabits] = useState(true);
+  const [showQuarterly, setShowQuarterly] = useState(true);
+  const [showChallenges, setShowChallenges] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+    getUserSettings().then((s) => {
+      setShowBusiness(s.showBusinessPanel);
+      setShowFinance(s.showFinancePanel);
+      setShowHabits(s.showHabitsPanel);
+      setShowQuarterly(s.showQuarterlyPanel);
+      setShowChallenges(s.showChallengesPanel);
+    });
   }, []);
+
+  const hiddenHrefs = new Set<string>();
+  if (!showBusiness) hiddenHrefs.add('/negocio');
+  if (!showFinance) hiddenHrefs.add('/finanzas');
+  if (!showHabits) hiddenHrefs.add('/habits');
+  if (!showQuarterly) hiddenHrefs.add('/quarterly');
+  if (!showChallenges) hiddenHrefs.add('/challenges');
+
+  const visibleItems = DESKTOP_NAV_ITEMS.filter((item) => !hiddenHrefs.has(item.href));
 
   const handleSignOut = async () => {
     await signOut({ redirect: false });
@@ -74,7 +105,7 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {DESKTOP_NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -135,10 +166,34 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
 
 function MobileNav() {
   const pathname = usePathname();
+  const [showBusiness, setShowBusiness] = useState(true);
+  const [showFinance, setShowFinance] = useState(true);
+  const [showHabits, setShowHabits] = useState(true);
+  const [showQuarterly, setShowQuarterly] = useState(true);
+  const [showChallenges, setShowChallenges] = useState(true);
+
+  useEffect(() => {
+    getUserSettings().then((s) => {
+      setShowBusiness(s.showBusinessPanel);
+      setShowFinance(s.showFinancePanel);
+      setShowHabits(s.showHabitsPanel);
+      setShowQuarterly(s.showQuarterlyPanel);
+      setShowChallenges(s.showChallengesPanel);
+    });
+  }, []);
+
+  const hiddenHrefs = new Set<string>();
+  if (!showBusiness) hiddenHrefs.add('/negocio');
+  if (!showFinance) hiddenHrefs.add('/finanzas');
+  if (!showHabits) hiddenHrefs.add('/habits');
+  if (!showQuarterly) hiddenHrefs.add('/quarterly');
+  if (!showChallenges) hiddenHrefs.add('/challenges');
+
+  const visibleItems = MOBILE_NAV_ITEMS.filter((item) => !hiddenHrefs.has(item.href));
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-center justify-around px-2 pb-safe z-30 shadow-lg transition-colors">
-      {MOBILE_NAV_ITEMS.map((item) => {
+      {visibleItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
         return (

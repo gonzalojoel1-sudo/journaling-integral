@@ -1,7 +1,16 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { Briefcase, Minus, Plus } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Briefcase, Minus, Plus, PlusCircle } from 'lucide-react';
+import { autoSaveBizField, registerSale } from '../actions/business';
+
+interface BusinessUnit {
+  id: string;
+  name: string;
+  defaultSaleAmount: number;
+  defaultSaleCost: number;
+  isActive: number;
+}
 
 interface BizCompactPanelProps {
   prospectDone: boolean;
@@ -14,6 +23,8 @@ interface BizCompactPanelProps {
   sales: number;
   income: number;
   hasEntry: boolean;
+  date?: string;
+  businessUnits: BusinessUnit[];
 }
 
 export function BizCompactPanel({
@@ -27,7 +38,11 @@ export function BizCompactPanel({
   sales: initialSales,
   income: initialIncome,
   hasEntry,
+  date,
+  businessUnits,
 }: BizCompactPanelProps) {
+  const todayStr = date || new Date().toISOString().split('T')[0];
+
   const [prospectDone, setProspectDone] = useState(initialProspect);
   const [followUpDone, setFollowUpDone] = useState(initialFollowUp);
   const [mktDone, setMktDone] = useState(initialMkt);
@@ -36,53 +51,73 @@ export function BizCompactPanel({
   const [mktText, setMktText] = useState(initialMktText);
   const [contacts, setContacts] = useState(initialContacts);
   const [sales, setSales] = useState(initialSales);
-  const [income, setIncome] = useState(initialIncome);
-
-  const handleBizUpdate = useCallback(
-    (field: string, value: boolean | number | string) => {
-      console.log(`[BizUpdate] ${field}:`, value);
-    },
-    []
+  const [selectedUnit, setSelectedUnit] = useState<string>(
+    businessUnits.length > 0 ? businessUnits[0].id : '',
   );
+  const [registering, setRegistering] = useState(false);
+
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingActionsRef = useRef<Record<string, string | number>>({});
+
+  const debouncedSave = useCallback((field: string, value: string | number) => {
+    pendingActionsRef.current[field] = value;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(async () => {
+      const actions = { ...pendingActionsRef.current };
+      pendingActionsRef.current = {};
+      for (const [f, v] of Object.entries(actions)) {
+        await autoSaveBizField(f, v, todayStr);
+      }
+    }, 500);
+  }, [todayStr]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
 
   const toggleAction = (action: 'prospect' | 'followUp' | 'mkt') => {
-    const setters = {
-      prospect: () => {
-        const v = !prospectDone;
-        setProspectDone(v);
-        handleBizUpdate('bizProspectCompleted', v);
-      },
-      followUp: () => {
-        const v = !followUpDone;
-        setFollowUpDone(v);
-        handleBizUpdate('bizFollowUpCompleted', v);
-      },
-      mkt: () => {
-        const v = !mktDone;
-        setMktDone(v);
-        handleBizUpdate('bizMktActionCompleted', v);
-      },
-    };
-    setters[action]();
+    if (action === 'prospect') {
+      const v = !prospectDone;
+      setProspectDone(v);
+      debouncedSave('bizProspectCompleted', v ? 1 : 0);
+    } else if (action === 'followUp') {
+      const v = !followUpDone;
+      setFollowUpDone(v);
+      debouncedSave('bizFollowUpCompleted', v ? 1 : 0);
+    } else {
+      const v = !mktDone;
+      setMktDone(v);
+      debouncedSave('bizMktActionCompleted', v ? 1 : 0);
+    }
   };
 
   const updateText = (action: 'prospect' | 'followUp' | 'mkt', value: string) => {
-    const setters = {
-      prospect: () => {
-        setProspectText(value);
-        handleBizUpdate('bizActionsSpecific_prospect', value);
-      },
-      followUp: () => {
-        setFollowUpText(value);
-        handleBizUpdate('bizActionsSpecific_followUp', value);
-      },
-      mkt: () => {
-        setMktText(value);
-        handleBizUpdate('bizActionsSpecific_mkt', value);
-      },
+    if (action === 'prospect') setProspectText(value);
+    else if (action === 'followUp') setFollowUpText(value);
+    else setMktText(value);
+
+    const merged: Record<string, string> = {
+      prospect: action === 'prospect' ? value : prospectText,
+      followUp: action === 'followUp' ? value : followUpText,
+      mkt: action === 'mkt' ? value : mktText,
     };
-    setters[action]();
+
+    debouncedSave('bizActionsSpecific', JSON.stringify(merged));
   };
+
+  const handleRegisterSale = async () => {
+    if (!selectedUnit) return;
+    setRegistering(true);
+    const result = await registerSale(selectedUnit, todayStr);
+    if (result.success) {
+      setSales((s) => s + 1);
+    }
+    setRegistering(false);
+  };
+
+  const activeUnit = businessUnits.find((u) => u.id === selectedUnit);
 
   return (
     <div className="surface-card p-5">
@@ -91,11 +126,9 @@ export function BizCompactPanel({
           <Briefcase className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           Negocio 1-1-1
         </h3>
-        {hasEntry && (
-          <span className="text-[9px] font-bold font-mono text-zinc-400 uppercase">
-            Hoy
-          </span>
-        )}
+        <span className="text-[9px] font-bold font-mono text-zinc-400 uppercase">
+          {hasEntry ? 'Hoy' : 'Nuevo'}
+        </span>
       </div>
 
       <div className="space-y-2.5">
@@ -125,43 +158,64 @@ export function BizCompactPanel({
         />
       </div>
 
-      {hasEntry && (
-        <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/50 grid grid-cols-3 gap-3">
+      <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/50 space-y-3">
+        <div className="grid grid-cols-3 gap-3">
           <BizCounter
             label="Contactos"
             value={contacts}
             onChange={(v) => {
               setContacts(v);
-              handleBizUpdate('bizContactsCount', v);
+              debouncedSave('bizContactsCount', v);
             }}
           />
-          <BizCounter
-            label="Ventas"
-            value={sales}
-            onChange={(v) => {
-              setSales(v);
-              handleBizUpdate('bizSalesCount', v);
-            }}
-          />
-          <BizCounter
-            label="Ingresos"
-            value={income}
-            prefix="$"
-            onChange={(v) => {
-              setIncome(v);
-              handleBizUpdate('bizIncome', v);
-            }}
-          />
+          <ReadOnlyMetric label="Ventas" value={sales} />
+          <ReadOnlyMetric label="Ingresos" value={`$${initialIncome}`} />
         </div>
-      )}
 
-      {!hasEntry && (
-        <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/50">
-          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 font-mono uppercase tracking-wider">
-            Registra en diario para ver métricas
+        {businessUnits.length > 0 && (
+          <div className="flex items-center gap-2 pt-1">
+            <select
+              value={selectedUnit}
+              onChange={(e) => setSelectedUnit(e.target.value)}
+              className="flex-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 text-[10px] font-mono text-zinc-600 dark:text-zinc-400 outline-none focus:border-emerald-500/50"
+            >
+              {businessUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
+                  {unit.defaultSaleAmount > 0
+                    ? ` ($${unit.defaultSaleAmount}${unit.defaultSaleCost > 0 ? ` - $${unit.defaultSaleCost}` : ''})`
+                    : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleRegisterSale}
+              disabled={registering || !selectedUnit}
+              className="shrink-0 flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] transition-colors cursor-pointer"
+            >
+              <PlusCircle className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {activeUnit && activeUnit.defaultSaleAmount > 0 && (
+          <p className="text-[9px] font-mono text-zinc-400 dark:text-zinc-500 text-center">
+            Venta: ${activeUnit.defaultSaleAmount}
+            {activeUnit.defaultSaleCost > 0 && ` · Costo: $${activeUnit.defaultSaleCost}`}
           </p>
-        </div>
-      )}
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReadOnlyMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="text-center">
+      <p className="text-sm font-extrabold text-zinc-400 dark:text-zinc-500">
+        {value}
+      </p>
+      <p className="text-[9px] font-mono text-zinc-400 uppercase">{label}</p>
     </div>
   );
 }

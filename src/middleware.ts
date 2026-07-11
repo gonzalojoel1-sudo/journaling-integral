@@ -1,6 +1,20 @@
-export { default } from 'next-auth/middleware';
+import { withAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-// Rutas protegidas que requieren inicio de sesión obligatorio
+export default withAuth(
+  function middleware(req: NextRequest) {
+    const response = NextResponse.next();
+    response.headers.set('x-pathname', req.nextUrl.pathname);
+    return response;
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
+  },
+);
+
 export const config = {
   matcher: [
     '/',
@@ -9,7 +23,11 @@ export const config = {
     '/quarterly',
     '/habits',
     '/challenges',
+    '/negocio',
+    '/finanzas',
+    '/configuracion',
     '/progress',
-    '/review'
-  ]
+    '/review',
+    '/onboarding',
+  ],
 };
