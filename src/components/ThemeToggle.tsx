@@ -4,33 +4,38 @@ import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
 export function ThemeToggle() {
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [mounted, setMounted] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    // Verificar si el usuario ya tenía una preferencia guardada o asimilar la del sistema
-    const isDark = 
-      localStorage.getItem('theme') === 'dark' || 
+    const isDark =
+      localStorage.getItem('theme') === 'dark' ||
       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
+
     setDarkMode(isDark);
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    if (darkMode) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setDarkMode(false);
-    } else {
+    const next = !darkMode;
+    setDarkMode(next);
+    if (next) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      setDarkMode(true);
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     }
   };
+
+  if (!mounted) {
+    return <div className="p-2 rounded-lg w-9 h-9" aria-hidden="true" />;
+  }
 
   return (
     <button

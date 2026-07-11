@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveWeeklyPlan } from '../actions/journal';
+import { saveWeeklyPlan } from '../actions/weekly-planning';
 import { 
   Award, 
   Activity, 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { createHabit, archiveHabit } from '../actions/journal';
+import { createHabit, archiveHabit } from '../actions/habits';
 import { 
   Plus, 
   Trash2, 

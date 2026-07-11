@@ -1,8 +1,8 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { Navigation } from '../components/Navigation';
-import { Providers } from './providers'; // Importar Proveedor de Sesión
+import Navigation from '@/components/Navigation';
+import { Providers } from './providers';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -28,12 +28,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <meta name="theme-color" content="#0c0a09" />
       </head>
       <body className={`${inter.className} h-full antialiased text-stone-900 bg-stone-50 dark:text-stone-100 dark:bg-stone-950`} suppressHydrationWarning>
-        <Providers> {/* Envolver toda la aplicación para soporte Multiusuario */}
+        <Providers>
           <div className="min-h-screen flex flex-col md:flex-row">
-            {/* Navegación dual responsiva */}
             <Navigation />
 
-            {/* Área de contenido principal */}
             <main className="flex-1 md:pl-64 min-h-screen pb-20 md:pb-0 flex flex-col">
               <div className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 {children}
@@ -42,7 +40,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
           </div>
         </Providers>
 
-        {/* Registro del Service Worker Nativo */}
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -2,7 +2,6 @@
 
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateUserLevel } from '../../app/actions/journal';
 import { Settings2, Loader2 } from 'lucide-react';
 
 export function AdminControls() {
@@ -14,7 +13,11 @@ export function AdminControls() {
   const handleLevelChange = (level: number) => {
     setAdminLevel(level);
     startTransition(async () => {
-      await updateUserLevel(level);
+      await fetch('/api/admin/level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level }),
+      });
       router.refresh();
     });
   };
@@ -26,6 +29,7 @@ export function AdminControls() {
           Panel de Pruebas
         </span>
         <button
+          type="button"
           onClick={() => setShowAdminPanel(!showAdminPanel)}
           className="text-stone-500 hover:text-emerald-600 dark:hover:text-emerald-400"
           title="Abrir selector de niveles"

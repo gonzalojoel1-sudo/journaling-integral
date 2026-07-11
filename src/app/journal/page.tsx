@@ -1,5 +1,6 @@
 import React from 'react';
-import { getOrCreateUserProfile, getActiveHabits } from '../actions/journal';
+import { getOrCreateUserProfile } from '../actions/auth';
+import { getActiveHabits } from '../actions/habits';
 import { db } from '../../db/db';
 import { dailyEntries } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';

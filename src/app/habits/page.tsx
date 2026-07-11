@@ -1,5 +1,5 @@
 import React from 'react';
-import { getActiveHabits } from '../actions/journal';
+import { getActiveHabits } from '../actions/habits';
 import { HabitsClient } from './HabitsClient';
 
 export default async function HabitsPage() {

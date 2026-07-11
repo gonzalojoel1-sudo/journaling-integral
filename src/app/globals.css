@@ -2,16 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   LIFE OS DESIGN SYSTEM — "Del Ser al Legado"
+   Paleta: Zinc metálico + acentos por área de vida
+   ============================================================ */
+
+/* --- CSS Custom Properties --- */
 :root {
-  --foreground-rgb: 24, 24, 27; /* Stone 900 */
-  --bg-gradient: linear-gradient(135deg, #f5f5f4 0%, #e7e5e4 100%); /* Stone soft gradient */
+  --foreground-rgb: 24, 24, 27;
+  --bg-gradient: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
+
+  --surface-card: rgba(255, 255, 255, 0.82);
+  --surface-card-border: rgba(0, 0, 0, 0.04);
+  --surface-elevated: rgba(255, 255, 255, 0.92);
+  --surface-elevated-border: rgba(0, 0, 0, 0.06);
+
+  --divider: rgba(0, 0, 0, 0.06);
+  --divider-strong: rgba(0, 0, 0, 0.1);
+
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #a1a1aa;
+
+  --area-ser: #0ea5e9;
+  --area-negocio: #10b981;
+  --area-fe: #8b5cf6;
+  --area-cuerpo: #f59e0b;
+  --area-mente: #06b6d4;
+  --area-relaciones: #f43f5e;
+  --area-legado: #f97316;
+  --area-disciplina: #71717a;
+
+  --shadow-surface: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-elevated: 0 4px 16px -2px rgba(0,0,0,0.06), 0 2px 6px -1px rgba(0,0,0,0.03);
+  --shadow-float: 0 12px 40px -8px rgba(0,0,0,0.1), 0 4px 12px -2px rgba(0,0,0,0.04);
 }
 
 .dark {
-  --foreground-rgb: 244, 244, 245; /* Stone 100 */
-  --bg-gradient: linear-gradient(135deg, #09090b 0%, #18181b 100%); /* Zinc dark gradient */
+  --foreground-rgb: 244, 244, 245;
+  --bg-gradient: linear-gradient(135deg, #0a0a0b 0%, #0f0f12 50%, #0a0a0b 100%);
+
+  --surface-card: rgba(26, 26, 30, 0.65);
+  --surface-card-border: rgba(255, 255, 255, 0.04);
+  --surface-elevated: rgba(26, 26, 30, 0.85);
+  --surface-elevated-border: rgba(255, 255, 255, 0.06);
+
+  --divider: rgba(255, 255, 255, 0.05);
+  --divider-strong: rgba(255, 255, 255, 0.1);
+
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #52525b;
+
+  --shadow-surface: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-elevated: 0 4px 16px -2px rgba(0,0,0,0.4), 0 2px 6px -1px rgba(0,0,0,0.2);
+  --shadow-float: 0 12px 40px -8px rgba(0,0,0,0.5), 0 4px 12px -2px rgba(0,0,0,0.3);
 }
 
+/* --- Base --- */
 body {
   color: rgb(var(--foreground-rgb));
   background: var(--bg-gradient);
@@ -19,36 +67,306 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Estilo Glassmorphism Premium */
+/* ============================================================
+   SUPERFICIES (reemplazo de bordes duros por sombras sutiles)
+   ============================================================ */
+
+.surface-card {
+  background: var(--surface-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--surface-card-border);
+  box-shadow: var(--shadow-surface);
+  border-radius: 1rem;
+  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.surface-card:hover {
+  box-shadow: var(--shadow-elevated);
+}
+
+.surface-elevated {
+  background: var(--surface-elevated);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--surface-elevated-border);
+  box-shadow: var(--shadow-elevated);
+  border-radius: 1rem;
+}
+
+.surface-float {
+  background: var(--surface-elevated);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--surface-elevated-border);
+  box-shadow: var(--shadow-float);
+  border-radius: 1.25rem;
+}
+
+/* ============================================================
+   DIVISORES (separación invisible, sin líneas duras)
+   ============================================================ */
+
+.divider-subtle {
+  border-color: var(--divider);
+}
+
+.divider-strong {
+  border-color: var(--divider-strong);
+}
+
+/* ============================================================
+   COLORES POR ÁREA DE VIDA (acentos semánticos)
+   ============================================================ */
+
+.text-area-ser { color: var(--area-ser); }
+.bg-area-ser { background-color: var(--area-ser); }
+.border-area-ser { border-color: var(--area-ser); }
+
+.text-area-negocio { color: var(--area-negocio); }
+.bg-area-negocio { background-color: var(--area-negocio); }
+.border-area-negocio { border-color: var(--area-negocio); }
+
+.text-area-fe { color: var(--area-fe); }
+.bg-area-fe { background-color: var(--area-fe); }
+.border-area-fe { border-color: var(--area-fe); }
+
+.text-area-cuerpo { color: var(--area-cuerpo); }
+.bg-area-cuerpo { background-color: var(--area-cuerpo); }
+.border-area-cuerpo { border-color: var(--area-cuerpo); }
+
+.text-area-mente { color: var(--area-mente); }
+.bg-area-mente { background-color: var(--area-mente); }
+.border-area-mente { border-color: var(--area-mente); }
+
+.text-area-relaciones { color: var(--area-relaciones); }
+.bg-area-relaciones { background-color: var(--area-relaciones); }
+.border-area-relaciones { border-color: var(--area-relaciones); }
+
+.text-area-legado { color: var(--area-legado); }
+.bg-area-legado { background-color: var(--area-legado); }
+.border-area-legado { border-color: var(--area-legado); }
+
+.text-area-disciplina { color: var(--area-disciplina); }
+.bg-area-disciplina { background-color: var(--area-disciplina); }
+.border-area-disciplina { border-color: var(--area-disciplina); }
+
+/* ============================================================
+   FLOW STEPS (colapso/expansión para el wizard del diario)
+   ============================================================ */
+
+.flow-step-content {
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flow-step-content[data-state="collapsed"] {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.flow-step-content[data-state="expanded"] {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.flow-step-header {
+  cursor: pointer;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.flow-step-header:hover {
+  background: var(--divider);
+}
+
+/* ============================================================
+   AUTOSAVE INDICATOR
+   ============================================================ */
+
+.autosave-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.autosave-indicator[data-saving="true"] {
+  color: var(--area-negocio);
+}
+
+.autosave-indicator[data-saved="true"] {
+  color: var(--area-negocio);
+  opacity: 0.7;
+}
+
+/* ============================================================
+   PRIORITY CHECKBOX (para el dashboard)
+   ============================================================ */
+
+.priority-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--divider-strong);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.priority-check:checked {
+  background: var(--area-negocio);
+  border-color: var(--area-negocio);
+}
+
+.priority-check:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  animation: check-mark 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.priority-check:hover {
+  border-color: var(--area-negocio);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* ============================================================
+   SCROLLBAR (sutil y premium)
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--divider-strong);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ============================================================
+   CLASES LEGACY (mantener compatibilidad con componentes existentes)
+   ============================================================ */
+
 .glass-panel {
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--surface-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--surface-card-border);
 }
 
-.dark .glass-panel {
-  background-color: rgba(24, 24, 27, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Sombras suaves y orgánicas */
 .shadow-soft {
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-surface);
 }
 
-.dark .shadow-soft {
-  box-shadow: 0 4px 30px -4px rgba(0, 0, 0, 0.4);
-}
-
-/* Efectos de transición */
 .transition-all-fresco {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Soporte para áreas seguras */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================================
+   RANGE INPUT (sliders de energía, estrés, etc.)
+   ============================================================ */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--divider-strong);
+  outline: none;
+  transition: background 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+/* ============================================================
+   FOCUS RING (unificado y sutil)
+   ============================================================ */
+
+*:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.5);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* ============================================================
+   PRINT STYLES (mantener compatibilidad con export PDF)
+   ============================================================ */
+
+@media print {
+  body {
+    background: white !important;
+    color: #18181b !important;
+  }
+
+  .surface-card,
+  .surface-elevated,
+  .glass-panel {
+    background: white !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 1px solid #e4e4e7 !important;
+  }
 }

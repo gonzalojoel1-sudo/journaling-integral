@@ -1,4 +1,4 @@
-const CACHE_NAME = 'journaling-static-v2';
+const CACHE_NAME = 'journaling-static-v3';
 const ASSETS_TO_CACHE = [
   '/manifest.json',
   '/icon-192.png',

@@ -1,5 +1,6 @@
 import React from 'react';
-import { getActiveQuarterlyPlan, getOrCreateUserProfile } from '../actions/journal';
+import { getOrCreateUserProfile } from '../actions/auth';
+import { getActiveQuarterlyPlan } from '../actions/quarterly-planning';
 import { QuarterlyPlanForm } from './QuarterlyPlanForm';
 
 export default async function QuarterlyPlanPage() {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveQuarterlyPlan } from '../actions/journal';
+import { saveQuarterlyPlan } from '../actions/quarterly-planning';
 import { 
   Save, 
   Compass, 

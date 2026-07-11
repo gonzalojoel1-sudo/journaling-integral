@@ -1,0 +1,19 @@
+meta {
+  name: POST login credentials
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/auth/callback/credentials
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "joel@journalingintegral.demo",
+    "password": "admin123",
+    "redirect": false
+  }
+}

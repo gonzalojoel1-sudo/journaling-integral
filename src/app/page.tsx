@@ -2,24 +2,27 @@ import React from 'react';
 import Link from 'next/link';
 import { db } from '../db/db';
 import { dailyEntries, users } from '../db/schema';
-import { getOrCreateUserProfile, getRandomVerse, getActiveWeeklyPlan } from './actions/journal';
-import { getActiveChallenges } from './actions/challenges';
+import { getOrCreateUserProfile } from './actions/auth';
+import { getRandomVerse } from './actions/bible';
+import { getActiveWeeklyPlan } from './actions/weekly-planning';
+import { getActiveChallenges, getBadges } from './actions/challenges';
+import { getActiveHabits } from './actions/habits';
 import { ALL_TEMPLATES } from '@/lib/challenge-templates';
 import { eq, and, gte } from 'drizzle-orm';
-import { 
-  Flame, 
-  Award, 
-  CheckCircle2, 
-  ArrowRight, 
-  BookOpen, 
-  Sparkles, 
-  Clock, 
-  Compass,
-  CheckSquare,
+import {
+  Flame,
+  Award,
+  ArrowRight,
+  Zap,
+  Brain,
+  Moon,
   AlertTriangle,
-  Target,
+  BookOpen,
   Trophy,
 } from 'lucide-react';
+import { PriorityChecklist } from './dashboard/PriorityChecklist';
+import { HabitProgress } from './dashboard/HabitProgress';
+import { BizCompactPanel } from './dashboard/BizCompactPanel';
 
 export default async function DashboardPage() {
   const profileRes = await getOrCreateUserProfile();
@@ -35,7 +38,6 @@ export default async function DashboardPage() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // 1. Comprobar si ya completó el diario de hoy
   const todayEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
@@ -43,7 +45,6 @@ export default async function DashboardPage() {
     ),
   });
 
-  // 2. RECUPERAR LA "PREPARACIÓN PARA MAÑANA" DE AYER
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -55,11 +56,10 @@ export default async function DashboardPage() {
     ),
   });
 
-  const antiReactivityTasks: string[] = yesterdayEntry?.prepTomorrowJson 
-    ? JSON.parse(yesterdayEntry.prepTomorrowJson) 
+  const prepTomorrowTasks: string[] = yesterdayEntry?.prepTomorrowJson
+    ? JSON.parse(yesterdayEntry.prepTomorrowJson)
     : [];
 
-  // --- 3. NUEVO MOTOR DE INTEGRACIÓN: AUTOMATIZACIÓN DE DESTRABE SEMANAL ---
   const weeklyPlanRes = await getActiveWeeklyPlan();
   const activeWeeklyPlan = weeklyPlanRes.plan;
 
@@ -70,12 +70,8 @@ export default async function DashboardPage() {
     weeklyFocusText = activeWeeklyPlan.focus;
     try {
       const parsedTasks = JSON.parse(activeWeeklyPlan.tasksJson);
-      
-      // Obtener el nombre del día actual en español
       const daysInSpanish = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const todayDayName = daysInSpanish[new Date().getDay()];
-
-      // Buscar si el usuario planificó una tarea de destrabe para el día de hoy
       const foundTask = parsedTasks.find((t: any) => t.day === todayDayName);
       if (foundTask && foundTask.task.trim() !== '') {
         todayWeeklyDestrabeAction = foundTask.task;
@@ -85,14 +81,41 @@ export default async function DashboardPage() {
     }
   }
 
-  // 4. Versículo de anclaje diario
   const verse = await getRandomVerse(user.currentLevel);
 
-  // 5. Desafios activos
   const challengesRes = await getActiveChallenges();
   const activeChallenges = challengesRes.challenges || [];
 
-  // 6. Constancia últimos 30 días
+  const badgesRes = await getBadges();
+  const userBadges = badgesRes.badges || [];
+
+  const habitsRes = await getActiveHabits();
+  const habitsList = habitsRes.habits || [];
+
+  let parsedHabits: { id: string; name: string; type: string; completed?: boolean }[] = [];
+  let initialCompletedIds: string[] = [];
+
+  if (habitsList.length > 0) {
+    if (todayEntry?.dailyHabitsJson) {
+      try {
+        const savedHabits = JSON.parse(todayEntry.dailyHabitsJson);
+        parsedHabits = savedHabits.map((h: any) => ({
+          id: h.habitId,
+          name: h.name,
+          type: h.type,
+          completed: h.completed,
+        }));
+        initialCompletedIds = savedHabits
+          .filter((h: any) => h.completed)
+          .map((h: any) => h.habitId);
+      } catch {
+        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type }));
+      }
+    } else {
+      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type }));
+    }
+  }
+
   const dateLimit = new Date();
   dateLimit.setDate(dateLimit.getDate() - 30);
   const dateLimitStr = dateLimit.toISOString().split('T')[0];
@@ -106,307 +129,356 @@ export default async function DashboardPage() {
 
   const completedDays = entriesLast30Days.length;
 
-  const levelRequirements = {
-    1: { target: 18, next: 'Nivel 2 (Direccion)' },
+  const levelRequirements: Record<number, { target: number; next: string }> = {
+    1: { target: 18, next: 'Nivel 2 (Dirección)' },
     2: { target: 25, next: 'Nivel 3 (Legado)' },
-    3: { target: 30, next: 'Nivel 4 (Maestro) - requiere insignias Diamante' },
-    4: { target: 30, next: 'Nivel 5 (Leyenda) - requiere insignia Legendaria' },
-    5: { target: 30, next: 'Maximo nivel alcanzado' },
+    3: { target: 30, next: 'Nivel 4 (Maestro)' },
+    4: { target: 30, next: 'Nivel 5 (Leyenda)' },
+    5: { target: 30, next: 'Máximo nivel' },
   };
 
-  const currentRequirement = levelRequirements[user.currentLevel as 1 | 2 | 3 | 4 | 5] || { target: 18, next: 'Nivel 2' };
+  const currentRequirement = levelRequirements[user.currentLevel] || { target: 18, next: 'Nivel 2' };
   const progressPercent = Math.min(Math.round((completedDays / currentRequirement.target) * 100), 100);
 
   const daysOfWeek = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const now = new Date();
-  const formattedDate = `${daysOfWeek[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+  const formattedDate = `${daysOfWeek[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]}`;
+
+  const levelNames = ['', 'Fundamentos', 'Dirección', 'Legado', 'Maestro', 'Leyenda'];
+
+  const bizProspectDone = todayEntry?.bizProspectCompleted === 1;
+  const bizFollowUpDone = todayEntry?.bizFollowUpCompleted === 1;
+  const bizMktDone = todayEntry?.bizMktActionCompleted === 1;
+
+  let bizProspectText = '';
+  let bizFollowUpText = '';
+  let bizMktText = '';
+  if (todayEntry?.bizActionsSpecific) {
+    try {
+      const parsed = JSON.parse(todayEntry.bizActionsSpecific);
+      bizProspectText = parsed.prospect || '';
+      bizFollowUpText = parsed.followUp || '';
+      bizMktText = parsed.mkt || '';
+    } catch {}
+  }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* --- SECCIÓN DE BIENVENIDA --- */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-stone-200 dark:border-stone-850 pb-6">
+    <div className="space-y-6 animate-fade-in">
+
+      {/* ── HEADER MINIMAL ── */}
+      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-mono">
             {formattedDate}
           </p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-100 mt-1">
-            Bienvenido de vuelta, {user.name}
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 mt-1">
+            Buenos días, {user.name}
           </h1>
-          <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
-            {user.currentLevel === 1 
-              ? 'Enfoque de hoy: Interrumpir el piloto automatico y crear orden consciente.'
-              : user.currentLevel === 2
-              ? 'Enfoque de hoy: Alinear tus prioridades y habitos con la vision a 5 anos.'
-              : user.currentLevel === 3
-              ? 'Enfoque de hoy: Medir el impacto generacional, legado y mayordomia integral.'
-              : user.currentLevel === 4
-              ? 'Enfoque de hoy: Maestria — multiplica tu impacto, mentorea a otros.'
-              : 'Enfoque de hoy: Leyenda — tu vida es un legado que trasciende generaciones.'}
-          </p>
         </div>
-
-        {/* Nivel actual */}
-        <div className="flex items-center gap-3 bg-stone-100/80 dark:bg-stone-900/60 border border-stone-200 dark:border-stone-850 rounded-2xl p-4 self-start md:self-auto shadow-sm">
-          <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-            <Award className="h-6 w-6" />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Flame className="h-3.5 w-3.5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 leading-none">
+                {user.streakCurrent}
+              </p>
+              <p className="text-[9px] font-mono text-zinc-400 uppercase">días</p>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 font-mono block">
-              Nivel Actual
-            </span>
-            <p className="text-sm font-bold text-stone-850 dark:text-stone-200">
-              Nivel {user.currentLevel}: {['', 'Fundamentos', 'Direccion', 'Legado', 'Maestro', 'Leyenda'][user.currentLevel] || 'Fundamentos'}
-            </p>
+          <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800" />
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <Award className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 leading-none">
+                Lvl {user.currentLevel}
+              </p>
+              <p className="text-[9px] font-mono text-zinc-400 uppercase">{levelNames[user.currentLevel]}</p>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* --- GRID DE ESTADÍSTICAS --- */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-amber-500/5 to-orange-500/5 dark:from-stone-900/40 dark:to-stone-950/40 border border-amber-200/60 dark:border-stone-850 rounded-2xl p-6 relative overflow-hidden shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-semibold uppercase text-amber-800 dark:text-stone-400 tracking-wider font-mono">
-                Racha Activa
-              </p>
-              <p className="text-4xl font-extrabold text-amber-900 dark:text-amber-500 mt-2">
-                {user.streakCurrent} <span className="text-sm font-medium text-stone-500">días</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-500 flex items-center justify-center">
-              <Flame className="h-6 w-6 fill-current" />
-            </div>
-          </div>
-          <div className="mt-4 text-xs text-amber-800/80 dark:text-stone-400">
-            Racha máxima histórica: <span className="font-bold">{user.streakMax} días</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs font-semibold uppercase text-stone-500 tracking-wider font-mono">
-                Días Registrados (30 d)
-              </p>
-              <p className="text-4xl font-extrabold text-stone-800 dark:text-stone-200 mt-2">
-                {completedDays} <span className="text-sm font-medium text-stone-500">de 30</span>
-              </p>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
-          </div>
-          <div className="mt-4 text-xs text-stone-500">
-            Frecuencia mínima requerida para mantener estabilidad.
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 flex flex-col justify-between shadow-sm">
-          <div>
-            <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-stone-500 mb-2">
-              <span>Progreso de Nivel</span>
-              <span>{progressPercent}%</span>
-            </div>
-            <div className="w-full bg-stone-200 dark:bg-stone-800 h-2 rounded-full overflow-hidden">
-              <div 
-                className="bg-emerald-600 dark:bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                style={{ width: `${progressPercent}%` }}
-              ></div>
-            </div>
-          </div>
-          <div className="text-xs text-stone-500 mt-4">
-            {user.currentLevel < 3 ? (
-              <span>Siguiente meta: <strong className="text-stone-800 dark:text-stone-300">{currentRequirement.target} registros</strong> para habilitar {currentRequirement.next}.</span>
-            ) : (
-              <span>Metodología completa habilitada. Sigue construyendo tu legado.</span>
-            )}
-          </div>
-        </div>
+      {/* ── HERO: LISTA DE PRIORIDADES ── */}
+      <section>
+        <PriorityChecklist
+          mitSer={todayEntry?.mitSer ?? null}
+          mitSerCompleted={todayEntry?.mitSerCompleted === 1}
+          mitNegocio={todayEntry?.mitNegocio ?? null}
+          mitNegocioCompleted={todayEntry?.mitNegocioCompleted === 1}
+          mitRelaciones={todayEntry?.mitRelaciones ?? null}
+          mitRelacionesCompleted={todayEntry?.mitRelacionesCompleted === 1}
+          weeklyDestrabeAction={todayWeeklyDestrabeAction}
+          weeklyFocus={weeklyFocusText}
+          prepTomorrowTasks={prepTomorrowTasks}
+          hasEntryToday={!!todayEntry}
+        />
       </section>
 
-      {/* --- SECCIÓN PRINCIPAL DE CONTROL --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Columna Izquierda: Tarjetas de Planificación Semanal y Antirreactividad */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* --- NUEVO MÓDULO INTELIGENTE: ENFOQUE SEMANAL Y ACCIÓN DE DESTRABE AUTOMATIZADA --- */}
-          {activeWeeklyPlan && (
-            <div className="p-6 rounded-3xl border border-emerald-500/20 bg-emerald-50/5 dark:bg-emerald-950/5 shadow-soft space-y-4">
-              <div className="flex items-center gap-2 border-b border-emerald-500/10 pb-2">
-                <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                <div>
-                  <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-200">
-                    Tu Planificación Semanal Activa
-                  </h3>
-                  <p className="text-[10px] text-stone-400 font-mono">INTEGRACIÓN DE ENFOQUES DOMINICALES</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                {/* Enfoque Dominante Semanal */}
-                <div className="p-4 bg-white dark:bg-stone-900 border border-stone-150 dark:border-stone-850 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase font-mono">Enfoque Dominante (80/20):</span>
-                  <p className="font-bold text-stone-850 dark:text-stone-100">{weeklyFocusText || 'No definido aún.'}</p>
-                </div>
+      {/* ── GRID DE ECOSISTEMA COMPACTO ── */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                {/* Acción Automática de Destrabe de Hoy */}
-                <div className="p-4 bg-white dark:bg-stone-900 border border-stone-150 dark:border-stone-850 rounded-xl space-y-1">
-                  <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase font-mono flex items-center gap-1.5">
-                    <Sparkles className="h-3 w-3 animate-pulse" /> Acción de Destrabe para Hoy:
-                  </span>
-                  <p className="font-bold text-stone-850 dark:text-stone-100">
-                    {todayWeeklyDestrabeAction ? todayWeeklyDestrabeAction : 'No programaste ninguna acción de destrabe para hoy.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Panel Negocio 1-1-1 */}
+        <BizCompactPanel
+          prospectDone={bizProspectDone}
+          followUpDone={bizFollowUpDone}
+          mktDone={bizMktDone}
+          prospectText={bizProspectText}
+          followUpText={bizFollowUpText}
+          mktText={bizMktText}
+          contacts={todayEntry?.bizContactsCount ?? 0}
+          sales={todayEntry?.bizSalesCount ?? 0}
+          income={todayEntry?.bizIncome ?? 0}
+          hasEntry={!!todayEntry}
+        />
 
-          {/* Enfoque Anti-Reactividad Diario */}
-          {antiReactivityTasks.length > 0 && (
-            <div className="p-6 rounded-3xl border border-stone-200/60 dark:border-stone-850 bg-stone-50/5 dark:bg-stone-950/5 shadow-soft space-y-4">
-              <div className="flex items-center gap-2 border-b border-stone-200 dark:border-stone-800 pb-2">
-                <CheckSquare className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                <div>
-                  <h3 className="text-sm font-extrabold text-stone-800 dark:text-stone-200">
-                    Tu Enfoque Anti-Reactividad para Hoy
-                  </h3>
-                  <p className="text-[10px] text-stone-400 font-mono">DISEÑADO POR TI ANOCHE PARA BLINDAR TU DÍA</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {antiReactivityTasks.map((task, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 bg-white dark:bg-stone-900/60 border border-stone-150 dark:border-stone-850 rounded-xl">
-                    <span className="h-5 w-5 rounded-md bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-400 font-mono shrink-0">
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs font-bold text-stone-750 dark:text-stone-300">
-                      {task}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Hábitos EOR */}
+        <HabitProgress habits={parsedHabits} initialCompletedIds={initialCompletedIds} />
 
-          {/* Tarjeta de Estado del Diario de Hoy */}
-          <div className="bg-stone-900 text-stone-100 rounded-3xl p-6 border border-stone-800 relative overflow-hidden shadow-lg">
-            <div className="relative z-10">
-              <span className="bg-emerald-950 text-emerald-400 border border-emerald-900/60 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider font-mono">
-                Estatus Diario
+        {/* Pulso Vital */}
+        <div className="surface-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-500" />
+              Pulso Vital
+            </h3>
+            {todayEntry && (
+              <span className="text-[9px] font-bold font-mono text-zinc-400 uppercase">
+                Hoy
               </span>
-              
-              {todayEntry ? (
-                <div className="mt-6 space-y-4">
-                  <h3 className="text-2xl font-bold">¡Diario de hoy completado con éxito!</h3>
-                  <p className="text-sm text-stone-400">
-                    Has tomado el control del día al registrar tus hábitos, oraciones y niveles de energía.
-                  </p>
-                  <div className="flex flex-wrap gap-4 pt-2">
-                    <div className="bg-stone-800/60 border border-stone-700/50 px-3 py-2 rounded-xl text-center">
-                      <span className="text-[10px] uppercase text-stone-500 block font-mono">Energía</span>
-                      <span className="text-lg font-bold text-emerald-400">{todayEntry.energyRating || '-'}/10</span>
-                    </div>
-                    <div className="bg-stone-800/60 border border-stone-700/50 px-3 py-2 rounded-xl text-center">
-                      <span className="text-[10px] uppercase text-stone-500 block font-mono">Enfoque</span>
-                      <span className="text-lg font-bold text-emerald-400">{todayEntry.focusRating || '-'}/10</span>
-                    </div>
-                    <div className="bg-stone-800/60 border border-stone-700/50 px-3 py-2 rounded-xl text-center">
-                      <span className="text-[10px] uppercase text-stone-500 block font-mono">Estrés</span>
-                      <span className="text-lg font-bold text-amber-500">{todayEntry.stressRating || '-'}/10</span>
-                    </div>
-                  </div>
-                  <div className="pt-2">
-                    <Link 
-                      href="/journal" 
-                      className="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 font-semibold transition-colors"
-                    >
-                      Editar diario de hoy <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-6 space-y-4">
-                  <h3 className="text-2xl font-bold">¿Cómo quieres gobernar tu día hoy?</h3>
-                  <p className="text-sm text-stone-400">
-                    Evita que la reactividad dirija tu jornada. Dedica {user.currentLevel === 1 ? '3-5' : user.currentLevel === 2 ? '15' : '20'} minutos para alinear tu identidad con tus acciones.
-                  </p>
-                  <div className="pt-4">
-                    <Link 
-                      href="/journal" 
-                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-950/50 text-sm cursor-pointer hover:opacity-90"
-                    >
-                      Iniciar Registro Diario <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Elemento de diseño de fondo */}
-            <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-y-1/4 translate-x-1/4">
-              <BookOpen className="h-64 w-64 text-emerald-400" />
-            </div>
+            )}
           </div>
+
+          {todayEntry ? (
+            <div className="grid grid-cols-2 gap-3">
+              <VitalMetric
+                icon={<Moon className="h-3.5 w-3.5" />}
+                label="Sueño"
+                value={todayEntry.sleepRating}
+                color="sky"
+              />
+              <VitalMetric
+                icon={<Zap className="h-3.5 w-3.5" />}
+                label="Energía"
+                value={todayEntry.energyRating}
+                color="emerald"
+              />
+              <VitalMetric
+                icon={<Brain className="h-3.5 w-3.5" />}
+                label="Enfoque"
+                value={todayEntry.focusRating}
+                color="cyan"
+              />
+              <VitalMetric
+                icon={<AlertTriangle className="h-3.5 w-3.5" />}
+                label="Estrés"
+                value={todayEntry.stressRating}
+                color="amber"
+                inverted
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="h-10 w-10 rounded-xl bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-3">
+                <Zap className="h-5 w-5 text-zinc-400 dark:text-zinc-500" />
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Registra tu diario para ver tu pulso vital
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Columna Derecha: Desafio Activo + Versiculo */}
-        <div className="space-y-6">
-          {activeChallenges.length > 0 && (() => {
-            const ch = activeChallenges[0];
-            const template = ALL_TEMPLATES.find((t) => t.id === ch.templateId);
-            if (!template) return null;
-            return (
-              <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-stone-900/40 dark:to-stone-950/40 border border-emerald-200/60 dark:border-stone-850 rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="h-4 w-4 text-emerald-600" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 font-mono">Desafio Activo</span>
-                </div>
-                <h3 className="text-sm font-bold text-stone-800 dark:text-stone-200">{template.title}</h3>
-                <p className="text-xs text-stone-500 mt-1">Dia {ch.currentDay} de {template.days} · {template.mineral}</p>
-                <div className="mt-3 w-full bg-stone-200 dark:bg-stone-800 h-2 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${((ch.currentDay - 1) / template.days) * 100}%` }} />
-                </div>
-                <Link href="/challenges" className="text-[10px] font-bold text-emerald-600 hover:text-emerald-500 mt-3 inline-block">
-                  Ver todos los desafios →
-                </Link>
-              </div>
-            );
-          })()}
+        {/* Anclaje Espiritual */}
+        <div className="surface-card p-5 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-violet-500" />
+              Anclaje Espiritual
+            </h3>
+            {verse && (
+              <span className="text-[9px] font-bold font-mono text-violet-500 dark:text-violet-400 uppercase">
+                {verse.topic || 'Hoy'}
+              </span>
+            )}
+          </div>
 
-          {verse && (
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-2xl p-6 flex flex-col justify-between h-full min-h-[350px] shadow-sm">
+          {verse ? (
+            <div className="flex-1 flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-100 dark:bg-emerald-950/40 px-2 py-1 rounded-md">
-                  Anclaje Espiritual del Día
-                </span>
-                
-                <blockquote className="mt-6 text-stone-800 dark:text-stone-200 italic font-semibold leading-relaxed font-serif text-sm">
-                  "{verse.text}"
+                <blockquote className="text-sm text-zinc-700 dark:text-zinc-300 italic leading-relaxed font-serif">
+                  &ldquo;{verse.text}&rdquo;
                 </blockquote>
-                
-                <p className="mt-3 text-xs font-bold text-stone-500 dark:text-stone-400 text-right">
+                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 text-right mt-2 font-mono">
                   — {verse.reference}
                 </p>
               </div>
-
               {verse.interpretation && (
-                <div className="mt-8 border-t border-stone-150 dark:border-stone-850 pt-4 bg-stone-50 dark:bg-stone-950/20 p-4 rounded-xl">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block font-mono mb-1">
-                    Aplicación Práctica
-                  </span>
-                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                <div className="mt-4 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-1">
+                    Aplicación
+                  </p>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                     {verse.interpretation}
                   </p>
                 </div>
               )}
             </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
+                No hay versículo disponible hoy
+              </p>
+            </div>
           )}
         </div>
+      </section>
 
+      {/* ── GAMIFICACIÓN COMPACTA (Footer) ── */}
+      <section className="surface-card p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+
+          {/* Progreso de Nivel */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-mono">
+                Progreso de Nivel
+              </span>
+              <span className="text-[10px] font-bold font-mono text-zinc-400">
+                {progressPercent}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-200/60 dark:bg-zinc-800/60 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-premium"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1.5">
+              {completedDays} de {currentRequirement.target} registros → {currentRequirement.next}
+            </p>
+          </div>
+
+          <div className="hidden sm:block h-10 w-px bg-zinc-200/50 dark:bg-zinc-800/50" />
+
+          {/* Desafío Activo */}
+          {activeChallenges.length > 0 && (() => {
+            const ch = activeChallenges[0];
+            const template = ALL_TEMPLATES.find((t) => t.id === ch.templateId);
+            if (!template) return null;
+            const chPercent = Math.round(((ch.currentDay - 1) / template.days) * 100);
+            return (
+              <div className="sm:w-56 shrink-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-mono">
+                    Desafío
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                  {template.title}
+                </p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="h-1 flex-1 bg-zinc-200/60 dark:bg-zinc-800/60 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${chPercent}%` }} />
+                  </div>
+                  <span className="text-[9px] font-mono text-zinc-400 shrink-0">
+                    {ch.currentDay}/{template.days}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="hidden sm:block h-10 w-px bg-zinc-200/50 dark:bg-zinc-800/50" />
+
+          {/* Insignias */}
+          <div className="sm:w-40 shrink-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Award className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-mono">
+                Insignias
+              </span>
+            </div>
+            <Link
+              href="/progress"
+              className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+            >
+              {userBadges.length} <span className="text-xs font-normal text-zinc-400">/ 50</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA DIARIO (si no hay entrada hoy) ── */}
+      {!todayEntry && (
+        <section className="surface-elevated p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+              ¿Listo para gobernar tu día?
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Dedica {user.currentLevel === 1 ? '3-5' : user.currentLevel === 2 ? '15' : '20'} minutos para alinear tu identidad con tus acciones.
+            </p>
+          </div>
+          <Link
+            href="/journal"
+            className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl text-xs transition-colors shadow-sm shadow-emerald-600/20 shrink-0"
+          >
+            Iniciar Registro Diario <ArrowRight className="h-4 w-4" />
+          </Link>
+        </section>
+      )}
+
+    </div>
+  );
+}
+
+/* ── SUB-COMPONENTES INLINE (Server Components) ── */
+
+function VitalMetric({
+  icon,
+  label,
+  value,
+  color,
+  inverted = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | null;
+  color: 'sky' | 'emerald' | 'cyan' | 'amber';
+  inverted?: boolean;
+}) {
+  const colorMap = {
+    sky: { bg: 'bg-sky-500/10', text: 'text-sky-600 dark:text-sky-400' },
+    emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
+    cyan: { bg: 'bg-cyan-500/10', text: 'text-cyan-600 dark:text-cyan-400' },
+    amber: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400' },
+  };
+
+  const c = colorMap[color];
+  const isGood = value !== null && (inverted ? value <= 5 : value >= 7);
+
+  return (
+    <div className={`p-3 rounded-xl ${isGood ? 'bg-emerald-500/5 dark:bg-emerald-500/5' : 'bg-zinc-100/50 dark:bg-zinc-800/30'}`}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className={`h-5 w-5 rounded ${c.bg} flex items-center justify-center ${c.text}`}>
+          {icon}
+        </div>
+        <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
+          {label}
+        </span>
       </div>
+      <p className={`text-xl font-extrabold ${
+        isGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-800 dark:text-zinc-200'
+      }`}>
+        {value ?? '—'}
+        <span className="text-xs font-medium text-zinc-400 ml-0.5">/10</span>
+      </p>
     </div>
   );
 }

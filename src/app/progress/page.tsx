@@ -1,5 +1,6 @@
 import React from 'react';
-import { getAnalyticsData, getActiveQuarterlyPlan } from '../actions/journal';
+import { getAnalyticsData } from '../actions/daily-journal';
+import { getActiveQuarterlyPlan } from '../actions/quarterly-planning';
 import { getBadges } from '../actions/challenges';
 import { ProgressClient } from './ProgressClient';
 

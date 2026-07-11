@@ -1,5 +1,5 @@
 import React from 'react';
-import { getAnalyticsData } from '../actions/journal';
+import { getAnalyticsData } from '../actions/daily-journal';
 import { ReviewClient } from './ReviewClient';
 
 export default async function ReviewPage() {

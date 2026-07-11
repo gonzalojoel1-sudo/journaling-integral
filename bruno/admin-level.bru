@@ -1,0 +1,17 @@
+meta {
+  name: POST admin set level
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/admin/level
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "level": 3
+  }
+}
