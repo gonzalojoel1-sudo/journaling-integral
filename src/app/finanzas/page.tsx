@@ -5,6 +5,8 @@ import { MetricCard } from '@/components/business/MetricCard';
 import { PersonalLedger } from '@/components/personal/PersonalLedger';
 import { DonutChart } from '@/components/personal/DonutChart';
 
+export const dynamic = 'force-dynamic';
+
 function formatCurrency(n: number): string {
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
   return `$${n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;

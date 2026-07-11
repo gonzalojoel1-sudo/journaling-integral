@@ -2,6 +2,8 @@ import React from 'react';
 import { getActiveHabits } from '../actions/habits';
 import { HabitsClient } from './HabitsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HabitsPage() {
   // Obtener hábitos activos del usuario demo
   const res = await getActiveHabits();

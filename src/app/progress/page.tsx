@@ -4,6 +4,8 @@ import { getActiveQuarterlyPlan } from '../actions/quarterly-planning';
 import { getBadges } from '../actions/challenges';
 import { ProgressClient } from './ProgressClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProgressPage() {
   const analyticsRes = await getAnalyticsData();
   const entries = analyticsRes.entries || [];

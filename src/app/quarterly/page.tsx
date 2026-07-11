@@ -3,6 +3,8 @@ import { getOrCreateUserProfile } from '../actions/auth';
 import { getActiveQuarterlyPlan } from '../actions/quarterly-planning';
 import { QuarterlyPlanForm } from './QuarterlyPlanForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function QuarterlyPlanPage() {
   const profileRes = await getOrCreateUserProfile();
   const user = profileRes.user;

@@ -28,6 +28,8 @@ import { HabitProgress } from './dashboard/HabitProgress';
 import { BizCompactPanel } from './dashboard/BizCompactPanel';
 import { PersonalFinanceWidget } from './dashboard/PersonalFinanceWidget';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const profileRes = await getOrCreateUserProfile();
   const user = profileRes.user;

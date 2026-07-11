@@ -12,6 +12,8 @@ import { WithdrawButton } from './WithdrawButton';
 import { getCurrentUserId } from '../actions/auth';
 import { eq, and, gte, lte } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 function formatCurrency(n: number): string {
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
   return `$${n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;

@@ -3,6 +3,8 @@ import { Settings2 } from 'lucide-react';
 import { getUserSettings } from '../actions/user-settings';
 import { SettingsToggles } from './SettingsToggles';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ConfiguracionPage() {
   const settings = await getUserSettings();
 

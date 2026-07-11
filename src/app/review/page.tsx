@@ -2,6 +2,8 @@ import React from 'react';
 import { getAnalyticsData } from '../actions/daily-journal';
 import { ReviewClient } from './ReviewClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ReviewPage() {
   const analyticsRes = await getAnalyticsData();
   

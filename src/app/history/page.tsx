@@ -2,6 +2,8 @@ import React from 'react';
 import { getAnalyticsData } from '../actions/daily-journal';
 import { HistoryClient } from './HistoryClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HistoryPage() {
   // Cargar las entradas históricas de los últimos 30 días
   const res = await getAnalyticsData();
