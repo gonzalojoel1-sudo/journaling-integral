@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Navigation from '@/components/Navigation';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
+import { MainWrapper } from '@/components/MainWrapper';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -33,11 +34,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <div className="min-h-screen flex flex-col md:flex-row">
             <Navigation />
 
-            <main className="flex-1 md:pl-64 min-h-screen pb-20 md:pb-0 flex flex-col">
+            <MainWrapper>
               <div className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 <OnboardingGuard>{children}</OnboardingGuard>
               </div>
-            </main>
+            </MainWrapper>
           </div>
         </Providers>
 

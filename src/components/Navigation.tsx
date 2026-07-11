@@ -129,7 +129,7 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-stone-200 dark:border-stone-850 bg-stone-100/60 dark:bg-stone-950/30">
-        <AdminControls />
+        {isAdmin && <AdminControls />}
         
         {mounted && (status === 'authenticated' ? (
           <div className="space-y-3">
@@ -227,6 +227,9 @@ function MobileNav() {
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { status } = useSession();
+
+  if (status === 'unauthenticated') return null;
 
   return (
     <>
