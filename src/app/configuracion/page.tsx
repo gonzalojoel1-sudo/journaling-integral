@@ -33,6 +33,7 @@ export default async function ConfiguracionPage() {
           showHabitsPanel={settings.showHabitsPanel}
           showQuarterlyPanel={settings.showQuarterlyPanel}
           showChallengesPanel={settings.showChallengesPanel}
+          aiAssistantEnabled={settings.aiAssistantEnabled}
         />
       </section>
     </div>

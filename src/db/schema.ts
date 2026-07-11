@@ -298,6 +298,7 @@ export const userSettings = sqliteTable('user_settings', {
   showQuarterlyPanel: integer('show_quarterly_panel').default(0),
   showChallengesPanel: integer('show_challenges_panel').default(0),
   onboardingCompleted: integer('onboarding_completed').default(0).notNull(),
+  aiAssistantEnabled: integer('ai_assistant_enabled').default(1),
 });
 
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({

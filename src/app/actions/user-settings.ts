@@ -12,6 +12,7 @@ const defaultSettings = {
   showHabitsPanel: false,
   showQuarterlyPanel: false,
   showChallengesPanel: false,
+  aiAssistantEnabled: true,
   onboardingCompleted: false,
 };
 
@@ -30,6 +31,7 @@ export async function getUserSettings() {
         showHabitsPanel: 0,
         showQuarterlyPanel: 0,
         showChallengesPanel: 0,
+        aiAssistantEnabled: 1,
         onboardingCompleted: 0,
       });
       return defaultSettings;
@@ -41,6 +43,7 @@ export async function getUserSettings() {
       showHabitsPanel: (settings.showHabitsPanel ?? 0) === 1,
       showQuarterlyPanel: (settings.showQuarterlyPanel ?? 0) === 1,
       showChallengesPanel: (settings.showChallengesPanel ?? 0) === 1,
+      aiAssistantEnabled: (settings.aiAssistantEnabled ?? 1) === 1,
       onboardingCompleted: settings.onboardingCompleted === 1,
     };
   } catch {
@@ -71,6 +74,7 @@ export async function updateUserSetting(field: string, value: boolean) {
         showHabitsPanel: 0,
         showQuarterlyPanel: 0,
         showChallengesPanel: 0,
+        aiAssistantEnabled: 1,
         onboardingCompleted: 0,
         ...updateData,
       });

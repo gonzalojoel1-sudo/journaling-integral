@@ -27,6 +27,7 @@ import { PriorityChecklist } from './dashboard/PriorityChecklist';
 import { HabitProgress } from './dashboard/HabitProgress';
 import { BizCompactPanel } from './dashboard/BizCompactPanel';
 import { PersonalFinanceWidget } from './dashboard/PersonalFinanceWidget';
+import { ChatTrigger } from '@/components/ChatTrigger';
 
 export const dynamic = 'force-dynamic';
 
@@ -457,6 +458,8 @@ export default async function DashboardPage() {
           </Link>
         </section>
       )}
+
+      <ChatTrigger enabled={userSettings.aiAssistantEnabled} />
 
     </div>
   );

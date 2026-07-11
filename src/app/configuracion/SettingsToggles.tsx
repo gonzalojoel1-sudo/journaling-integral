@@ -10,6 +10,7 @@ interface SettingsTogglesProps {
   showHabitsPanel: boolean;
   showQuarterlyPanel: boolean;
   showChallengesPanel: boolean;
+  aiAssistantEnabled: boolean;
 }
 
 function ToggleSwitch({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
@@ -36,12 +37,14 @@ export function SettingsToggles({
   showHabitsPanel,
   showQuarterlyPanel,
   showChallengesPanel,
+  aiAssistantEnabled,
 }: SettingsTogglesProps) {
   const [business, setBusiness] = useState(showBusinessPanel);
   const [finance, setFinance] = useState(showFinancePanel);
   const [habits, setHabits] = useState(showHabitsPanel);
   const [quarterly, setQuarterly] = useState(showQuarterlyPanel);
   const [challenges, setChallenges] = useState(showChallengesPanel);
+  const [aiAssistant, setAiAssistant] = useState(aiAssistantEnabled);
   const [saving, setSaving] = useState(false);
 
   const hasChanges =
@@ -49,7 +52,8 @@ export function SettingsToggles({
     finance !== showFinancePanel ||
     habits !== showHabitsPanel ||
     quarterly !== showQuarterlyPanel ||
-    challenges !== showChallengesPanel;
+    challenges !== showChallengesPanel ||
+    aiAssistant !== aiAssistantEnabled;
 
   const handleSaveAll = async () => {
     setSaving(true);
@@ -60,6 +64,7 @@ export function SettingsToggles({
     if (habits !== showHabitsPanel) changes.showHabitsPanel = habits;
     if (quarterly !== showQuarterlyPanel) changes.showQuarterlyPanel = quarterly;
     if (challenges !== showChallengesPanel) changes.showChallengesPanel = challenges;
+    if (aiAssistant !== aiAssistantEnabled) changes.aiAssistantEnabled = aiAssistant;
 
     for (const [field, value] of Object.entries(changes)) {
       await updateUserSetting(field, value);
@@ -74,6 +79,7 @@ export function SettingsToggles({
     { label: 'Hábitos Diarios', desc: 'Gestor EOR, Habit Stacking, racha', value: habits, setter: setHabits },
     { label: 'Planificación Trimestral', desc: 'Visión 5 años, objetivos SMART, legado', value: quarterly, setter: setQuarterly },
     { label: 'Desafíos y Gamificación', desc: 'Insignias, niveles, retos de disciplina', value: challenges, setter: setChallenges },
+    { label: 'Asistente Espiritual', desc: 'Chat con IA pastor/mentor basado en Groq', value: aiAssistant, setter: setAiAssistant },
   ];
 
   return (
