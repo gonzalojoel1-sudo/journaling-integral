@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import Groq from 'groq-sdk';
 import { GEMINI_MODEL, GROQ_MODEL, TIMEOUT_MS, getApiKeys } from '@/config/ai';
+import { validate, SmartEntryRequestSchema } from '@/lib/validations';
+import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 
 const JOURNAL_RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT as const,
@@ -190,11 +194,39 @@ async function tryGroq(transcript: string): Promise<any> {
 }
 
 export async function POST(request: Request) {
-  const { transcript } = await request.json();
+  // Rate limiting: hybrid key (userId or IP), stricter limit for heavy AI calls
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id;
+  const clientId = getClientIdentifier(request, userId);
+  const { success: rateLimitOk, remaining } = rateLimit(`smart-entry:${clientId}`, 5, 60000);
 
-  if (!transcript || typeof transcript !== 'string' || transcript.trim().length === 0) {
-    return Response.json({ error: 'Transcript is required' }, { status: 400 });
+  if (!rateLimitOk) {
+    return Response.json(
+      { error: 'Demasiadas solicitudes. Intenta de nuevo en un minuto.' },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Limit': '5',
+        },
+      },
+    );
   }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'Cuerpo de solicitud inválido' }, { status: 400 });
+  }
+
+  // Zod validation
+  const v = validate(SmartEntryRequestSchema, body);
+  if (!v.success) {
+    return Response.json({ error: v.error }, { status: 400 });
+  }
+
+  const { transcript } = v.data;
 
   try {
     const data = await tryGroq(transcript.trim());

@@ -6,9 +6,23 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import {
+  validate,
+  AutoSaveBizFieldSchema,
+  AutoSyncSalesSchema,
+  UpsertBusinessSettingSchema,
+  DeleteBusinessSettingSchema,
+  UpdateBusinessTransactionSchema,
+  DeleteBusinessTransactionSchema,
+  CreateBusinessTransactionSchema,
+  RegisterSaleSchema,
+} from '@/lib/validations';
 
 export async function autoSaveBizField(field: string, value: string | number, date: string) {
   try {
+    const v = validate(AutoSaveBizFieldSchema, { field, value, date });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
 
     const existing = await db.query.dailyEntries.findFirst({
@@ -60,6 +74,9 @@ export async function autoSaveBizField(field: string, value: string | number, da
 
 export async function autoSyncSalesWithTransaction(date: string) {
   try {
+    const v = validate(AutoSyncSalesSchema, { date });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
 
     const entry = await db.query.dailyEntries.findFirst({
@@ -158,6 +175,9 @@ export async function upsertBusinessSetting(data: {
   isActive?: boolean;
 }) {
   try {
+    const v = validate(UpsertBusinessSettingSchema, data);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
 
     if (data.id) {
@@ -192,6 +212,9 @@ export async function upsertBusinessSetting(data: {
 
 export async function deleteBusinessSetting(id: string) {
   try {
+    const v = validate(DeleteBusinessSettingSchema, { id });
+    if (!v.success) return { success: false, error: v.error };
+
     await db.delete(businessSettings).where(eq(businessSettings.id, id));
     revalidatePath('/negocio');
     return { success: true };
@@ -213,6 +236,9 @@ export async function updateBusinessTransaction(
   },
 ) {
   try {
+    const v = validate(UpdateBusinessTransactionSchema, { id, ...data });
+    if (!v.success) return { success: false, error: v.error };
+
     const updateData: Record<string, any> = {};
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.cost !== undefined) updateData.cost = data.cost;
@@ -241,6 +267,9 @@ export async function updateBusinessTransaction(
 
 export async function registerSale(settingsId: string, date: string) {
   try {
+    const v = validate(RegisterSaleSchema, { settingsId, date });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
 
     const unit = await db.query.businessSettings.findFirst({
@@ -320,6 +349,9 @@ export async function registerSale(settingsId: string, date: string) {
 
 export async function deleteBusinessTransaction(id: string) {
   try {
+    const v = validate(DeleteBusinessTransactionSchema, { id });
+    if (!v.success) return { success: false, error: v.error };
+
     await db.delete(businessTransactions).where(eq(businessTransactions.id, id));
     revalidatePath('/negocio');
     revalidatePath('/');
@@ -339,6 +371,9 @@ export async function createBusinessTransaction(data: {
   date?: string;
 }) {
   try {
+    const v = validate(CreateBusinessTransactionSchema, data);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const todayStr = new Date().toISOString().split('T')[0];
 

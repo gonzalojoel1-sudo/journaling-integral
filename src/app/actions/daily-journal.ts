@@ -8,6 +8,12 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getOrCreateUserProfile } from './auth';
 import { validateActiveChallenges } from './challenges';
+import {
+  validate,
+  DailyEntrySchema,
+  CreateBusinessTransactionSchema,
+} from '@/lib/validations';
+import { storeEntryEmbedding, buildEntryContent } from '@/lib/rag';
 
 function calculateStreak(
   lastEntryDate: string | null,
@@ -33,6 +39,9 @@ function checkLevelProgression(currentLevel: number, activeDaysCount: number): n
 
 export async function submitDailyEntry(formData: Record<string, any>) {
   try {
+    const v = validate(DailyEntrySchema, formData);
+    if (!v.success) return { success: false, error: v.error };
+
     const profileRes = await getOrCreateUserProfile();
     if (!profileRes.success || !profileRes.user) {
       return { success: false, error: 'Usuario no autenticado.' };
@@ -143,6 +152,12 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         })
         .where(eq(users.id, user.id));
     }
+
+    // RAG: Generate embedding in background (non-blocking)
+    const contentForEmbedding = buildEntryContent(entryData);
+    storeEntryEmbedding(user.id, entryId, contentForEmbedding).catch((err) =>
+      console.error('[RAG] Falló la generación del embedding en segundo plano:', err),
+    );
 
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - 30);
@@ -359,6 +374,9 @@ export async function createBusinessTransaction(data: {
   date?: string;
 }) {
   try {
+    const v = validate(CreateBusinessTransactionSchema, data);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const todayStr = new Date().toISOString().split('T')[0];
 

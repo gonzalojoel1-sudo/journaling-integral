@@ -1,0 +1,298 @@
+diff --git a/src/db/migrations/2026-07-12-habit-engine.ts b/src/db/migrations/2026-07-12-habit-engine.ts
+new file mode 100644
+index 0000000..8599cd0
+--- /dev/null
++++ b/src/db/migrations/2026-07-12-habit-engine.ts
+@@ -0,0 +1,96 @@
++import { db } from '../db';
++import { habits } from '../schema';
++import { sql } from 'drizzle-orm';
++
++export async function migrate() {
++  // 1. Rename 'type' to 'habit_type', add new columns
++  // SQLite doesn't support ALTER COLUMN, so we need to:
++  // - Create temp table with new schema
++  // - Copy data with migration logic
++  // - Drop old table
++  // - Rename temp table
++
++  // Helper: map old types to new habitType
++  const typeMap: Record<string, string> = {
++    'ESTANDARIZAR': 'crecer',
++    'OPTIMIZAR': 'sembrar',
++    'REEMPLAZAR': 'cambiar',
++    'STACK': 'crecer',
++    'fe': 'crecer',
++    'negocio': 'crecer',
++    'cuerpo': 'crecer',
++    'mente': 'crecer',
++    'relaciones': 'crecer',
++    'personal': 'crecer',
++  };
++
++  // Helper: map old types to domain
++  const domainMap: Record<string, string | null> = {
++    'fe': 'espiritual',
++    'negocio': 'trabajo',
++    'cuerpo': 'cuerpo',
++    'mente': 'mente',
++    'relaciones': 'relaciones',
++    'personal': null,
++  };
++
++  // Execute migration
++  await db.run(sql`
++    CREATE TABLE habits_new (
++      id TEXT PRIMARY KEY,
++      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
++      name TEXT NOT NULL,
++      habit_type TEXT NOT NULL DEFAULT 'crecer',
++      domain TEXT,
++      rescue_action TEXT,
++      active_action TEXT,
++      celebration TEXT DEFAULT '✅ Hecho',
++      anchor TEXT,
++      if_trigger TEXT,
++      if_action TEXT,
++      cue TEXT,
++      old_routine TEXT,
++      new_routine TEXT,
++      identity_label TEXT,
++      belongs_to_chain_id TEXT,
++      next_habit_id TEXT,
++      current_strength REAL DEFAULT 0.0,
++      last_strength_date TEXT,
++      created_at TEXT NOT NULL,
++      is_active INTEGER DEFAULT 1 NOT NULL
++    );
++
++    INSERT INTO habits_new (id, user_id, name, habit_type, domain, active_action, current_strength, last_strength_date, created_at, is_active)
++    SELECT
++      id,
++      user_id,
++      name,
++      CASE
++        WHEN type IN ('ESTANDARIZAR', 'STACK') THEN 'crecer'
++        WHEN type = 'OPTIMIZAR' THEN 'sembrar'
++        WHEN type = 'REEMPLAZAR' THEN 'cambiar'
++        ELSE 'crecer'
++      END,
++      CASE
++        WHEN type IN ('fe', 'negocio', 'cuerpo', 'mente', 'relaciones', 'personal')
++        THEN CASE type
++          WHEN 'fe' THEN 'espiritual'
++          WHEN 'negocio' THEN 'trabajo'
++          WHEN 'cuerpo' THEN 'cuerpo'
++          WHEN 'mente' THEN 'mente'
++          WHEN 'relaciones' THEN 'relaciones'
++          WHEN 'personal' THEN NULL
++        END
++        ELSE NULL
++      END,
++      name,
++      current_strength,
++      last_strength_date,
++      created_at,
++      is_active
++    FROM habits;
++
++    DROP TABLE habits;
++    ALTER TABLE habits_new RENAME TO habits;
++  `);
++}
+diff --git a/src/db/schema.ts b/src/db/schema.ts
+index 3e251d0..bfcb887 100644
+--- a/src/db/schema.ts
++++ b/src/db/schema.ts
+@@ -15,20 +15,21 @@ export const users = sqliteTable('users', {
+ });
+ 
+ export const usersRelations = relations(users, ({ many }) => ({
+   dailyEntries: many(dailyEntries),
+   quarterlyPlans: many(quarterlyPlans),
+   weeklyPlans: many(weeklyPlans),
+   habits: many(habits),
+   businessTransactions: many(businessTransactions),
+   businessSettings: many(businessSettings),
+   personalTransactions: many(personalTransactions),
++  journalEmbeddings: many(journalEmbeddings),
+ }));
+ 
+ export const dailyEntries = sqliteTable('daily_entries', {
+   id: text('id').primaryKey(),
+   userId: text('user_id')
+     .notNull()
+     .references(() => users.id, { onDelete: 'cascade' }),
+   date: text('date').notNull(),
+   time: text('time').notNull(),
+   levelAtEntry: integer('level_at_entry').notNull(),
+@@ -86,25 +87,26 @@ export const dailyEntries = sqliteTable('daily_entries', {
+   mindsetEmpoweringBelief: text('mindset_empowering_belief'),
+   mindsetEmpoweringAction: text('mindset_empowering_action'),
+ 
+   prepTomorrowJson: text('prep_tomorrow_json'),
+   legacyReflection: text('legacy_reflection'),
+   dominantFocusCompleted: integer('dominant_focus_completed').default(0).notNull(),
+ 
+   createdAt: text('created_at').notNull(),
+ });
+ 
+-export const dailyEntriesRelations = relations(dailyEntries, ({ one }) => ({
++export const dailyEntriesRelations = relations(dailyEntries, ({ one, many }) => ({
+   user: one(users, {
+     fields: [dailyEntries.userId],
+     references: [users.id],
+   }),
++  embeddings: many(journalEmbeddings),
+ }));
+ 
+ // --- NUEVA TABLA: PLANES SEMANALES DE ENFOQUE (80/20) ---
+ export const weeklyPlans = sqliteTable('weekly_plans', {
+   id: text('id').primaryKey(),
+   userId: text('user_id')
+     .notNull()
+     .references(() => users.id, { onDelete: 'cascade' }),
+   weekLabel: text('week_label').notNull(), // Formato YYYY-W[Semana] (ISO)
+   focus: text('focus').notNull(), // Enfoque Dominante
+@@ -151,36 +153,101 @@ export const quarterlyPlansRelations = relations(quarterlyPlans, ({ one }) => ({
+     fields: [quarterlyPlans.userId],
+     references: [users.id],
+   }),
+ }));
+ 
+ export const habits = sqliteTable('habits', {
+   id: text('id').primaryKey(),
+   userId: text('user_id')
+     .notNull()
+     .references(() => users.id, { onDelete: 'cascade' }),
++
++  // Core
+   name: text('name').notNull(),
+-  type: text('type').notNull(),
+-  strategyDetails: text('strategy_details'),
++  habitType: text('habit_type').notNull(),   // crecer | sembrar | cambiar | preciso | pilar
++  domain: text('domain'),                     // cuerpo | mente | trabajo | relaciones | hogar | espiritual | finanzas | null
++
++  // Action system
++  rescueAction: text('rescue_action'),
++  activeAction: text('active_action'),
++  celebration: text('celebration').default('✅ Hecho'),
++
++  // Type-specific fields
++  anchor: text('anchor'),                     // Crecer, Sembrar
++  ifTrigger: text('if_trigger'),              // Preciso
++  ifAction: text('if_action'),                // Preciso
++  cue: text('cue'),                           // Cambiar
++  oldRoutine: text('old_routine'),            // Cambiar
++  newRoutine: text('new_routine'),            // Cambiar
++
++  // Identity
++  identityLabel: text('identity_label'),
++
++  // Chain relationship
++  belongsToChainId: text('belongs_to_chain_id'),
++  nextHabitId: text('next_habit_id'),
++
++  // Strength
+   currentStrength: real('current_strength').default(0.0),
+   lastStrengthDate: text('last_strength_date'),
++
++  // Meta
+   createdAt: text('created_at').notNull(),
+   isActive: integer('is_active').default(1).notNull(),
+ });
+ 
+ export const habitsRelations = relations(habits, ({ one }) => ({
+   user: one(users, {
+     fields: [habits.userId],
+     references: [users.id],
+   }),
+ }));
+ 
++export const chains = sqliteTable('chains', {
++  id: text('id').primaryKey(),
++  userId: text('user_id')
++    .notNull()
++    .references(() => users.id, { onDelete: 'cascade' }),
++  name: text('name').notNull(),
++  createdAt: text('created_at').notNull(),
++});
++
++export const chainItems = sqliteTable('chain_items', {
++  id: text('id').primaryKey(),
++  chainId: text('chain_id')
++    .notNull()
++    .references(() => chains.id, { onDelete: 'cascade' }),
++  habitId: text('habit_id')
++    .notNull()
++    .references(() => habits.id, { onDelete: 'cascade' }),
++  order: integer('order').notNull(),
++});
++
++export const chainsRelations = relations(chains, ({ one, many }) => ({
++  user: one(users, {
++    fields: [chains.userId],
++    references: [users.id],
++  }),
++  items: many(chainItems),
++}));
++
++export const chainItemsRelations = relations(chainItems, ({ one }) => ({
++  chain: one(chains, {
++    fields: [chainItems.chainId],
++    references: [chains.id],
++  }),
++  habit: one(habits, {
++    fields: [chainItems.habitId],
++    references: [habits.id],
++  }),
++}));
++
+ export const bibleVerses = sqliteTable('bible_verses', {
+   id: text('id').primaryKey(),
+   reference: text('reference').notNull(),
+   text: text('text').notNull(),
+   interpretation: text('interpretation'),
+   recommendedLevel: integer('recommended_level').default(1).notNull(),
+   topic: text('topic'),
+ });
+ 
+ export const challenges = sqliteTable('challenges', {
+@@ -299,11 +366,36 @@ export const userSettings = sqliteTable('user_settings', {
+   showChallengesPanel: integer('show_challenges_panel').default(0),
+   onboardingCompleted: integer('onboarding_completed').default(0).notNull(),
+   aiAssistantEnabled: integer('ai_assistant_enabled').default(1),
+ });
+ 
+ export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+   user: one(users, {
+     fields: [userSettings.userId],
+     references: [users.id],
+   }),
++}));
++
++// --- TABLA: EMBEDDINGS PARA RAG (KAIRO) ---
++export const journalEmbeddings = sqliteTable('journal_embeddings', {
++  id: text('id').primaryKey(),
++  userId: text('user_id')
++    .notNull()
++    .references(() => users.id, { onDelete: 'cascade' }),
++  entryId: text('entry_id')
++    .notNull()
++    .references(() => dailyEntries.id, { onDelete: 'cascade' }),
++  content: text('content').notNull(),
++  embedding: text('embedding').notNull(),
++  createdAt: text('created_at').notNull(),
++});
++
++export const journalEmbeddingsRelations = relations(journalEmbeddings, ({ one }) => ({
++  user: one(users, {
++    fields: [journalEmbeddings.userId],
++    references: [users.id],
++  }),
++  entry: one(dailyEntries, {
++    fields: [journalEmbeddings.entryId],
++    references: [dailyEntries.id],
++  }),
+ }));
+\ No newline at end of file

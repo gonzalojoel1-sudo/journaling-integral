@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
 import { ALL_TEMPLATES, getTemplate, ChallengeTemplate } from '@/lib/challenge-templates';
+import { validate, ActivateChallengeSchema } from '@/lib/validations';
 
 export async function getActiveChallenges() {
   try {
@@ -52,6 +53,9 @@ export async function getBadges() {
 
 export async function activateChallenge(templateId: string) {
   try {
+    const v = validate(ActivateChallengeSchema, { templateId });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const template = getTemplate(templateId);
     if (!template) return { success: false, error: 'Desafio no encontrado' };

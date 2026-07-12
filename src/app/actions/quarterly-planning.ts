@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import { validate, SaveQuarterlyPlanSchema } from '@/lib/validations';
 
 export async function getActiveQuarterlyPlan() {
   try {
@@ -25,6 +26,9 @@ export async function getActiveQuarterlyPlan() {
 
 export async function saveQuarterlyPlan(formData: Record<string, any>) {
   try {
+    const v = validate(SaveQuarterlyPlanSchema, formData);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const activePlanRes = await getActiveQuarterlyPlan();
     const planId = activePlanRes.plan?.id || randomUUID();

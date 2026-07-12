@@ -6,6 +6,13 @@ import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import {
+  validate,
+  CreatePersonalTransactionSchema,
+  UpdatePersonalTransactionSchema,
+  DeletePersonalTransactionSchema,
+  WithdrawToPersonalSchema,
+} from '@/lib/validations';
 
 export async function createPersonalTransaction(data: {
   amount: number;
@@ -16,6 +23,9 @@ export async function createPersonalTransaction(data: {
   date?: string;
 }) {
   try {
+    const v = validate(CreatePersonalTransactionSchema, data);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const todayStr = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
@@ -72,6 +82,9 @@ export async function updatePersonalTransaction(
   },
 ) {
   try {
+    const v = validate(UpdatePersonalTransactionSchema, { id, ...data });
+    if (!v.success) return { success: false, error: v.error };
+
     const updateData: Record<string, any> = {};
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.type !== undefined) updateData.type = data.type;
@@ -93,6 +106,9 @@ export async function updatePersonalTransaction(
 
 export async function deletePersonalTransaction(id: string) {
   try {
+    const v = validate(DeletePersonalTransactionSchema, { id });
+    if (!v.success) return { success: false, error: v.error };
+
     await db.delete(personalTransactions).where(eq(personalTransactions.id, id));
     revalidatePath('/finanzas');
     return { success: true };
@@ -151,6 +167,9 @@ export async function getPersonalMetricsRange(startDate: string, endDate: string
 
 export async function withdrawToPersonal(amount: number, date?: string) {
   try {
+    const v = validate(WithdrawToPersonalSchema, { amount, date });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const todayStr = date || new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();

@@ -28,12 +28,12 @@ export default async function ConfiguracionPage() {
         </div>
 
         <SettingsToggles
-          showBusinessPanel={settings.showBusinessPanel}
-          showFinancePanel={settings.showFinancePanel}
-          showHabitsPanel={settings.showHabitsPanel}
-          showQuarterlyPanel={settings.showQuarterlyPanel}
-          showChallengesPanel={settings.showChallengesPanel}
-          aiAssistantEnabled={settings.aiAssistantEnabled}
+          showBusinessPanel={settings?.showBusinessPanel ?? false}
+          showFinancePanel={settings?.showFinancePanel ?? false}
+          showHabitsPanel={settings?.showHabitsPanel ?? false}
+          showQuarterlyPanel={settings?.showQuarterlyPanel ?? false}
+          showChallengesPanel={settings?.showChallengesPanel ?? false}
+          aiAssistantEnabled={settings?.aiAssistantEnabled ?? true}
         />
       </section>
     </div>

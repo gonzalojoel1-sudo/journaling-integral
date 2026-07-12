@@ -1,40 +1,7 @@
 import { db } from '../db';
-import { habits } from '../schema';
 import { sql } from 'drizzle-orm';
 
 export async function migrate() {
-  // 1. Rename 'type' to 'habit_type', add new columns
-  // SQLite doesn't support ALTER COLUMN, so we need to:
-  // - Create temp table with new schema
-  // - Copy data with migration logic
-  // - Drop old table
-  // - Rename temp table
-
-  // Helper: map old types to new habitType
-  const typeMap: Record<string, string> = {
-    'ESTANDARIZAR': 'crecer',
-    'OPTIMIZAR': 'sembrar',
-    'REEMPLAZAR': 'cambiar',
-    'STACK': 'crecer',
-    'fe': 'crecer',
-    'negocio': 'crecer',
-    'cuerpo': 'crecer',
-    'mente': 'crecer',
-    'relaciones': 'crecer',
-    'personal': 'crecer',
-  };
-
-  // Helper: map old types to domain
-  const domainMap: Record<string, string | null> = {
-    'fe': 'espiritual',
-    'negocio': 'trabajo',
-    'cuerpo': 'cuerpo',
-    'mente': 'mente',
-    'relaciones': 'relaciones',
-    'personal': null,
-  };
-
-  // Execute migration
   await db.run(sql`
     CREATE TABLE habits_new (
       id TEXT PRIMARY KEY,
@@ -83,7 +50,7 @@ export async function migrate() {
         END
         ELSE NULL
       END,
-      name,
+      NULL,
       current_strength,
       last_strength_date,
       created_at,

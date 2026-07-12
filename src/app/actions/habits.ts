@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import { validate, CreateHabitSchema, ArchiveHabitSchema } from '@/lib/validations';
 
 export async function getActiveHabits() {
   try {
@@ -22,6 +23,9 @@ export async function getActiveHabits() {
 
 export async function createHabit(name: string, type: string, strategyDetails: string) {
   try {
+    const v = validate(CreateHabitSchema, { name, type, strategyDetails });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     await db.insert(habits).values({
       id: randomUUID(),
@@ -46,6 +50,9 @@ export async function createHabit(name: string, type: string, strategyDetails: s
 
 export async function archiveHabit(habitId: string) {
   try {
+    const v = validate(ArchiveHabitSchema, { habitId });
+    if (!v.success) return { success: false, error: v.error };
+
     await db.update(habits).set({ isActive: 0 }).where(eq(habits.id, habitId));
     revalidatePath('/habits');
     return { success: true };

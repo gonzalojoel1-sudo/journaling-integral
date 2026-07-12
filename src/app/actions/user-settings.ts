@@ -5,6 +5,11 @@ import { userSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import {
+  validate,
+  UpdateUserSettingSchema,
+  CompleteOnboardingSchema,
+} from '@/lib/validations';
 
 const defaultSettings = {
   showBusinessPanel: false,
@@ -53,6 +58,9 @@ export async function getUserSettings() {
 
 export async function updateUserSetting(field: string, value: boolean) {
   try {
+    const v = validate(UpdateUserSettingSchema, { field, value });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
 
     const existing = await db.query.userSettings.findFirst({
@@ -96,6 +104,9 @@ export async function completeOnboarding(prefs: {
   showChallengesPanel: boolean;
 }) {
   try {
+    const v = validate(CompleteOnboardingSchema, prefs);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
 
     const existing = await db.query.userSettings.findFirst({

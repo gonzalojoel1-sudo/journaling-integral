@@ -4,3 +4,4 @@ local.db
 .env
 .env.local
 .env.production
+.aider*

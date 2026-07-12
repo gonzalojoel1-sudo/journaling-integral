@@ -13,6 +13,7 @@ import {
   DEMO_USER_NAME,
   DEMO_USER_PASSWORD_HASH,
 } from '@/lib/constants';
+import { validate, UpdateUserLevelSchema } from '@/lib/validations';
 
 export const getCurrentUserId = cache(async (): Promise<string> => {
   try {
@@ -73,6 +74,9 @@ export const getOrCreateUserProfile = cache(async () => {
 
 export async function updateUserLevel(level: number) {
   try {
+    const v = validate(UpdateUserLevelSchema, { level });
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     await db
       .update(users)

@@ -5,20 +5,27 @@ import { Send, X, Sparkles, Loader2 } from 'lucide-react';
 
 interface ChatAssistantProps {
   onClose: () => void;
-  messages: Array<{ id: string; role: string; content: string }>;
+  messages: Array<{ id: string; role: string; parts: Array<{ type: string; text?: string }> }>;
   input: string;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSubmit: (e: React.FormEvent) => void;
+  onInputChange: (value: string) => void;
+  onSend: (text: string) => void;
   isLoading: boolean;
   chatError: string | null;
+}
+
+function getMessageText(msg: ChatAssistantProps['messages'][0]): string {
+  return msg.parts
+    .filter((p) => p.type === 'text')
+    .map((p) => p.text ?? '')
+    .join('');
 }
 
 export function ChatAssistant({
   onClose,
   messages,
   input,
-  handleInputChange,
-  handleSubmit,
+  onInputChange,
+  onSend,
   isLoading,
   chatError,
 }: ChatAssistantProps) {
@@ -68,7 +75,7 @@ export function ChatAssistant({
                   : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-bl-md'
               }`}
             >
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              <div className="whitespace-pre-wrap">{getMessageText(msg)}</div>
             </div>
           </div>
         ))}
@@ -90,18 +97,22 @@ export function ChatAssistant({
       </div>
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!(input || '').trim()) return;
+          onSend(input.trim());
+        }}
         className="px-3 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0 flex items-center gap-2"
       >
         <input
-          value={input}
-          onChange={handleInputChange}
+          value={input || ''}
+          onChange={(e) => onInputChange(e.target.value)}
           placeholder="Escribe tu mensaje..."
           className="flex-1 bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 outline-none placeholder:text-zinc-400"
         />
         <button
           type="submit"
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || !(input || '').trim()}
           className="h-8 w-8 rounded-xl bg-violet-500 hover:bg-violet-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 flex items-center justify-center text-white transition-colors shrink-0"
         >
           {isLoading ? (

@@ -241,7 +241,7 @@ export default async function DashboardPage() {
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
         {/* Panel Negocio 1-1-1 */}
-        {userSettings.showBusinessPanel && (
+        {userSettings?.showBusinessPanel && (
           <BizCompactPanel
             prospectDone={bizProspectDone}
             followUpDone={bizFollowUpDone}
@@ -258,7 +258,7 @@ export default async function DashboardPage() {
         )}
 
         {/* Capital Personal */}
-        {userSettings.showFinancePanel && <PersonalFinanceWidget />}
+        {userSettings?.showFinancePanel && <PersonalFinanceWidget />}
 
         {/* Hábitos EOR */}
         <HabitProgress habits={parsedHabits} initialCompletedIds={initialCompletedIds} />

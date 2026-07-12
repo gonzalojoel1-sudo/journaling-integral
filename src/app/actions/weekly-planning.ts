@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import { validate, SaveWeeklyPlanSchema } from '@/lib/validations';
 
 function getISOWeekLabel(date: Date = new Date()): string {
   const tempDate = new Date(date.getTime());
@@ -42,6 +43,9 @@ export async function getActiveWeeklyPlan() {
 
 export async function saveWeeklyPlan(formData: Record<string, any>) {
   try {
+    const v = validate(SaveWeeklyPlanSchema, formData);
+    if (!v.success) return { success: false, error: v.error };
+
     const userId = await getCurrentUserId();
     const currentWeekLabel = getISOWeekLabel();
 

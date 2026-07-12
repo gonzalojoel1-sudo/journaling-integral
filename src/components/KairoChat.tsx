@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { Sparkles } from 'lucide-react';
 import { getUserSettings } from '@/app/actions/user-settings';
 
@@ -11,30 +12,46 @@ const ChatAssistant = dynamic(
   { ssr: false },
 );
 
+const chatTransport = new DefaultChatTransport({
+  api: '/api/chat',
+  prepareSendMessagesRequest: ({ messages, ...rest }) => ({
+    ...rest,
+    body: {
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.parts
+          .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+          .map((p) => p.text)
+          .join(''),
+      })),
+    },
+  }),
+});
+
 export function KairoChat() {
   const [show, setShow] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [input, setInput] = useState('');
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/chat',
-    onResponse: (response) => {
+  const { messages, sendMessage, status, error } = useChat({
+    transport: chatTransport,
+    onFinish: () => {
       setChatError(null);
     },
-    onFinish: (message) => {
-      console.log('Kairo:', message);
-    },
-    onError: (error) => {
-      console.error('Kairo Error:', error);
-      setChatError(error.message || 'Error de conexión');
+    onError: (err) => {
+      console.error('Kairo Error:', err);
+      setChatError(err.message || 'Error de conexión');
     },
   });
 
   useEffect(() => {
-    getUserSettings().then((s) => setEnabled(s.aiAssistantEnabled));
+    getUserSettings().then((s) => setEnabled(s?.aiAssistantEnabled ?? true));
   }, []);
 
   if (!enabled) return null;
+
+  const isLoading = status === 'submitted' || status === 'streaming';
 
   return (
     <>
@@ -60,10 +77,13 @@ export function KairoChat() {
           onClose={() => setShow(false)}
           messages={messages}
           input={input}
-          handleInputChange={handleInputChange}
-          handleSubmit={handleSubmit}
+          onInputChange={setInput}
+          onSend={(text) => {
+            sendMessage({ text });
+            setInput('');
+          }}
           isLoading={isLoading}
-          chatError={chatError}
+          chatError={chatError || error?.message || null}
         />
       )}
     </>

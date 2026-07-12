@@ -72,11 +72,11 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
   useEffect(() => {
     setMounted(true);
     getUserSettings().then((s) => {
-      setShowBusiness(s.showBusinessPanel);
-      setShowFinance(s.showFinancePanel);
-      setShowHabits(s.showHabitsPanel);
-      setShowQuarterly(s.showQuarterlyPanel);
-      setShowChallenges(s.showChallengesPanel);
+      setShowBusiness(s?.showBusinessPanel ?? false);
+      setShowFinance(s?.showFinancePanel ?? false);
+      setShowHabits(s?.showHabitsPanel ?? false);
+      setShowQuarterly(s?.showQuarterlyPanel ?? false);
+      setShowChallenges(s?.showChallengesPanel ?? false);
     });
   }, []);
 
@@ -179,11 +179,11 @@ function MobileNav() {
 
   useEffect(() => {
     getUserSettings().then((s) => {
-      setShowBusiness(s.showBusinessPanel);
-      setShowFinance(s.showFinancePanel);
-      setShowHabits(s.showHabitsPanel);
-      setShowQuarterly(s.showQuarterlyPanel);
-      setShowChallenges(s.showChallengesPanel);
+      setShowBusiness(s?.showBusinessPanel ?? false);
+      setShowFinance(s?.showFinancePanel ?? false);
+      setShowHabits(s?.showHabitsPanel ?? false);
+      setShowQuarterly(s?.showQuarterlyPanel ?? false);
+      setShowChallenges(s?.showChallengesPanel ?? false);
     });
   }, []);
 
