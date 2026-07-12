@@ -208,21 +208,36 @@ export async function POST(req: Request) {
           description: 'Crea un nuevo hábito o disciplina diaria en el sistema del usuario.',
           inputSchema: z.object({
             name: z.string().describe('Nombre del hábito, ej: Devocional Matutino'),
-            type: z.enum(['fe', 'negocio', 'cuerpo', 'mente', 'relaciones']).describe('Categoría del hábito: fe, negocio, cuerpo, mente o relaciones'),
-            strategyDetails: z.string().optional().describe('Detalles o estrategia para implementar el hábito'),
+            habitType: z.enum(['crecer', 'sembrar', 'cambiar', 'preciso', 'pilar']).default('crecer').describe('Tipo de hábito: crecer (nuevo), sembrar (mini), cambiar (reemplazo), preciso (if-then), pilar (keystone)'),
+            domain: z.enum(['cuerpo', 'mente', 'trabajo', 'relaciones', 'hogar', 'espiritual', 'finanzas']).optional().describe('Área de vida del hábito'),
+            rescueAction: z.string().describe('Versión mínima del hábito para días difíciles (menos de 2 minutos)'),
+            anchor: z.string().optional().describe('Rutina existente después de la cual se hará el hábito'),
+            celebration: z.string().optional().describe('Celebración al completar el hábito'),
           }),
-          execute: async ({ name, type, strategyDetails }) => {
-            console.log('⚡ [TOOL EXECUTING] Crear hábito:', { name, type, strategyDetails });
+          execute: async ({ name, habitType, domain, rescueAction, anchor, celebration }) => {
+            console.log('⚡ [TOOL EXECUTING] Crear hábito:', { name, habitType, domain, rescueAction, anchor });
             if (!userId) {
               return 'SISTEMA: Error - Usuario no autenticado.';
             }
             try {
+              const celebrationMap: Record<string, string> = {
+                crecer: '✅ Hecho',
+                sembrar: '🎉',
+                cambiar: '🔄 Avance',
+                preciso: '🎯 Ejecutado',
+                pilar: '🏛️ Un paso más',
+              };
+
               await db.insert(habits).values({
                 id: randomUUID(),
                 userId,
                 name,
-                type,
-                strategyDetails: strategyDetails ?? 'Creado por Kairo',
+                habitType: habitType || 'crecer',
+                domain: domain || null,
+                rescueAction: rescueAction,
+                activeAction: rescueAction,
+                celebration: celebration || celebrationMap[habitType || 'crecer'],
+                anchor: anchor || null,
                 currentStrength: 0.15,
                 isActive: 1,
                 createdAt: new Date().toISOString(),
