@@ -2,14 +2,11 @@
 
 import React, { useState } from 'react';
 import { createHabit, archiveHabit } from '../actions/habits';
-import { StrengthBar } from '@/components/StrengthBar';
 import { HabitWizard } from './HabitWizard';
+import { HabitCard } from './habitCards';
 import { 
-  Plus, 
   Trash2, 
   ToggleLeft, 
-  Zap, 
-  RefreshCw, 
   CheckCircle,
   Sparkles,
   Layers,
@@ -20,11 +17,22 @@ import {
 interface Habit {
   id: string;
   name: string;
-  type: string;
-  strategyDetails: string | null;
+  type?: string;
+  strategyDetails?: string | null;
   isActive: number;
   currentStrength?: number;
   lastStrengthDate?: string | null;
+  habitType?: string;
+  domain?: string;
+  activeAction?: string;
+  rescueAction?: string;
+  celebration?: string;
+  anchor?: string;
+  ifTrigger?: string;
+  ifAction?: string;
+  cue?: string;
+  newRoutine?: string;
+  identityLabel?: string;
 }
 
 interface HabitsClientProps {
@@ -34,50 +42,14 @@ interface HabitsClientProps {
 export function HabitsClient({ initialHabits }: HabitsClientProps) {
   const [habitsList, setHabitsList] = useState<Habit[]>(initialHabits);
   const [activeSubTab, setActiveSubTab] = useState<'catalogo' | 'stacking'>('catalogo');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // --- ESTADOS: NUEVO HÁBITO ORDINARIO ---
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'ESTANDARIZAR' | 'OPTIMIZAR' | 'REEMPLAZAR'>('ESTANDARIZAR');
-  const [strategyDetails, setStrategyDetails] = useState('');
 
   // --- ESTADOS: CONSTRUCTOR ATÓMICO (HABIT STACKING) ---
   const [stackAnchor, setStackAnchor] = useState('');      // Desencadenante (Ancla)
   const [stackAction, setStackAction] = useState('');      // Acción 1%
   const [stackReward, setStackReward] = useState('');      // Celebración (Dopamina)
-
-  // --- GUARDAR HÁBITO ORDINARIO ---
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    setLoading(true);
-    setError(null);
-
-    const res = await createHabit(name, type, strategyDetails);
-    setLoading(false);
-
-    if (res.success) {
-      const newHabitLocal: Habit = {
-        id: Math.random().toString(),
-        name,
-        type,
-        strategyDetails: strategyDetails || null,
-        isActive: 1,
-        currentStrength: 0.0,
-        lastStrengthDate: null,
-      };
-      setHabitsList([newHabitLocal, ...habitsList]);
-      setName('');
-      setStrategyDetails('');
-      setShowAddForm(false);
-    } else {
-      setError(res.error || 'Error al guardar el hábito.');
-    }
-  };
 
   // --- GUARDAR HABIT STACK CIENTÍFICO (EOR) ---
   const handleCreateStack = async (e: React.FormEvent) => {
@@ -130,10 +102,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
     await archiveHabit(habitId);
   };
 
-  // Filtrar hábitos para el catálogo
-  const estandarizarList = habitsList.filter(h => h.type === 'ESTANDARIZAR');
-  const optimizarList = habitsList.filter(h => h.type === 'OPTIMIZAR' && !h.strategyDetails?.includes('"isStack":true'));
-  const reemplazarList = habitsList.filter(h => h.type === 'REEMPLAZAR');
+  // Filtrar stacks atómicos
   const stacksList = habitsList.filter(h => h.type === 'STACK' || h.strategyDetails?.includes('"isStack":true'));
 
   return (
@@ -160,138 +129,13 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
       </div>
 
       {/* ========================================================================= */}
-      {/* VISTA 1: CATÁLOGO DE HÁBITOS ORDINARIOS                                   */}
+      {/* VISTA 1: CATÁLOGO DE HÁBITOS                                              */}
       {/* ========================================================================= */}
       {activeSubTab === 'catalogo' && (
-        <div className="space-y-8">
-          {/* Formulario Ordinario */}
-          <div className="p-5 rounded-2xl border border-stone-200 dark:border-stone-850 glass-panel shadow-soft">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-md font-bold text-stone-800 dark:text-stone-200">Hábitos EOR Estándar</h3>
-                <p className="text-xs text-stone-500 mt-1">Crea pautas para estandarizar, optimizar o reemplazar conductas de forma sencilla.</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowWizard(true)}
-                  className="flex items-center gap-1.5 bg-stone-800 hover:bg-stone-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
-                >
-                  <Plus className="h-4 w-4" />
-                  + Nuevo hábito
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(!showAddForm)}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
-                >
-                  <Plus className="h-4 w-4" />
-                  {showAddForm ? 'Cerrar' : 'Crear'}
-                </button>
-              </div>
-            </div>
-
-            {showAddForm && (
-              <form onSubmit={handleCreate} className="mt-6 border-t border-stone-200 dark:border-stone-800 pt-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">Conducta:</label>
-                    <input
-                      type="text" value={name} onChange={(e) => setName(e.target.value)}
-                      placeholder="E.g., No mirar redes antes de las 8am"
-                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">Tipo EOR:</label>
-                    <select
-                      value={type} onChange={(e: any) => setType(e.target.value)}
-                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none"
-                    >
-                      <option value="ESTANDARIZAR">ESTANDARIZAR</option>
-                      <option value="OPTIMIZAR">OPTIMIZAR</option>
-                      <option value="REEMPLAZAR">REEMPLAZAR</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-3">
-                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 font-mono">Estrategia / Rediseño de Entorno:</label>
-                    <input
-                      type="text" value={strategyDetails} onChange={(e) => setStrategyDetails(e.target.value)}
-                      placeholder="E.g., Dejar el libro sobre la almohada"
-                      className="w-full bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 rounded-xl px-4 py-2.5 text-sm outline-none"
-                    />
-                  </div>
-                </div>
-                {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
-                <div className="flex justify-end">
-                  <button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow">
-                    Guardar Hábito
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          {/* Columnas EOR */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Estandarizar */}
-            <div className="p-5 rounded-2xl border border-stone-200 dark:border-stone-850 glass-panel shadow-soft flex flex-col h-full">
-              <h4 className="text-xs font-extrabold uppercase font-mono tracking-wider text-stone-500 border-b border-stone-200 dark:border-stone-850 pb-2">Estandarizar</h4>
-              <div className="flex-1 py-4 space-y-3">
-                {estandarizarList.map(h => (
-                  <div key={h.id} className="bg-stone-100/60 dark:bg-stone-950/40 p-3.5 border border-stone-200/50 dark:border-stone-850/60 rounded-xl flex justify-between items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h5 className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-snug">{h.name}</h5>
-                      <StrengthBar strength={h.currentStrength ?? 0} className="my-1.5" />
-                      {h.strategyDetails && <p className="text-[10px] text-stone-400 mt-1">Estrategia: {h.strategyDetails}</p>}
-                    </div>
-                    <button onClick={() => handleArchive(h.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Optimizar */}
-            <div className="p-5 rounded-2xl border border-stone-200 dark:border-stone-850 glass-panel shadow-soft flex flex-col h-full">
-              <h4 className="text-xs font-extrabold uppercase font-mono tracking-wider text-stone-500 border-b border-stone-200 dark:border-stone-850 pb-2">Optimizar</h4>
-              <div className="flex-1 py-4 space-y-3">
-                {optimizarList.map(h => (
-                  <div key={h.id} className="bg-stone-100/60 dark:bg-stone-950/40 p-3.5 border border-stone-200/50 dark:border-stone-850/60 rounded-xl flex justify-between items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h5 className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-snug">{h.name}</h5>
-                      <StrengthBar strength={h.currentStrength ?? 0} className="my-1.5" />
-                      {h.strategyDetails && <p className="text-[10px] text-stone-400 mt-1">Estrategia: {h.strategyDetails}</p>}
-                    </div>
-                    <button onClick={() => handleArchive(h.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Reemplazar */}
-            <div className="p-5 rounded-2xl border border-stone-200 dark:border-stone-850 glass-panel shadow-soft flex flex-col h-full">
-              <h4 className="text-xs font-extrabold uppercase font-mono tracking-wider text-stone-500 border-b border-stone-200 dark:border-stone-850 pb-2">Reemplazar</h4>
-              <div className="flex-1 py-4 space-y-3">
-                {reemplazarList.map(h => (
-                  <div key={h.id} className="bg-stone-100/60 dark:bg-stone-950/40 p-3.5 border border-stone-200/50 dark:border-stone-850/60 rounded-xl flex justify-between items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h5 className="text-xs font-bold text-stone-800 dark:text-stone-200 leading-snug">{h.name}</h5>
-                      <StrengthBar strength={h.currentStrength ?? 0} className="my-1.5" />
-                      {h.strategyDetails && <p className="text-[10px] text-stone-400 mt-1">Estrategia: {h.strategyDetails}</p>}
-                    </div>
-                    <button onClick={() => handleArchive(h.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {habitsList.map(habit => (
+            <HabitCard key={habit.id} habit={habit} />
+          ))}
         </div>
       )}
 
