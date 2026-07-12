@@ -197,17 +197,17 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = await tryGemini(transcript.trim());
-    return Response.json({ success: true, data });
-  } catch (geminiErr: any) {
-    console.warn('[SMART-ENTRY] Gemini failed, using Groq fallback:', geminiErr?.message || geminiErr);
-  }
-
-  try {
     const data = await tryGroq(transcript.trim());
     return Response.json({ success: true, data });
   } catch (groqErr: any) {
-    console.error('[SMART-ENTRY] Both providers failed. Groq:', groqErr?.message || groqErr);
+    console.warn('[SMART-ENTRY] Groq failed, trying Gemini fallback:', groqErr?.message || groqErr);
+  }
+
+  try {
+    const data = await tryGemini(transcript.trim());
+    return Response.json({ success: true, data });
+  } catch (geminiErr: any) {
+    console.error('[SMART-ENTRY] Both providers failed. Gemini:', geminiErr?.message || geminiErr);
     return Response.json(
       { error: 'Service temporarily unavailable. Please try again.' },
       { status: 500 },

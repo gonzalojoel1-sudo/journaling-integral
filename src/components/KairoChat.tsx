@@ -1,0 +1,71 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useChat } from '@ai-sdk/react';
+import { Sparkles } from 'lucide-react';
+import { getUserSettings } from '@/app/actions/user-settings';
+
+const ChatAssistant = dynamic(
+  () => import('@/components/ChatAssistant').then((mod) => mod.ChatAssistant),
+  { ssr: false },
+);
+
+export function KairoChat() {
+  const [show, setShow] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+    onResponse: (response) => {
+      setChatError(null);
+    },
+    onFinish: (message) => {
+      console.log('Kairo:', message);
+    },
+    onError: (error) => {
+      console.error('Kairo Error:', error);
+      setChatError(error.message || 'Error de conexión');
+    },
+  });
+
+  useEffect(() => {
+    getUserSettings().then((s) => setEnabled(s.aiAssistantEnabled));
+  }, []);
+
+  if (!enabled) return null;
+
+  return (
+    <>
+      {/* FAB — dark premium glow */}
+      <button
+        onClick={() => {
+          setShow((prev) => !prev);
+          setChatError(null);
+        }}
+        className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+          show
+            ? 'bg-zinc-800 dark:bg-zinc-700 text-zinc-400 shadow-lg shadow-zinc-900/20'
+            : 'bg-zinc-900 dark:bg-zinc-100 text-zinc-100 dark:text-zinc-900 shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_28px_rgba(139,92,246,0.5)] hover:scale-105'
+        }`}
+        title="Kairo"
+      >
+        <Sparkles className={`h-5 w-5 transition-transform duration-300 ${show ? 'rotate-90' : ''}`} />
+      </button>
+
+      {/* Chat panel — useChat state lives here, persists across routes */}
+      {show && (
+        <ChatAssistant
+          onClose={() => setShow(false)}
+          messages={messages}
+          input={input}
+          handleInputChange={handleInputChange}
+          handleSubmit={handleSubmit}
+          isLoading={isLoading}
+          chatError={chatError}
+        />
+      )}
+    </>
+  );
+}

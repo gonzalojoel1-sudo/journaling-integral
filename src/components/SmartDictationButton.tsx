@@ -87,12 +87,9 @@ declare global {
   }
 }
 
-function fuzzyMatchHabit(habitName: string, completedNames: string[]): boolean {
-  const lower = habitName.toLowerCase();
-  return completedNames.some((name) => {
-    const lowerName = name.toLowerCase();
-    return lower.includes(lowerName) || lowerName.includes(lower);
-  });
+function getSpeechAPI(): MySpeechRecognitionConstructor | null {
+  if (typeof window === 'undefined') return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
 export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDictationButtonProps) {
@@ -101,75 +98,20 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const recognitionRef = useRef<MySpeechRecognition | null>(null);
+  const SpeechAPI = useRef<MySpeechRecognitionConstructor | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    SpeechAPI.current = getSpeechAPI();
+    console.log('Dictado: Inicializando...', {
+      supported: !!SpeechAPI.current,
+      hasWindow: typeof window !== 'undefined',
+      SpeechRecognition: !!window.SpeechRecognition,
+      webkitSpeechRecognition: !!window.webkitSpeechRecognition,
+    });
   }, []);
 
-  const SpeechRecognitionAPI =
-    typeof window !== 'undefined'
-      ? window.SpeechRecognition || window.webkitSpeechRecognition
-      : null;
-
-  const supported = mounted ? !!SpeechRecognitionAPI : false;
-
-  const startListening = useCallback(() => {
-    if (!SpeechRecognitionAPI) {
-      setError('Speech recognition not available in this browser');
-      return;
-    }
-
-    setError(null);
-
-    const recognition = new SpeechRecognitionAPI();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'es-ES';
-
-    let finalTranscript = '';
-
-    recognition.onresult = (event: MySpeechRecognitionEvent) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript + ' ';
-        } else {
-          interim += result[0].transcript;
-        }
-      }
-      void interim;
-    };
-
-    recognition.onerror = (event: Event) => {
-      const errorEvent = event as MySpeechRecognitionErrorEvent;
-      if (errorEvent.error !== 'no-speech') {
-        setError('Error de micrófono');
-      }
-      setListening(false);
-    };
-
-    recognition.onend = async () => {
-      setListening(false);
-      if (finalTranscript.trim()) {
-        await sendToGemini(finalTranscript.trim());
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
-  }, [SpeechRecognitionAPI]);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    setListening(false);
-  }, []);
-
-  const sendToGemini = async (transcript: string) => {
+  const sendToSmartEntry = useCallback(async (transcript: string) => {
     setProcessing(true);
     setError(null);
 
@@ -185,52 +127,133 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
         try {
           errorBody = await res.json();
         } catch {}
-        console.error('[DICTATION] API response not ok:', res.status, errorBody);
+        console.error('[DICTATION] API error:', res.status, errorBody);
         throw new Error(errorBody?.error || `API error (${res.status})`);
       }
 
       const json = await res.json();
-
       if (!json.success) {
-        console.error('[DICTATION] Gemini processing error:', json.error, json);
+        console.error('[DICTATION] Processing error:', json);
         throw new Error(json.error || 'Unknown error');
       }
 
-      const rawData = json.data;
-
+      const rawData = json.data as ExtractedJournalData;
       if (rawData.habits?.completedNames?.length) {
         rawData.habits.completedNames = rawData.habits.completedNames.map(
           (name: string, i: number) => {
-            if (i === 0 && dailyHabits.length === 1) {
-              return dailyHabits[0].name;
-            }
+            if (i === 0 && dailyHabits.length === 1) return dailyHabits[0].name;
             return name;
-          }
+          },
         );
       }
 
       onDataExtracted(rawData);
     } catch (err) {
-      console.error('Smart dictation error:', err);
+      console.error('[DICTATION] Error:', err);
       setError('Error al procesar');
     } finally {
       setProcessing(false);
     }
-  };
+  }, [dailyHabits, onDataExtracted]);
+
+  const startListening = useCallback(() => {
+    const api = SpeechAPI.current;
+    if (!api) {
+      console.error('Dictado ERROR: SpeechRecognition API not available');
+      setError('Navegador no compatible');
+      return;
+    }
+
+    setError(null);
+    console.log('Dictado: Iniciando grabación...');
+
+    const recognition = new api();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'es-ES';
+
+    let finalTranscript = '';
+
+    recognition.onresult = (event: MySpeechRecognitionEvent) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript + ' ';
+        }
+      }
+    };
+
+    recognition.onerror = (event: Event) => {
+      const err = event as MySpeechRecognitionErrorEvent;
+      console.error('Dictado ERROR:', err.error, err.message || '');
+
+      switch (err.error) {
+        case 'not-allowed':
+          setError('Permite el acceso al micrófono en tu navegador');
+          break;
+        case 'audio-capture':
+          setError('No se encontró micrófono');
+          break;
+        case 'network':
+          setError('Error de red en el reconocimiento');
+          break;
+        case 'no-speech':
+          break;
+        case 'aborted':
+          break;
+        default:
+          setError('Error de micrófono');
+      }
+
+      setListening(false);
+    };
+
+    recognition.onend = async () => {
+      console.log('Dictado: Grabación finalizada. Transcripción:', finalTranscript || '(vacía)');
+      setListening(false);
+      if (finalTranscript.trim()) {
+        await sendToSmartEntry(finalTranscript.trim());
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      setListening(true);
+      console.log('Dictado: Grabación activa');
+    } catch (err: any) {
+      console.error('Dictado ERROR al iniciar:', err?.message || err);
+      setError('Error al iniciar grabación');
+    }
+  }, [sendToSmartEntry]);
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setListening(false);
+  }, []);
 
   const handleClick = () => {
     if (processing) return;
-    if (!supported) {
-      setError('Navegador no compatible');
-      setTimeout(() => setError(null), 2000);
-      return;
-    }
     if (listening) {
       stopListening();
     } else {
       startListening();
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="relative inline-flex">
+        <div className="h-9 w-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800" />
+      </div>
+    );
+  }
+
+  const supported = !!SpeechAPI.current;
 
   return (
     <div className="relative inline-flex z-10">
@@ -242,7 +265,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
           relative h-9 w-9 rounded-xl flex items-center justify-center
           transition-all duration-300
           border
-          ${!supported || !mounted
+          ${!supported
             ? 'border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed'
             : listening
               ? 'border-zinc-300 dark:border-zinc-500 bg-zinc-200/60 dark:bg-zinc-800/40 shadow-[0_0_12px_rgba(161,161,170,0.5)] dark:shadow-[0_0_12px_rgba(212,212,216,0.3)] cursor-pointer'
@@ -252,7 +275,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
           }
           ${error ? 'border-red-300 dark:border-red-800' : ''}
         `}
-        title={!mounted ? 'Iniciar dictado por voz' : !supported ? 'Dictado no disponible' : listening ? 'Detener grabación' : 'Iniciar dictado por voz'}
+        title={!supported ? 'Dictado no disponible' : listening ? 'Detener grabación' : 'Iniciar dictado por voz'}
       >
         {processing ? (
           <Loader2 className="h-4 w-4 text-zinc-500 dark:text-zinc-400 animate-spin" />

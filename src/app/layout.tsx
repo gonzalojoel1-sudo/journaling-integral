@@ -5,6 +5,7 @@ import Navigation from '@/components/Navigation';
 import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { MainWrapper } from '@/components/MainWrapper';
 import { Providers } from './providers';
+import { KairoChat } from '@/components/KairoChat';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -40,6 +41,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
               </div>
             </MainWrapper>
           </div>
+
+          <KairoChat />
         </Providers>
 
         <script
