@@ -22,6 +22,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   businessTransactions: many(businessTransactions),
   businessSettings: many(businessSettings),
   personalTransactions: many(personalTransactions),
+  journalEmbeddings: many(journalEmbeddings),
 }));
 
 export const dailyEntries = sqliteTable('daily_entries', {
@@ -93,11 +94,12 @@ export const dailyEntries = sqliteTable('daily_entries', {
   createdAt: text('created_at').notNull(),
 });
 
-export const dailyEntriesRelations = relations(dailyEntries, ({ one }) => ({
+export const dailyEntriesRelations = relations(dailyEntries, ({ one, many }) => ({
   user: one(users, {
     fields: [dailyEntries.userId],
     references: [users.id],
   }),
+  embeddings: many(journalEmbeddings),
 }));
 
 // --- NUEVA TABLA: PLANES SEMANALES DE ENFOQUE (80/20) ---
@@ -158,11 +160,37 @@ export const habits = sqliteTable('habits', {
   userId: text('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Core
   name: text('name').notNull(),
-  type: text('type').notNull(),
-  strategyDetails: text('strategy_details'),
+  habitType: text('habit_type').notNull(),   // crecer | sembrar | cambiar | preciso | pilar
+  domain: text('domain'),                     // cuerpo | mente | trabajo | relaciones | hogar | espiritual | finanzas | null
+
+  // Action system
+  rescueAction: text('rescue_action'),
+  activeAction: text('active_action'),
+  celebration: text('celebration').default('✅ Hecho'),
+
+  // Type-specific fields
+  anchor: text('anchor'),                     // Crecer, Sembrar
+  ifTrigger: text('if_trigger'),              // Preciso
+  ifAction: text('if_action'),                // Preciso
+  cue: text('cue'),                           // Cambiar
+  oldRoutine: text('old_routine'),            // Cambiar
+  newRoutine: text('new_routine'),            // Cambiar
+
+  // Identity
+  identityLabel: text('identity_label'),
+
+  // Chain relationship
+  belongsToChainId: text('belongs_to_chain_id'),
+  nextHabitId: text('next_habit_id'),
+
+  // Strength
   currentStrength: real('current_strength').default(0.0),
   lastStrengthDate: text('last_strength_date'),
+
+  // Meta
   createdAt: text('created_at').notNull(),
   isActive: integer('is_active').default(1).notNull(),
 });
@@ -171,6 +199,45 @@ export const habitsRelations = relations(habits, ({ one }) => ({
   user: one(users, {
     fields: [habits.userId],
     references: [users.id],
+  }),
+}));
+
+export const chains = sqliteTable('chains', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const chainItems = sqliteTable('chain_items', {
+  id: text('id').primaryKey(),
+  chainId: text('chain_id')
+    .notNull()
+    .references(() => chains.id, { onDelete: 'cascade' }),
+  habitId: text('habit_id')
+    .notNull()
+    .references(() => habits.id, { onDelete: 'cascade' }),
+  order: integer('order').notNull(),
+});
+
+export const chainsRelations = relations(chains, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chains.userId],
+    references: [users.id],
+  }),
+  items: many(chainItems),
+}));
+
+export const chainItemsRelations = relations(chainItems, ({ one }) => ({
+  chain: one(chains, {
+    fields: [chainItems.chainId],
+    references: [chains.id],
+  }),
+  habit: one(habits, {
+    fields: [chainItems.habitId],
+    references: [habits.id],
   }),
 }));
 
@@ -305,5 +372,30 @@ export const userSettingsRelations = relations(userSettings, ({ one }) => ({
   user: one(users, {
     fields: [userSettings.userId],
     references: [users.id],
+  }),
+}));
+
+// --- TABLA: EMBEDDINGS PARA RAG (KAIRO) ---
+export const journalEmbeddings = sqliteTable('journal_embeddings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  entryId: text('entry_id')
+    .notNull()
+    .references(() => dailyEntries.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  embedding: text('embedding').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const journalEmbeddingsRelations = relations(journalEmbeddings, ({ one }) => ({
+  user: one(users, {
+    fields: [journalEmbeddings.userId],
+    references: [users.id],
+  }),
+  entry: one(dailyEntries, {
+    fields: [journalEmbeddings.entryId],
+    references: [dailyEntries.id],
   }),
 }));
