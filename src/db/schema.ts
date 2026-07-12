@@ -22,6 +22,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   businessTransactions: many(businessTransactions),
   businessSettings: many(businessSettings),
   personalTransactions: many(personalTransactions),
+  journalEmbeddings: many(journalEmbeddings),
 }));
 
 export const dailyEntries = sqliteTable('daily_entries', {
@@ -98,6 +99,7 @@ export const dailyEntriesRelations = relations(dailyEntries, ({ one, many }) => 
     fields: [dailyEntries.userId],
     references: [users.id],
   }),
+  embeddings: many(journalEmbeddings),
 }));
 
 // --- NUEVA TABLA: PLANES SEMANALES DE ENFOQUE (80/20) ---
@@ -370,5 +372,29 @@ export const userSettingsRelations = relations(userSettings, ({ one }) => ({
   user: one(users, {
     fields: [userSettings.userId],
     references: [users.id],
+  }),
+}));
+
+export const journalEmbeddings = sqliteTable('journal_embeddings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  entryId: text('entry_id')
+    .notNull()
+    .references(() => dailyEntries.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+  embedding: text('embedding').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const journalEmbeddingsRelations = relations(journalEmbeddings, ({ one }) => ({
+  user: one(users, {
+    fields: [journalEmbeddings.userId],
+    references: [users.id],
+  }),
+  entry: one(dailyEntries, {
+    fields: [journalEmbeddings.entryId],
+    references: [dailyEntries.id],
   }),
 }));
