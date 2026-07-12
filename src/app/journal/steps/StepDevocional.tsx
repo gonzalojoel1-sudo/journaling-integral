@@ -7,7 +7,7 @@ import { getDevotionalForDay } from '@/lib/devotionalGuide';
 interface DailyHabit {
   habitId: string;
   name: string;
-  type: string;
+  habitType: string;
   completed: boolean;
 }
 
@@ -149,7 +149,7 @@ export function StepDevocional({
                   {habit.name}
                 </span>
                 <span className="ml-auto text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                  {habit.type}
+                  {habit.habitType}
                 </span>
               </button>
             ))}
