@@ -7,6 +7,8 @@ import {
   ChatRequestSchema,
   SmartEntryRequestSchema,
   validate,
+  HabitTypeEnum,
+  DomainEnum,
 } from './validations';
 
 describe('DailyEntrySchema', () => {
@@ -119,28 +121,51 @@ describe('DailyEntrySchema', () => {
   });
 });
 
-describe('CreateHabitSchema', () => {
-  it('should accept a valid habit', () => {
-    const result = CreateHabitSchema.safeParse({
-      name: 'Meditar 10 minutos',
-      type: 'personal',
-      strategyDetails: 'Todos los días a las 6am',
-    });
-    expect(result.success).toBe(true);
+describe('HabitTypeEnum', () => {
+  it('accepts valid types', () => {
+    expect(HabitTypeEnum.parse('crecer')).toBe('crecer');
+    expect(HabitTypeEnum.parse('sembrar')).toBe('sembrar');
+    expect(HabitTypeEnum.parse('cambiar')).toBe('cambiar');
+    expect(HabitTypeEnum.parse('preciso')).toBe('preciso');
+    expect(HabitTypeEnum.parse('pilar')).toBe('pilar');
   });
 
-  it('should accept a habit without strategyDetails', () => {
-    const result = CreateHabitSchema.safeParse({
-      name: 'Ejercicio',
-      type: 'cuerpo',
+  it('rejects old types', () => {
+    expect(() => HabitTypeEnum.parse('ESTANDARIZAR')).toThrow();
+    expect(() => HabitTypeEnum.parse('personal')).toThrow();
+  });
+});
+
+describe('DomainEnum', () => {
+  it('accepts valid domains', () => {
+    expect(DomainEnum.parse('cuerpo')).toBe('cuerpo');
+    expect(DomainEnum.parse('espiritual')).toBe('espiritual');
+  });
+});
+
+describe('CreateHabitSchema', () => {
+  it('validates a minimal crecer habit', () => {
+    const result = CreateHabitSchema.parse({
+      name: 'Ejercicio matutino',
+      habitType: 'crecer',
+      anchor: 'Después del café',
+      rescueAction: '1 sentadilla',
     });
-    expect(result.success).toBe(true);
+    expect(result.name).toBe('Ejercicio matutino');
+  });
+
+  it('requires rescueAction', () => {
+    expect(() => CreateHabitSchema.parse({
+      name: 'Test',
+      habitType: 'crecer',
+    })).toThrow();
   });
 
   it('should reject empty name', () => {
     const result = CreateHabitSchema.safeParse({
       name: '',
-      type: 'personal',
+      habitType: 'crecer',
+      rescueAction: 'something',
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -151,25 +176,62 @@ describe('CreateHabitSchema', () => {
   it('should reject name > 100 characters', () => {
     const result = CreateHabitSchema.safeParse({
       name: 'A'.repeat(101),
-      type: 'personal',
+      habitType: 'crecer',
+      rescueAction: 'something',
     });
     expect(result.success).toBe(false);
   });
 
-  it('should reject invalid type', () => {
+  it('should reject invalid habitType', () => {
     const result = CreateHabitSchema.safeParse({
       name: 'Meditar',
-      type: 'invalido',
+      habitType: 'invalido',
+      rescueAction: 'something',
     });
     expect(result.success).toBe(false);
   });
 
-  it('should accept all valid types', () => {
-    const types = ['personal', 'negocio', 'fe', 'cuerpo', 'mente', 'relaciones'];
-    for (const type of types) {
+  it('should accept all valid habitTypes', () => {
+    const types = ['crecer', 'sembrar', 'cambiar', 'preciso', 'pilar'];
+    for (const habitType of types) {
       const result = CreateHabitSchema.safeParse({
         name: 'Test Habit',
-        type,
+        habitType,
+        rescueAction: 'something',
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('should accept optional fields', () => {
+    const result = CreateHabitSchema.safeParse({
+      name: 'Full habit',
+      habitType: 'pilar',
+      rescueAction: 'Do something',
+      domain: 'cuerpo',
+      activeAction: 'Active action',
+      celebration: 'Celebrate!',
+      anchor: 'After coffee',
+      ifTrigger: 'If X',
+      ifAction: 'Then Y',
+      cue: 'Cue',
+      oldRoutine: 'Old',
+      newRoutine: 'New',
+      identityLabel: 'I am...',
+      belongsToChainId: 'abc-123',
+      nextHabitId: 'def-456',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept valid domains', () => {
+    const domains = ['cuerpo', 'mente', 'trabajo', 'relaciones', 'hogar', 'espiritual', 'finanzas'];
+    for (const domain of domains) {
+      const result = CreateHabitSchema.safeParse({
+        name: 'Test',
+        habitType: 'crecer',
+        rescueAction: 'action',
+        domain,
       });
       expect(result.success).toBe(true);
     }
@@ -351,7 +413,8 @@ describe('validate helper', () => {
   it('should return success with data on valid input', () => {
     const result = validate(CreateHabitSchema, {
       name: 'Meditar',
-      type: 'personal',
+      habitType: 'crecer',
+      rescueAction: 'Hacerlo',
     });
     expect(result.success).toBe(true);
     if (result.success) {
@@ -362,7 +425,8 @@ describe('validate helper', () => {
   it('should return error message on invalid input', () => {
     const result = validate(CreateHabitSchema, {
       name: '',
-      type: 'personal',
+      habitType: 'crecer',
+      rescueAction: 'Hacerlo',
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -375,7 +439,8 @@ describe('validate helper', () => {
   it('should return first error only', () => {
     const result = validate(CreateHabitSchema, {
       name: '',
-      type: 'invalido',
+      habitType: 'invalido',
+      rescueAction: 'Hacerlo',
     });
     expect(result.success).toBe(false);
     if (!result.success) {

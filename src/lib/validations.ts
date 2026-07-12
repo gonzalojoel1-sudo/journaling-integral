@@ -124,12 +124,21 @@ export type DailyEntryInput = z.infer<typeof DailyEntrySchema>;
 // ============================================================
 
 export const HabitTypeEnum = z.enum([
-  'personal',
-  'negocio',
-  'fe',
+  'crecer',
+  'sembrar',
+  'cambiar',
+  'preciso',
+  'pilar',
+]);
+
+export const DomainEnum = z.enum([
   'cuerpo',
   'mente',
+  'trabajo',
   'relaciones',
+  'hogar',
+  'espiritual',
+  'finanzas',
 ]);
 
 export const CreateHabitSchema = z.object({
@@ -137,8 +146,20 @@ export const CreateHabitSchema = z.object({
     .string()
     .min(1, 'El nombre del hábito es requerido')
     .max(100, 'Máximo 100 caracteres'),
-  type: HabitTypeEnum,
-  strategyDetails: z.string().max(1000).optional(),
+  habitType: HabitTypeEnum,
+  domain: DomainEnum.optional(),
+  rescueAction: z.string().min(1, 'La acción de rescate es requerida').max(200),
+  activeAction: z.string().optional(),
+  celebration: z.string().optional(),
+  anchor: z.string().optional(),
+  ifTrigger: z.string().optional(),
+  ifAction: z.string().optional(),
+  cue: z.string().optional(),
+  oldRoutine: z.string().optional(),
+  newRoutine: z.string().optional(),
+  identityLabel: z.string().optional(),
+  belongsToChainId: z.string().optional(),
+  nextHabitId: z.string().optional(),
 });
 
 export type CreateHabitInput = z.infer<typeof CreateHabitSchema>;
