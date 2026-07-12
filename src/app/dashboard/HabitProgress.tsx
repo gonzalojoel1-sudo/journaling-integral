@@ -11,12 +11,23 @@ interface Habit {
   completed?: boolean;
   currentStrength?: number;
   lastStrengthDate?: string | null;
+  activeAction?: string | null;
+  rescueAction?: string | null;
+  celebration?: string | null;
 }
 
 interface HabitProgressProps {
   habits: Habit[];
   initialCompletedIds?: string[];
 }
+
+const typeIcon: Record<string, string> = {
+  crecer: '⚡',
+  sembrar: '🌱',
+  cambiar: '🔄',
+  preciso: '🎯',
+  pilar: '🏛️',
+};
 
 export function HabitProgress({ habits, initialCompletedIds = [] }: HabitProgressProps) {
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set(initialCompletedIds));
@@ -95,15 +106,31 @@ export function HabitProgress({ habits, initialCompletedIds = [] }: HabitProgres
                 >
                   {isCompleted && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                 </div>
-                <span
-                  className={`text-xs font-medium truncate ${
-                    isCompleted
-                      ? 'text-zinc-500 dark:text-zinc-400 line-through'
-                      : 'text-zinc-700 dark:text-zinc-300'
-                  }`}
-                >
-                  {habit.name}
-                </span>
+                <span className="text-xs shrink-0">{typeIcon[habit.habitType] || '📋'}</span>
+                <div className="flex-1 min-w-0">
+                  <span
+                    className={`text-xs font-medium truncate ${
+                      isCompleted
+                        ? 'text-zinc-500 dark:text-zinc-400 line-through'
+                        : 'text-zinc-700 dark:text-zinc-300'
+                    }`}
+                  >
+                    {habit.name}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] text-zinc-400 truncate">
+                      {habit.activeAction || habit.rescueAction}
+                    </p>
+                    {habit.rescueAction && habit.activeAction === habit.rescueAction && (
+                      <span className="text-[9px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-1 py-0.5 rounded shrink-0">
+                        Modo rescate
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {isCompleted && habit.celebration && (
+                  <span className="text-[10px] text-zinc-400 shrink-0">{habit.celebration}</span>
+                )}
               </div>
               <StrengthBar strength={strength} className="ml-8" />
             </button>

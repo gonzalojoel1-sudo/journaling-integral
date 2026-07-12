@@ -105,7 +105,7 @@ export default async function DashboardPage() {
 
   const userSettings = await getUserSettings();
 
-  let parsedHabits: { id: string; name: string; habitType: string; completed?: boolean; currentStrength?: number; lastStrengthDate?: string | null }[] = [];
+  let parsedHabits: { id: string; name: string; habitType: string; completed?: boolean; currentStrength?: number; lastStrengthDate?: string | null; activeAction?: string | null; rescueAction?: string | null; celebration?: string | null }[] = [];
   let initialCompletedIds: string[] = [];
 
   if (habitsList.length > 0) {
@@ -121,16 +121,19 @@ export default async function DashboardPage() {
             completed: h.completed,
             currentStrength: dbHabit?.currentStrength ?? 0,
             lastStrengthDate: dbHabit?.lastStrengthDate ?? null,
+            activeAction: dbHabit?.activeAction ?? null,
+            rescueAction: dbHabit?.rescueAction ?? null,
+            celebration: dbHabit?.celebration ?? null,
           };
         });
         initialCompletedIds = savedHabits
           .filter((h: any) => h.completed)
           .map((h: any) => h.habitId);
       } catch {
-        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
+        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null, activeAction: h.activeAction ?? null, rescueAction: h.rescueAction ?? null, celebration: h.celebration ?? null }));
       }
     } else {
-      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
+      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null, activeAction: h.activeAction ?? null, rescueAction: h.rescueAction ?? null, celebration: h.celebration ?? null }));
     }
   }
 
