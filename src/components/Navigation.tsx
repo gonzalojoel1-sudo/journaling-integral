@@ -198,7 +198,7 @@ function MobileNav() {
   const visibleItems = MOBILE_NAV_ITEMS.filter((item) => !hiddenHrefs.has(item.href));
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-center justify-around px-2 pb-safe z-30 shadow-lg transition-colors">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-stone-950 border-t border-stone-200 dark:border-stone-850 text-stone-500 dark:text-stone-300 flex items-stretch overflow-x-auto flex-nowrap px-1 pb-safe z-30 shadow-lg transition-colors scrollbar-none">
       {visibleItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href;
@@ -206,19 +206,19 @@ function MobileNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors ${
+            className={`flex flex-col items-center justify-center min-w-[52px] px-1 h-full py-1 text-center transition-colors shrink-0 ${
               isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 hover:text-stone-200'
             }`}
           >
             <Icon className="h-5 w-5" />
-            <span className="text-[10px] font-medium mt-1 truncate max-w-[64px]">
+            <span className="text-[9px] font-medium mt-0.5 truncate max-w-[56px]">
               {item.label}
             </span>
           </Link>
         );
       })}
 
-      <div className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center shrink-0">
+      <div className="flex flex-col items-center justify-center min-w-[52px] px-1 h-full py-1 text-center shrink-0">
         <ThemeToggle />
       </div>
     </nav>

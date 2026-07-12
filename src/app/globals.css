@@ -272,6 +272,14 @@ body {
   background: var(--text-tertiary);
 }
 
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* ============================================================
    CLASES LEGACY (mantener compatibilidad con componentes existentes)
    ============================================================ */

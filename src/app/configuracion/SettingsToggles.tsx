@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save } from 'lucide-react';
+import { Save, LogOut } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 import { updateUserSetting } from '@/app/actions/user-settings';
 
 interface SettingsTogglesProps {
@@ -109,6 +110,16 @@ export function SettingsToggles({
           </p>
         </div>
       )}
+
+      <div className="pt-4 mt-4 border-t border-zinc-200 dark:border-white/5">
+        <button
+          onClick={() => signOut({ redirect: false }).then(() => { window.location.href = '/login'; })}
+          className="w-full flex items-center justify-center gap-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 px-6 py-3 rounded-xl text-sm font-medium transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar Sesión
+        </button>
+      </div>
     </div>
   );
 }
