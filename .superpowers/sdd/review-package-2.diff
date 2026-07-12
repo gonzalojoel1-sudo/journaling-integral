@@ -1,0 +1,293 @@
+diff --git a/src/lib/validations.test.ts b/src/lib/validations.test.ts
+index f1eea98..5528216 100644
+--- a/src/lib/validations.test.ts
++++ b/src/lib/validations.test.ts
+@@ -1,19 +1,21 @@
+ import { describe, it, expect } from 'vitest';
+ import {
+   DailyEntrySchema,
+   CreateHabitSchema,
+   CreatePersonalTransactionSchema,
+   CreateBusinessTransactionSchema,
+   ChatRequestSchema,
+   SmartEntryRequestSchema,
+   validate,
++  HabitTypeEnum,
++  DomainEnum,
+ } from './validations';
+ 
+ describe('DailyEntrySchema', () => {
+   const validEntry = {
+     sleepRating: 8,
+     energyRating: 7,
+     focusRating: 9,
+     stressRating: 3,
+     quickEnergyAction: 'Caminar 10 minutos',
+     gratitude1: 'Mi familia',
+@@ -112,71 +114,131 @@ describe('DailyEntrySchema', () => {
+ 
+   it('should reject bizIncome as negative', () => {
+     const result = DailyEntrySchema.safeParse({
+       ...validEntry,
+       bizIncome: -100,
+     });
+     expect(result.success).toBe(false);
+   });
+ });
+ 
++describe('HabitTypeEnum', () => {
++  it('accepts valid types', () => {
++    expect(HabitTypeEnum.parse('crecer')).toBe('crecer');
++    expect(HabitTypeEnum.parse('sembrar')).toBe('sembrar');
++    expect(HabitTypeEnum.parse('cambiar')).toBe('cambiar');
++    expect(HabitTypeEnum.parse('preciso')).toBe('preciso');
++    expect(HabitTypeEnum.parse('pilar')).toBe('pilar');
++  });
++
++  it('rejects old types', () => {
++    expect(() => HabitTypeEnum.parse('ESTANDARIZAR')).toThrow();
++    expect(() => HabitTypeEnum.parse('personal')).toThrow();
++  });
++});
++
++describe('DomainEnum', () => {
++  it('accepts valid domains', () => {
++    expect(DomainEnum.parse('cuerpo')).toBe('cuerpo');
++    expect(DomainEnum.parse('espiritual')).toBe('espiritual');
++  });
++});
++
+ describe('CreateHabitSchema', () => {
+-  it('should accept a valid habit', () => {
+-    const result = CreateHabitSchema.safeParse({
+-      name: 'Meditar 10 minutos',
+-      type: 'personal',
+-      strategyDetails: 'Todos los días a las 6am',
++  it('validates a minimal crecer habit', () => {
++    const result = CreateHabitSchema.parse({
++      name: 'Ejercicio matutino',
++      habitType: 'crecer',
++      anchor: 'Después del café',
++      rescueAction: '1 sentadilla',
+     });
+-    expect(result.success).toBe(true);
++    expect(result.name).toBe('Ejercicio matutino');
+   });
+ 
+-  it('should accept a habit without strategyDetails', () => {
+-    const result = CreateHabitSchema.safeParse({
+-      name: 'Ejercicio',
+-      type: 'cuerpo',
+-    });
+-    expect(result.success).toBe(true);
++  it('requires rescueAction', () => {
++    expect(() => CreateHabitSchema.parse({
++      name: 'Test',
++      habitType: 'crecer',
++    })).toThrow();
+   });
+ 
+   it('should reject empty name', () => {
+     const result = CreateHabitSchema.safeParse({
+       name: '',
+-      type: 'personal',
++      habitType: 'crecer',
++      rescueAction: 'something',
+     });
+     expect(result.success).toBe(false);
+     if (!result.success) {
+       expect(result.error.issues[0].message).toBe('El nombre del hábito es requerido');
+     }
+   });
+ 
+   it('should reject name > 100 characters', () => {
+     const result = CreateHabitSchema.safeParse({
+       name: 'A'.repeat(101),
+-      type: 'personal',
++      habitType: 'crecer',
++      rescueAction: 'something',
+     });
+     expect(result.success).toBe(false);
+   });
+ 
+-  it('should reject invalid type', () => {
++  it('should reject invalid habitType', () => {
+     const result = CreateHabitSchema.safeParse({
+       name: 'Meditar',
+-      type: 'invalido',
++      habitType: 'invalido',
++      rescueAction: 'something',
+     });
+     expect(result.success).toBe(false);
+   });
+ 
+-  it('should accept all valid types', () => {
+-    const types = ['personal', 'negocio', 'fe', 'cuerpo', 'mente', 'relaciones'];
+-    for (const type of types) {
++  it('should accept all valid habitTypes', () => {
++    const types = ['crecer', 'sembrar', 'cambiar', 'preciso', 'pilar'];
++    for (const habitType of types) {
+       const result = CreateHabitSchema.safeParse({
+         name: 'Test Habit',
+-        type,
++        habitType,
++        rescueAction: 'something',
++      });
++      expect(result.success).toBe(true);
++    }
++  });
++
++  it('should accept optional fields', () => {
++    const result = CreateHabitSchema.safeParse({
++      name: 'Full habit',
++      habitType: 'pilar',
++      rescueAction: 'Do something',
++      domain: 'cuerpo',
++      activeAction: 'Active action',
++      celebration: 'Celebrate!',
++      anchor: 'After coffee',
++      ifTrigger: 'If X',
++      ifAction: 'Then Y',
++      cue: 'Cue',
++      oldRoutine: 'Old',
++      newRoutine: 'New',
++      identityLabel: 'I am...',
++      belongsToChainId: 'abc-123',
++      nextHabitId: 'def-456',
++    });
++    expect(result.success).toBe(true);
++  });
++
++  it('should accept valid domains', () => {
++    const domains = ['cuerpo', 'mente', 'trabajo', 'relaciones', 'hogar', 'espiritual', 'finanzas'];
++    for (const domain of domains) {
++      const result = CreateHabitSchema.safeParse({
++        name: 'Test',
++        habitType: 'crecer',
++        rescueAction: 'action',
++        domain,
+       });
+       expect(result.success).toBe(true);
+     }
+   });
+ });
+ 
+ describe('CreatePersonalTransactionSchema', () => {
+   it('should accept a valid transaction', () => {
+     const result = CreatePersonalTransactionSchema.safeParse({
+       amount: 500,
+@@ -344,42 +406,45 @@ describe('SmartEntryRequestSchema', () => {
+       transcript: 'A'.repeat(10001),
+     });
+     expect(result.success).toBe(false);
+   });
+ });
+ 
+ describe('validate helper', () => {
+   it('should return success with data on valid input', () => {
+     const result = validate(CreateHabitSchema, {
+       name: 'Meditar',
+-      type: 'personal',
++      habitType: 'crecer',
++      rescueAction: 'Hacerlo',
+     });
+     expect(result.success).toBe(true);
+     if (result.success) {
+       expect(result.data.name).toBe('Meditar');
+     }
+   });
+ 
+   it('should return error message on invalid input', () => {
+     const result = validate(CreateHabitSchema, {
+       name: '',
+-      type: 'personal',
++      habitType: 'crecer',
++      rescueAction: 'Hacerlo',
+     });
+     expect(result.success).toBe(false);
+     if (!result.success) {
+       expect(result.error).toBe('El nombre del hábito es requerido');
+       expect(result.fieldErrors).toHaveLength(1);
+       expect(result.fieldErrors[0].path).toBe('name');
+     }
+   });
+ 
+   it('should return first error only', () => {
+     const result = validate(CreateHabitSchema, {
+       name: '',
+-      type: 'invalido',
++      habitType: 'invalido',
++      rescueAction: 'Hacerlo',
+     });
+     expect(result.success).toBe(false);
+     if (!result.success) {
+       expect(result.fieldErrors.length).toBeGreaterThanOrEqual(1);
+     }
+   });
+ });
+diff --git a/src/lib/validations.ts b/src/lib/validations.ts
+index b8f9f16..8f9a7db 100644
+--- a/src/lib/validations.ts
++++ b/src/lib/validations.ts
+@@ -117,35 +117,56 @@ export const DailyEntrySchema = z.object({
+   isPlanBUsed: z.boolean().optional(),
+ });
+ 
+ export type DailyEntryInput = z.infer<typeof DailyEntrySchema>;
+ 
+ // ============================================================
+ // HABITS
+ // ============================================================
+ 
+ export const HabitTypeEnum = z.enum([
+-  'personal',
+-  'negocio',
+-  'fe',
++  'crecer',
++  'sembrar',
++  'cambiar',
++  'preciso',
++  'pilar',
++]);
++
++export const DomainEnum = z.enum([
+   'cuerpo',
+   'mente',
++  'trabajo',
+   'relaciones',
++  'hogar',
++  'espiritual',
++  'finanzas',
+ ]);
+ 
+ export const CreateHabitSchema = z.object({
+   name: z
+     .string()
+     .min(1, 'El nombre del hábito es requerido')
+     .max(100, 'Máximo 100 caracteres'),
+-  type: HabitTypeEnum,
+-  strategyDetails: z.string().max(1000).optional(),
++  habitType: HabitTypeEnum,
++  domain: DomainEnum.optional(),
++  rescueAction: z.string().min(1, 'La acción de rescate es requerida').max(200),
++  activeAction: z.string().optional(),
++  celebration: z.string().optional(),
++  anchor: z.string().optional(),
++  ifTrigger: z.string().optional(),
++  ifAction: z.string().optional(),
++  cue: z.string().optional(),
++  oldRoutine: z.string().optional(),
++  newRoutine: z.string().optional(),
++  identityLabel: z.string().optional(),
++  belongsToChainId: z.string().optional(),
++  nextHabitId: z.string().optional(),
+ });
+ 
+ export type CreateHabitInput = z.infer<typeof CreateHabitSchema>;
+ 
+ export const ArchiveHabitSchema = z.object({
+   habitId: UUIDSchema,
+ });
+ 
+ export type ArchiveHabitInput = z.infer<typeof ArchiveHabitSchema>;
+ 

@@ -105,7 +105,7 @@ export default async function DashboardPage() {
 
   const userSettings = await getUserSettings();
 
-  let parsedHabits: { id: string; name: string; type: string; completed?: boolean; currentStrength?: number; lastStrengthDate?: string | null }[] = [];
+  let parsedHabits: { id: string; name: string; habitType: string; completed?: boolean; currentStrength?: number; lastStrengthDate?: string | null }[] = [];
   let initialCompletedIds: string[] = [];
 
   if (habitsList.length > 0) {
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
           return {
             id: h.habitId,
             name: h.name,
-            type: h.type,
+            habitType: h.habitType || h.type,
             completed: h.completed,
             currentStrength: dbHabit?.currentStrength ?? 0,
             lastStrengthDate: dbHabit?.lastStrengthDate ?? null,
@@ -127,10 +127,10 @@ export default async function DashboardPage() {
           .filter((h: any) => h.completed)
           .map((h: any) => h.habitId);
       } catch {
-        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
+        parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
       }
     } else {
-      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, type: h.type, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
+      parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null }));
     }
   }
 

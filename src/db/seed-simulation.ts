@@ -37,12 +37,12 @@ async function runSimulationSeed() {
 
   // 3. Crear Hábitos Core
   const habitList = [
-    { id: randomUUID(), name: 'Devocional Matutino y Oración', type: 'fe' },
-    { id: randomUUID(), name: 'Prospectar 5 clientes (iRon Tech)', type: 'negocio' },
-    { id: randomUUID(), name: 'Cerrar caja y flujo de caja diario', type: 'negocio' },
-    { id: randomUUID(), name: 'Entrenamiento de Fuerza', type: 'cuerpo' },
-    { id: randomUUID(), name: 'Lectura de Estrategia (Hormozi/Vaynerchuk)', type: 'mente' },
-    { id: randomUUID(), name: 'Tiempo de calidad sin pantallas con la familia', type: 'relaciones' },
+    { id: randomUUID(), name: 'Devocional Matutino y Oración', habitType: 'pilar', domain: 'espiritual' },
+    { id: randomUUID(), name: 'Prospectar 5 clientes (iRon Tech)', habitType: 'preciso', domain: 'trabajo' },
+    { id: randomUUID(), name: 'Cerrar caja y flujo de caja diario', habitType: 'sembrar', domain: 'trabajo' },
+    { id: randomUUID(), name: 'Entrenamiento de Fuerza', habitType: 'crecer', domain: 'cuerpo' },
+    { id: randomUUID(), name: 'Lectura de Estrategia', habitType: 'sembrar', domain: 'mente' },
+    { id: randomUUID(), name: 'Tiempo de calidad sin pantallas con la familia', habitType: 'pilar', domain: 'relaciones' },
   ];
 
   for (const h of habitList) {
@@ -50,8 +50,10 @@ async function runSimulationSeed() {
       id: h.id,
       userId,
       name: h.name,
-      type: h.type,
-      strategyDetails: 'Simulación de alta constancia',
+      habitType: h.habitType,
+      domain: h.domain,
+      rescueAction: h.name,
+      celebration: 'Hecho',
       isActive: 1,
       currentStrength: 0.85,
       createdAt: now,

@@ -1,41 +1,32 @@
-'use client';
+### Task 5: Per-Type Card Rendering
 
-import React from 'react';
-import { StrengthBar } from '@/components/StrengthBar';
-import { archiveHabit } from '../actions/habits';
+**Files:**
+- Modify: `src/app/habits/HabitsClient.tsx` (replace old EOR columns with per-type cards)
+- Modify: `src/components/StrengthBar.tsx` (add celebration display)
 
-interface HabitCardHabit {
-  id: string;
-  name: string;
-  habitType?: string;
-  domain?: string | null;
-  activeAction?: string | null;
-  rescueAction?: string | null;
-  celebration?: string | null;
-  anchor?: string | null;
-  ifTrigger?: string | null;
-  ifAction?: string | null;
-  cue?: string | null;
-  newRoutine?: string | null;
-  identityLabel?: string | null;
-  currentStrength?: number;
-}
+**Interfaces:**
+- Consumes: new `habitType`, `domain`, `activeAction`, `celebration` fields
+- Produces: 5 different card layouts (one per type)
 
-const typeConfig: Record<string, { icon: string; label: string; color: string }> = {
-  crecer: { icon: '⚡', label: 'Crecer', color: 'border-l-stone-600' },
-  sembrar: { icon: '🌱', label: 'Sembrar', color: 'border-l-emerald-500' },
-  cambiar: { icon: '🔄', label: 'Cambiar', color: 'border-l-amber-500' },
-  preciso: { icon: '🎯', label: 'Preciso', color: 'border-l-sky-500' },
-  pilar: { icon: '🏛️', label: 'Pilar', color: 'border-l-violet-500' },
-};
+- [ ] **Step 1: Create a HabitCard sub-component per type**
 
-const domainLabels: Record<string, string> = {
-  cuerpo: 'Cuerpo', mente: 'Mente', trabajo: 'Trabajo',
-  relaciones: 'Relaciones', hogar: 'Hogar', espiritual: 'Espiritual', finanzas: 'Finanzas',
-};
+In `HabitsClient.tsx`, implement card rendering based on `habitType`:
 
-export function HabitCard({ habit }: { habit: HabitCardHabit }) {
-  const config = typeConfig[habit.habitType || ''] || typeConfig.crecer;
+```tsx
+function HabitCard({ habit }: { habit: any }) {
+  const typeConfig: Record<string, { icon: string; label: string; color: string }> = {
+    crecer: { icon: '⚡', label: 'Crecer', color: 'border-l-stone-600' },
+    sembrar: { icon: '🌱', label: 'Sembrar', color: 'border-l-emerald-500' },
+    cambiar: { icon: '🔄', label: 'Cambiar', color: 'border-l-amber-500' },
+    preciso: { icon: '🎯', label: 'Preciso', color: 'border-l-sky-500' },
+    pilar: { icon: '🏛️', label: 'Pilar', color: 'border-l-violet-500' },
+  };
+  const config = typeConfig[habit.habitType] || typeConfig.crecer;
+
+  const domainLabels: Record<string, string> = {
+    cuerpo: 'Cuerpo', mente: 'Mente', trabajo: 'Trabajo',
+    relaciones: 'Relaciones', hogar: 'Hogar', espiritual: 'Espiritual', finanzas: 'Finanzas',
+  };
 
   return (
     <div className={`border-l-4 ${config.color} bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800`}>
@@ -47,15 +38,17 @@ export function HabitCard({ habit }: { habit: HabitCardHabit }) {
           </span>
           <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mt-1">{habit.name}</h3>
         </div>
-        <button onClick={() => archiveHabit(habit.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0" title="Archivar">
+        <button onClick={() => archiveHabit(habit.id)} className="text-stone-400 hover:text-red-500 transition-colors" title="Archivar">
           ✕
         </button>
       </div>
 
+      {/* Active action display */}
       <p className="text-sm text-stone-600 dark:text-stone-400 mb-2">
         {habit.activeAction || habit.rescueAction}
       </p>
 
+      {/* Type-specific details */}
       {habit.habitType === 'crecer' && habit.anchor && (
         <p className="text-xs text-stone-400">Después de: {habit.anchor}</p>
       )}
@@ -80,12 +73,14 @@ export function HabitCard({ habit }: { habit: HabitCardHabit }) {
         </span>
       )}
 
+      {/* Identity */}
       {habit.identityLabel && (
         <p className="text-xs text-stone-400 mt-1 italic">
           Te estás convirtiendo en una persona {habit.identityLabel}
         </p>
       )}
 
+      {/* Strength */}
       <div className="mt-3">
         <StrengthBar strength={habit.currentStrength ?? 0} />
         {habit.celebration && (
@@ -95,3 +90,29 @@ export function HabitCard({ habit }: { habit: HabitCardHabit }) {
     </div>
   );
 }
+```
+
+- [ ] **Step 2: Replace the old EOR columns in HabitsClient.tsx**
+
+Replace the three-column EOR section with a flat grid of `HabitCard` components grouped by type:
+
+```tsx
+// Replace the old {activeSubTab === 'catalogo' && (...)} section
+{activeSubTab === 'catalogo' && (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {habits.map(habit => (
+      <HabitCard key={habit.id} habit={habit} />
+    ))}
+  </div>
+)}
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/app/habits/HabitsClient.tsx src/components/StrengthBar.tsx
+git commit -m "feat: per-type habit card rendering with icon, action, and celebration"
+```
+
+---
+

@@ -17,11 +17,10 @@ export default async function HabitsPage() {
     <div className="space-y-6">
       <header className="border-b border-stone-200 dark:border-stone-800 pb-4">
         <h1 className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">
-          Gestor de Hábitos EOR
+          Gestor de Hábitos
         </h1>
         <p className="text-sm text-stone-500 mt-1">
-          Diseña tu comportamiento mediante el protocolo de hábitos atómicos: 
-          <strong> Estandarizar, Optimizar y Reemplazar</strong>.
+          Diseña, sigue y fortalece tus hábitos con ciencia del comportamiento.
         </p>
       </header>
 

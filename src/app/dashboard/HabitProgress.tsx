@@ -7,7 +7,7 @@ import { StrengthBar } from '@/components/StrengthBar';
 interface Habit {
   id: string;
   name: string;
-  type: string;
+  habitType: string;
   completed?: boolean;
   currentStrength?: number;
   lastStrengthDate?: string | null;

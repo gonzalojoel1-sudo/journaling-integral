@@ -18,8 +18,9 @@ import { SmartDictationButton } from '@/components/SmartDictationButton';
 interface Habit {
   id: string;
   name: string;
-  type: string;
-  strategyDetails: string | null;
+  type?: string | null;
+  habitType?: string | null;
+  strategyDetails?: string | null;
 }
 
 interface JournalFormProps {
@@ -71,7 +72,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     if (existingEntry?.dailyHabitsJson) {
       return JSON.parse(existingEntry.dailyHabitsJson);
     }
-    return habitsList.map(h => ({ habitId: h.id, name: h.name, type: h.type, completed: false }));
+    return habitsList.map(h => ({ habitId: h.id, name: h.name, habitType: h.habitType || h.type, completed: false }));
   });
 
   const [mitSer, setMitSer] = useState<string>(existingEntry?.mitSer ?? '');
