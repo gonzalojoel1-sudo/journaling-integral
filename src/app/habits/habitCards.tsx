@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { StrengthBar } from '@/components/StrengthBar';
 import { archiveHabit } from '../actions/habits';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface HabitCardHabit {
   id: string;
@@ -35,10 +37,22 @@ const domainLabels: Record<string, string> = {
 };
 
 export function HabitCard({ habit }: { habit: HabitCardHabit }) {
+  const router = useRouter();
+  const [isExpanded, setIsExpanded] = useState(false);
   const config = typeConfig[habit.habitType || ''] || typeConfig.crecer;
 
+  const handleArchive = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('¿Deseas archivar este hábito del catálogo activo?')) return;
+    await archiveHabit(habit.id);
+    router.refresh();
+  };
+
   return (
-    <div className={`border-l-4 ${config.color} bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800`}>
+    <div
+      onClick={() => setIsExpanded(!isExpanded)}
+      className={`border-l-4 ${config.color} bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800 cursor-pointer transition-all duration-300 hover:shadow-md ${isExpanded ? 'pb-5' : ''}`}
+    >
       <div className="flex items-start justify-between mb-2">
         <div>
           <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">
@@ -47,44 +61,59 @@ export function HabitCard({ habit }: { habit: HabitCardHabit }) {
           </span>
           <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mt-1">{habit.name}</h3>
         </div>
-        <button onClick={() => archiveHabit(habit.id)} className="text-stone-400 hover:text-red-500 transition-colors shrink-0" title="Archivar">
-          ✕
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={handleArchive} className="text-stone-400 hover:text-red-500 transition-colors shrink-0 p-1" title="Archivar">
+            ✕
+          </button>
+          {isExpanded ? <ChevronUp className="h-4 w-4 text-stone-400" /> : <ChevronDown className="h-4 w-4 text-stone-400" />}
+        </div>
       </div>
 
-      <p className="text-sm text-stone-600 dark:text-stone-400 mb-2">
-        {habit.activeAction || habit.rescueAction}
-      </p>
-
-      {habit.habitType === 'crecer' && habit.anchor && (
-        <p className="text-xs text-stone-400">Después de: {habit.anchor}</p>
-      )}
-      {habit.habitType === 'sembrar' && habit.anchor && (
-        <div className="text-xs text-stone-400 space-y-1">
-          <p>Ancla: {habit.anchor}</p>
-          {habit.celebration && <p>Celebración: {habit.celebration}</p>}
-        </div>
-      )}
-      {habit.habitType === 'cambiar' && (
-        <div className="text-xs text-stone-400 space-y-1">
-          {habit.cue && <p>Disparador: {habit.cue}</p>}
-          {habit.newRoutine && <p>Nueva rutina: {habit.newRoutine}</p>}
-        </div>
-      )}
-      {habit.habitType === 'preciso' && habit.ifTrigger && (
-        <p className="text-xs text-stone-400">Cuando {habit.ifTrigger} → {habit.ifAction}</p>
-      )}
-      {habit.habitType === 'pilar' && (
-        <span className="inline-block text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-full">
-          Hábito clave
-        </span>
-      )}
-
-      {habit.identityLabel && (
-        <p className="text-xs text-stone-400 mt-1 italic">
-          Te estás convirtiendo en una persona {habit.identityLabel}
+      <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-96' : 'max-h-12'}`}>
+        <p className="text-sm text-stone-600 dark:text-stone-400 mb-2 line-clamp-2">
+          {habit.activeAction || habit.rescueAction}
         </p>
-      )}
+      </div>
+
+      {/* Always visible details (compact) */}
+      <div className={isExpanded ? '' : 'hidden'}>
+        {habit.habitType === 'crecer' && habit.anchor && (
+          <p className="text-xs text-stone-400">Después de: {habit.anchor}</p>
+        )}
+        {habit.habitType === 'sembrar' && habit.anchor && (
+          <div className="text-xs text-stone-400 space-y-1">
+            <p>Ancla: {habit.anchor}</p>
+            {habit.celebration && <p>Celebración: {habit.celebration}</p>}
+          </div>
+        )}
+        {habit.habitType === 'cambiar' && (
+          <div className="text-xs text-stone-400 space-y-1">
+            {habit.cue && <p>Disparador: {habit.cue}</p>}
+            {habit.newRoutine && <p>Nueva rutina: {habit.newRoutine}</p>}
+          </div>
+        )}
+        {habit.habitType === 'preciso' && habit.ifTrigger && (
+          <p className="text-xs text-stone-400">Cuando {habit.ifTrigger} → {habit.ifAction}</p>
+        )}
+        {habit.habitType === 'pilar' && (
+          <span className="inline-block text-xs bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 px-2 py-0.5 rounded-full">
+            Hábito clave
+          </span>
+        )}
+
+        {habit.identityLabel && (
+          <p className="text-xs text-stone-400 mt-1 italic">
+            Te estás convirtiendo en una persona {habit.identityLabel}
+          </p>
+        )}
+
+        {habit.rescueAction && (
+          <div className="mt-2 p-2 rounded-lg bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800">
+            <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-wider">Versión mínima (día difícil)</p>
+            <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5">{habit.rescueAction}</p>
+          </div>
+        )}
+      </div>
 
       <div className="mt-3">
         <StrengthBar strength={habit.currentStrength ?? 0} />

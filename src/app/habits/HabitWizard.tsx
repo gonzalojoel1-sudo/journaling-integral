@@ -240,6 +240,54 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
+
+            {/* Ruta Neuronal Educativa */}
+            {data.anchor || data.rescueAction ? (
+              <div className="mt-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-50/5 dark:bg-emerald-950/5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono">
+                  ⚡ Ruta Neuronal
+                </span>
+                <div className="space-y-3 pt-3 relative">
+                  {data.anchor && (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <div className="h-5 w-5 rounded-full bg-stone-200 dark:bg-stone-800 text-[9px] font-bold font-mono flex items-center justify-center shrink-0 mt-0.5">1</div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider font-mono">Ancla</span>
+                          <p className="text-xs font-semibold text-stone-800 dark:text-stone-300 mt-0.5">{data.anchor}</p>
+                        </div>
+                      </div>
+                      <div className="h-3 w-0.5 bg-emerald-500/40 absolute left-[9.5px]" style={{ top: '24px' }}></div>
+                    </>
+                  )}
+                  {data.rescueAction && (
+                    <div className="flex items-start gap-3">
+                      <div className={`h-5 w-5 rounded-full text-[9px] font-bold font-mono flex items-center justify-center shrink-0 mt-0.5 ${data.anchor ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400' : 'bg-stone-200 dark:bg-stone-800 text-stone-600'}`}>2</div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-mono">Acción</span>
+                        <p className="text-xs font-semibold text-stone-800 dark:text-stone-300 mt-0.5">{data.rescueAction}</p>
+                      </div>
+                    </div>
+                  )}
+                  {data.anchor && (
+                    <>
+                      <div className="h-3 w-0.5 bg-amber-500/40 absolute left-[9.5px]" style={{ top: data.rescueAction ? '62px' : '36px' }}></div>
+                      <div className="flex items-start gap-3">
+                        <div className="h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[9px] font-bold font-mono flex items-center justify-center shrink-0 mt-0.5">3</div>
+                        <div className="min-w-0">
+                          <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider font-mono">Celebración</span>
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mt-0.5">{data.celebration || '✅ Hecho'}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="border-t border-emerald-500/10 pt-3 mt-3 text-[9px] text-stone-500 leading-relaxed italic">
+                  "La dopamina inmediata bloquea la ruta neuronal y la asienta en tu subconsciente." — James Clear.
+                </div>
+              </div>
+            ) : null}
+
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={handleBack} className="px-4 py-2 text-stone-500">Atrás</button>
               <button
