@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { createHabit, archiveHabit } from '../actions/habits';
 import { StrengthBar } from '@/components/StrengthBar';
+import { HabitWizard } from './HabitWizard';
 import { 
   Plus, 
   Trash2, 
@@ -34,6 +35,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
   const [habitsList, setHabitsList] = useState<Habit[]>(initialHabits);
   const [activeSubTab, setActiveSubTab] = useState<'catalogo' | 'stacking'>('catalogo');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,14 +171,24 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
                 <h3 className="text-md font-bold text-stone-800 dark:text-stone-200">Hábitos EOR Estándar</h3>
                 <p className="text-xs text-stone-500 mt-1">Crea pautas para estandarizar, optimizar o reemplazar conductas de forma sencilla.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                {showAddForm ? 'Cerrar' : 'Crear'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWizard(true)}
+                  className="flex items-center gap-1.5 bg-stone-800 hover:bg-stone-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  + Nuevo hábito
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  {showAddForm ? 'Cerrar' : 'Crear'}
+                </button>
+              </div>
             </div>
 
             {showAddForm && (
@@ -447,6 +459,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
         </div>
       )}
 
+      {showWizard && <HabitWizard onClose={() => setShowWizard(false)} />}
     </div>
   );
 }
