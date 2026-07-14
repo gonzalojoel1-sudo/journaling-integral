@@ -2,23 +2,9 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { ICadenaHabit } from '@/types/habits';
 
-interface ChainStep {
-  id: string;
-  name: string;
-  order: number;
-}
-
-interface CadenaHabit {
-  id: string;
-  name: string;
-  currentStrength?: number;
-  anchor?: string | null;
-  chainSteps?: ChainStep[];
-  chainId?: string;
-}
-
-export function HabitCardCadena({ habit }: { habit: CadenaHabit }) {
+export function HabitCardCadena({ habit }: { habit: ICadenaHabit }) {
   const [expanded, setExpanded] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 

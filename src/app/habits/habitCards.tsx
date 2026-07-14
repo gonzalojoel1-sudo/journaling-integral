@@ -11,34 +11,7 @@ import { HabitCardCrecer } from './cards/HabitCardCrecer';
 import { HabitCardCambiar } from './cards/HabitCardCambiar';
 import { HabitCardPreciso } from './cards/HabitCardPreciso';
 import { HabitCardPilar } from './cards/HabitCardPilar';
-
-interface ChainStep {
-  id: string;
-  name: string;
-  order: number;
-}
-
-interface HabitCardHabit {
-  id: string;
-  name: string;
-  habitType?: string;
-  domain?: string | null;
-  activeAction?: string | null;
-  rescueAction?: string | null;
-  celebration?: string | null;
-  anchor?: string | null;
-  ifTrigger?: string | null;
-  ifAction?: string | null;
-  cue?: string | null;
-  newRoutine?: string | null;
-  identityLabel?: string | null;
-  currentStrength?: number;
-  chainId?: string;
-  chainSteps?: ChainStep[];
-  otherHabitsCount?: number;
-  otherHabitsCompleted?: number;
-  otherHabits?: { name: string; completed: boolean; domain?: string | null }[];
-}
+import type { HabitCardHabit, ISembrarHabit, ICadenaHabit, ICrecerHabit, ICambiarHabit, IPrecisoHabit, IPilarHabit } from '@/types/habits';
 
 const typeConfig: Record<string, { icon: string; label: string; color: string }> = {
   crecer: { icon: '⚡', label: 'Crecer', color: 'border-l-stone-600' },
@@ -55,29 +28,12 @@ const domainLabels: Record<string, string> = {
 };
 
 export function HabitCard({ habit }: { habit: HabitCardHabit }) {
-  if (habit.habitType === 'crecer') {
-    return <HabitCardCrecer habit={habit} />;
-  }
-
-  if (habit.habitType === 'cadena') {
-    return <HabitCardCadena habit={habit} />;
-  }
-
-  if (habit.habitType === 'sembrar') {
-    return <HabitCardSembrar habit={habit} />;
-  }
-
-  if (habit.habitType === 'cambiar') {
-    return <HabitCardCambiar habit={habit} />;
-  }
-
-  if (habit.habitType === 'preciso') {
-    return <HabitCardPreciso habit={habit} />;
-  }
-
-  if (habit.habitType === 'pilar') {
-    return <HabitCardPilar habit={habit} />;
-  }
+  if (habit.habitType === 'crecer') return <HabitCardCrecer habit={habit as ICrecerHabit} />;
+  if (habit.habitType === 'cadena') return <HabitCardCadena habit={habit as ICadenaHabit} />;
+  if (habit.habitType === 'sembrar') return <HabitCardSembrar habit={habit as ISembrarHabit} />;
+  if (habit.habitType === 'cambiar') return <HabitCardCambiar habit={habit as ICambiarHabit} />;
+  if (habit.habitType === 'preciso') return <HabitCardPreciso habit={habit as IPrecisoHabit} />;
+  if (habit.habitType === 'pilar') return <HabitCardPilar habit={habit as IPilarHabit} />;
 
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);

@@ -4,25 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-
-interface SembrarHabit {
-  id: string;
-  name: string;
-  domain?: string | null;
-  activeAction?: string | null;
-  rescueAction?: string | null;
-  celebration?: string | null;
-  anchor?: string | null;
-  currentStrength?: number;
-  evolutionCycle?: number;
-  daysInCurrentCycle?: number;
-  evolutionOptimal?: string | null;
-  evolutionMinimum?: string | null;
-}
+import { ISembrarHabit } from '@/types/habits';
 
 const CYCLE_TARGET = 15;
 
-export function HabitCardSembrar({ habit }: { habit: SembrarHabit }) {
+export function HabitCardSembrar({ habit }: { habit: ISembrarHabit }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);

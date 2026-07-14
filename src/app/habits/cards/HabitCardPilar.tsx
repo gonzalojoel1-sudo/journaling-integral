@@ -3,24 +3,14 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Zap, CheckCircle, Check, X } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-
-interface PilarHabit {
-  id: string;
-  name: string;
-  domain?: string | null;
-  currentStrength?: number;
-  pilarCompleted?: number;
-  otherHabitsCount?: number;
-  otherHabitsCompleted?: number;
-  otherHabits?: { name: string; completed: boolean; domain?: string | null }[];
-}
+import { IPilarHabit } from '@/types/habits';
 
 const domainLabels: Record<string, string> = {
   cuerpo: 'Cuerpo', mente: 'Mente', trabajo: 'Trabajo',
   relaciones: 'Relaciones', hogar: 'Hogar', espiritual: 'Espiritual', finanzas: 'Finanzas',
 };
 
-export function HabitCardPilar({ habit }: { habit: PilarHabit }) {
+export function HabitCardPilar({ habit }: { habit: IPilarHabit }) {
   const [expanded, setExpanded] = useState(false);
   const completed = habit.pilarCompleted === 1;
   const hasDailyData = habit.otherHabitsCount !== undefined;

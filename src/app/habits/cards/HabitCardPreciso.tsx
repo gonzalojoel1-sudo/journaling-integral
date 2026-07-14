@@ -3,18 +3,9 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
+import { IPrecisoHabit } from '@/types/habits';
 
-interface PrecisoHabit {
-  id: string;
-  name: string;
-  ifTrigger?: string | null;
-  ifAction?: string | null;
-  triggerHitCount?: number;
-  actionExecutedCount?: number;
-  currentStrength?: number;
-}
-
-export function HabitCardPreciso({ habit }: { habit: PrecisoHabit }) {
+export function HabitCardPreciso({ habit }: { habit: IPrecisoHabit }) {
   const [expanded, setExpanded] = useState(false);
   const hits = habit.triggerHitCount ?? 0;
   const executed = habit.actionExecutedCount ?? 0;

@@ -2,15 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Shield } from 'lucide-react';
-
-interface CrecerHabit {
-  id: string;
-  name: string;
-  anchor?: string | null;
-  currentStrength?: number;
-  currentStreak?: number;
-  streakShields?: number;
-}
+import { ICrecerHabit } from '@/types/habits';
 
 const STREAK_TIERS = [
   { min: 0, icon: '🔥', label: 'Empezando' },
@@ -27,7 +19,7 @@ function getTier(streak: number) {
   return STREAK_TIERS[0];
 }
 
-export function HabitCardCrecer({ habit }: { habit: CrecerHabit }) {
+export function HabitCardCrecer({ habit }: { habit: ICrecerHabit }) {
   const [expanded, setExpanded] = useState(false);
   const streak = habit.currentStreak ?? 0;
   const shields = habit.streakShields ?? 0;

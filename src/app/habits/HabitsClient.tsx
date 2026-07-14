@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createHabit, archiveHabit } from '../actions/habits';
 import { HabitWizard } from './HabitWizard';
 import { HabitCard } from './habitCards';
+import type { HabitCardHabit } from '@/types/habits';
 import { 
   Trash2, 
   ToggleLeft, 
@@ -16,13 +17,11 @@ import {
 interface Habit {
   id: string;
   name: string;
-  type?: string | null;
-  strategyDetails?: string | null;
+  habitType?: string;
+  domain?: string | null;
   isActive: number;
   currentStrength?: number;
   lastStrengthDate?: string | null;
-  habitType?: string;
-  domain?: string | null;
   activeAction?: string | null;
   rescueAction?: string | null;
   celebration?: string | null;
@@ -32,6 +31,8 @@ interface Habit {
   cue?: string | null;
   newRoutine?: string | null;
   identityLabel?: string | null;
+  type?: string | null;
+  strategyDetails?: string | null;
   belongsToChainId?: string | null;
   nextHabitId?: string | null;
 }
@@ -104,7 +105,7 @@ export function HabitsClient({ initialHabits }: HabitsClientProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {habitsList.map(habit => (
-              <HabitCard key={habit.id} habit={habit} />
+              <HabitCard key={habit.id} habit={habit as HabitCardHabit} />
             ))}
           </div>
         </div>
