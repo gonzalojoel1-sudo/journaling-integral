@@ -13,18 +13,18 @@ import * as schema from './schema';
 function createDatabaseClient(): Client {
   const tursoUrl = process.env.TURSO_DATABASE_URL;
   const tursoToken = process.env.TURSO_AUTH_TOKEN;
+  const dbUrl = process.env.DATABASE_URL;
+  const dbToken = process.env.DATABASE_AUTH_TOKEN;
 
   if (tursoUrl && tursoToken) {
-    return createClient({
-      url: tursoUrl,
-      authToken: tursoToken,
-    });
+    return createClient({ url: tursoUrl, authToken: tursoToken });
   }
 
-  const localUrl = process.env.DATABASE_URL || 'file:local.db';
-  return createClient({
-    url: localUrl,
-  });
+  if (dbUrl) {
+    return createClient({ url: dbUrl, authToken: dbToken });
+  }
+
+  return createClient({ url: 'file:local.db' });
 }
 
 const client = createDatabaseClient();

@@ -12,6 +12,9 @@ export async function GET() {
     results.tursoUrlSet = !!process.env.TURSO_DATABASE_URL;
     results.tursoTokenSet = !!process.env.TURSO_AUTH_TOKEN;
     results.tursoUrlPrefix = process.env.TURSO_DATABASE_URL?.substring(0, 20) + '...';
+    results.dbUrlSet = !!process.env.DATABASE_URL;
+    results.dbUrlPrefix = process.env.DATABASE_URL?.substring(0, 20) + '...';
+    results.dbTokenSet = !!process.env.DATABASE_AUTH_TOKEN;
     results.nextAuthSecretSet = !!process.env.NEXTAUTH_SECRET;
     results.nextAuthUrlSet = !!process.env.NEXTAUTH_URL;
   } catch (e) {
