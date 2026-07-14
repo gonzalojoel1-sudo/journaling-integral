@@ -8,6 +8,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { HabitCardSembrar } from './cards/HabitCardSembrar';
 import { HabitCardCadena } from './cards/HabitCardCadena';
 import { HabitCardCrecer } from './cards/HabitCardCrecer';
+import { HabitCardCambiar } from './cards/HabitCardCambiar';
 
 interface ChainStep {
   id: string;
@@ -59,6 +60,10 @@ export function HabitCard({ habit }: { habit: HabitCardHabit }) {
 
   if (habit.habitType === 'sembrar') {
     return <HabitCardSembrar habit={habit} />;
+  }
+
+  if (habit.habitType === 'cambiar') {
+    return <HabitCardCambiar habit={habit} />;
   }
 
   const router = useRouter();

@@ -262,6 +262,19 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             }).where(eq(habits.id, habitEntry.habitId));
           }
         }
+
+        if (habitRecord.habitType === 'cambiar') {
+          if (habitEntry.completed === true) {
+            await db.update(habits).set({
+              victoryCount: (habitRecord.victoryCount ?? 0) + 1,
+            }).where(eq(habits.id, habitEntry.habitId));
+          }
+          if (habitEntry.temptationAppeared && !habitEntry.completed) {
+            await db.update(habits).set({
+              temptationCount: (habitRecord.temptationCount ?? 0) + 1,
+            }).where(eq(habits.id, habitEntry.habitId));
+          }
+        }
       }
     }
 

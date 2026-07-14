@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { createHabit } from '../actions/habits';
 import { useRouter } from 'next/navigation';
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 type WizardData = {
   name: string;
@@ -13,6 +13,9 @@ type WizardData = {
   rescueAction: string;
   celebration: string;
   domain: string;
+  cue: string;
+  oldRoutine: string;
+  newRoutine: string;
 };
 
 const DOMAINS = [
@@ -35,13 +38,16 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
     rescueAction: '',
     celebration: '',
     domain: '',
+    cue: '',
+    oldRoutine: '',
+    newRoutine: '',
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const update = (partial: Partial<WizardData>) => setData(prev => ({ ...prev, ...partial }));
 
-  const handleNext = () => setStep(prev => Math.min(prev + 1, 7) as Step);
+  const handleNext = () => setStep(prev => Math.min(prev + 1, 8) as Step);
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1) as Step);
 
   const handleSubmit = async () => {
@@ -63,6 +69,9 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
       rescueAction: data.rescueAction,
       anchor: data.anchor || undefined,
       celebration: data.celebration || celebrationMap[data.type],
+      cue: data.cue || undefined,
+      oldRoutine: data.oldRoutine || undefined,
+      newRoutine: data.newRoutine || undefined,
     });
 
     if (!result.success) {
@@ -80,7 +89,7 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
       <div className="bg-white dark:bg-stone-900 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl">
         {/* Step indicator */}
         <div className="flex gap-1 mb-6">
-          {[1,2,3,4,5,6,7].map(s => (
+          {[1,2,3,4,5,6,7,8].map(s => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-stone-800 dark:bg-stone-200' : 'bg-stone-200 dark:bg-stone-700'}`}
@@ -120,7 +129,7 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
                 <p className="text-sm text-stone-500 mt-1">Un hábito nuevo que sume a mi vida</p>
               </button>
               <button
-                onClick={() => { update({ type: 'cambiar' }); handleNext(); }}
+                onClick={() => { update({ type: 'cambiar' }); setStep(8); }}
                 className="w-full p-4 text-left border border-stone-300 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800"
               >
                 <span className="text-lg">🔄 Quiero DEJAR de hacer algo</span>
@@ -296,6 +305,44 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
                 className="px-6 py-2 bg-stone-800 text-white rounded-xl disabled:opacity-50"
               >
                 {isSubmitting ? 'Creando...' : 'Crear hábito'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 8 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Cuéntame sobre el hábito que quieres dejar</h2>
+            <input
+              autoFocus
+              type="text"
+              value={data.cue}
+              onChange={e => update({ cue: e.target.value })}
+              placeholder="¿Qué disparador desencadena ese hábito? (Ej: ver Instagram al despertar)"
+              className="w-full p-3 border border-stone-300 dark:border-stone-700 rounded-xl bg-transparent"
+            />
+            <input
+              type="text"
+              value={data.oldRoutine}
+              onChange={e => update({ oldRoutine: e.target.value })}
+              placeholder="¿Qué haces exactamente? (Ej: abro Instagram y pierdo 20 min)"
+              className="w-full p-3 border border-stone-300 dark:border-stone-700 rounded-xl bg-transparent"
+            />
+            <input
+              type="text"
+              value={data.newRoutine}
+              onChange={e => update({ newRoutine: e.target.value })}
+              placeholder="¿Qué harás en su lugar? (Ej: leer un libro 5 min)"
+              className="w-full p-3 border border-stone-300 dark:border-stone-700 rounded-xl bg-transparent"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={handleBack} className="px-4 py-2 text-stone-500">Atrás</button>
+              <button
+                onClick={() => setStep(4)}
+                disabled={!data.cue.trim() || !data.oldRoutine.trim() || !data.newRoutine.trim()}
+                className="px-4 py-2 bg-stone-800 text-white rounded-xl disabled:opacity-50"
+              >
+                Siguiente
               </button>
             </div>
           </div>
