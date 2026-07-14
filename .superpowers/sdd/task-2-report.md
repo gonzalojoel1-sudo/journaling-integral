@@ -1,40 +1,27 @@
-# Task 2: Validations — Report
+# Task 2: Cadena ⛓️ — Sequential Chain with Anchor
 
-## What I Implemented
+**Status:** DONE_WITH_CONCERNS
 
-1. **Replaced `HabitTypeEnum`** — old values (`personal`, `negocio`, `fe`, `cuerpo`, `mente`, `relaciones`) replaced with new values (`crecer`, `sembrar`, `cambiar`, `preciso`, `pilar`).
-
-2. **Added `DomainEnum`** — new Zod enum with values: `cuerpo`, `mente`, `trabajo`, `relaciones`, `hogar`, `espiritual`, `finanzas`.
-
-3. **Rewrote `CreateHabitSchema`** — now requires:
-   - `name` (string, min 1, max 100)
-   - `habitType` (HabitTypeEnum — renamed from `type`)
-   - `rescueAction` (string, min 1, max 200)
-   - Optional fields: `domain`, `activeAction`, `celebration`, `anchor`, `ifTrigger`, `ifAction`, `cue`, `oldRoutine`, `newRoutine`, `identityLabel`, `belongsToChainId`, `nextHabitId`
-
-4. **Updated tests** — replaced old `CreateHabitSchema` tests, added `HabitTypeEnum` and `DomainEnum` test blocks, updated `validate helper` tests to use new field names.
+## Commits
+- `bd7da36` feat: Cadena sequential chain with anchor block and step-by-step progress
 
 ## Files Changed
+| File | Action |
+|------|--------|
+| `src/app/habits/cards/HabitCardCadena.tsx` | Created |
+| `src/lib/cadena-store.ts` | Created |
+| `src/app/habits/habitCards.tsx` | Modified — added Cadena routing, typeConfig, and ChainStep interface |
+| `src/db/schema.ts` | Modified — added `name` column to `chain_items` table |
 
-| File | Changes |
-|------|---------|
-| `src/lib/validations.ts` | Replaced `HabitTypeEnum`, added `DomainEnum`, rewrote `CreateHabitSchema` with new required/optional fields |
-| `src/lib/validations.test.ts` | Added 3 new test blocks (HabitTypeEnum, DomainEnum, rewritten CreateHabitSchema), updated validate helper tests |
+## What Was Done
+- **HabitCardCadena**: Expandable card with anchor block (non-interactive), numbered steps with mini-checkboxes, vertical progress line that illuminates per tick, neon glow on all-steps-complete, and compact summary.
+- **cadena-store.ts**: `getChainWithSteps(chainId)` function querying `chains` + `chain_items` via Drizzle ORM.
+- **habitCards.tsx**: Added `cadena` → `HabitCardCadena` routing before `sembrar`. Added `ChainStep` interface and `chainSteps`/`chainId` to `HabitCardHabit`.
+- **Schema**: Added optional `name` column to `chain_items` — steps are inline (name-only), not reliant on the `habitId` FK.
 
-## Test Results
+## TypeScript Verification
+- `npx tsc --noEmit` — **No errors.**
 
-**39/39 tests passed** (all green):
-- DailyEntrySchema: 8/8 ✓
-- HabitTypeEnum: 2/2 ✓
-- DomainEnum: 1/1 ✓
-- CreateHabitSchema: 7/7 ✓
-- CreatePersonalTransactionSchema: 6/6 ✓
-- CreateBusinessTransactionSchema: 3/3 ✓
-- ChatRequestSchema: 4/4 ✓
-- SmartEntryRequestSchema: 3/3 ✓
-- validate helper: 3/3 ✓
-
-## Issues / Concerns
-
-- The old `type` field was renamed to `habitType` and `strategyDetails` was removed — any consumer of the old schema fields will need updating.
-- No concerns with the validations themselves; they follow the brief exactly.
+## Concerns
+1. **DB migration needed**: The `chain_items.name` column was added to the schema but no migration was run. The table in SQLite won't have the column until a migration (`drizzle-kit push` or similar) is executed. Without it, the app will error at runtime when trying to read/write `.name`.
+2. **Inline vs FK**: The existing `chain_items.habitId` FK remains in the schema but isn't used by the Cadena component. This is intentional per the brief (steps are inline), but the FK reference might cause confusion. Consider either dropping it in a future migration or keeping it for legacy.

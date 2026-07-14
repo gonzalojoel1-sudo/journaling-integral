@@ -1,29 +1,18 @@
-# Task 1: DB Schema Migration — Report
+# Task 1: Sembrar 🌱 — Evolution Cycles
 
-## What was implemented
+## Status: DONE
 
-1. **Replaced the `habits` table** in `src/db/schema.ts` with the new schema from the brief:
-   - Added new columns: `habitType`, `domain`, `rescueAction`, `activeAction`, `celebration`, `anchor`, `ifTrigger`, `ifAction`, `cue`, `oldRoutine`, `newRoutine`, `identityLabel`, `belongsToChainId`, `nextHabitId`
-   - Removed old columns: `type`, `strategyDetails`
-   - Retained: `currentStrength`, `lastStrengthDate`, `createdAt`, `isActive`
+## Files Created/Modified
+- **Created** `src/app/habits/cards/HabitCardSembrar.tsx` — Sembrar card with evolution bar, expandable details, and upgrade modal
+- **Created** `src/app/api/habits/evolve/route.ts` — POST endpoint that increments `evolutionCycle`, resets `daysInCurrentCycle`, updates `activeAction`/`rescueAction` with new evolution targets
+- **Modified** `src/app/actions/daily-journal.ts` — Inside habit loop, after strength update, increments `daysInCurrentCycle` when a Sembrar habit is completed (capped at 15)
+- **Modified** `src/app/habits/habitCards.tsx` — Added import and early return `if (habit.habitType === 'sembrar')` to render `HabitCardSembrar`
 
-2. **Added `chains` and `chainItems` tables** with proper foreign key relationships.
+## Verification
+- `npx tsc --noEmit` — passed with zero errors
 
-3. **Added `chainsRelations` and `chainItemsRelations`** for Drizzle ORM relation traversal.
+## Commit
+- `bc07964` — `feat: Sembrar evolution mechanic with 15-day cycles and upgrade modal`
 
-4. **Created migration script** at `src/db/migrations/2026-07-12-habit-engine.ts` that:
-   - Creates a temp table with the new schema
-   - Migrates existing data mapping old `type` values to new `habitType` and `domain`
-   - Drops the old `habits` table and renames the temp table
-
-## Files changed
-
-| File | Action |
-|------|--------|
-| `src/db/schema.ts` | Modified — habits table replaced, chains + chainItems + relations added |
-| `src/db/migrations/2026-07-12-habit-engine.ts` | Created — migration logic |
-
-## Issues / concerns
-
-- **Downstream type errors**: Other files (`src/app/actions/habits.ts`, `src/app/habits/HabitsClient.tsx`, `src/app/journal/JournalForm.tsx`, `src/app/page.tsx`, `src/app/api/chat/route.ts`) reference the removed `type` and `strategyDetails` columns/fields. These will need updates in subsequent tasks.
-- The schema.ts file itself compiles correctly — all TS errors are in consumer code, not in the schema definitions.
+## Concerns
+None.
