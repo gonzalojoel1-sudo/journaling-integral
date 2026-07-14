@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '../../db/db';
-import { challenges, badges, users } from '../../db/schema';
+import { challenges, badges } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
@@ -166,8 +166,6 @@ async function unlockBadge(userId: string, template: ChallengeTemplate) {
     unlockedAt: new Date().toISOString(),
   });
 
-  await maybeLevelUp(userId);
-
   await checkHiddenChallenges(userId);
 }
 
@@ -218,26 +216,4 @@ async function checkHiddenChallenges(userId: string) {
   }
 }
 
-async function maybeLevelUp(userId: string) {
-  const allBadges = await db.query.badges.findMany({
-    where: eq(badges.userId, userId),
-  });
-  const badgeIds = new Set(allBadges.map((b) => b.badgeId));
 
-  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
-  if (!user || user.currentLevel >= 5) return;
-
-  const areas = ['disciplina', 'identidad', 'fe', 'cuerpo', 'negocio', 'mente', 'relaciones', 'legado'];
-  const allOro = areas.every((a) => badgeIds.has(`${a}-oro`));
-  const diamondCount = areas.filter((a) => badgeIds.has(`${a}-diamante`)).length;
-  const hasLegendario = areas.some((a) => badgeIds.has(`${a}-legendario`));
-
-  let newLevel = user.currentLevel;
-
-  if (user.currentLevel === 3 && diamondCount >= 3 && allOro) newLevel = 4;
-  if (user.currentLevel === 4 && hasLegendario) newLevel = 5;
-
-  if (newLevel !== user.currentLevel) {
-    await db.update(users).set({ currentLevel: newLevel }).where(eq(users.id, userId));
-  }
-}

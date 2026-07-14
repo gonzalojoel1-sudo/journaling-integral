@@ -11,7 +11,8 @@ import { getDailyBusinessMetrics } from './actions/daily-journal';
 import { getBusinessSettingsList } from './actions/business';
 import { getUserSettings } from './actions/user-settings';
 import { ALL_TEMPLATES } from '@/lib/challenge-templates';
-import { eq, and, gte } from 'drizzle-orm';
+import { getCurrentEscalon, getNextEscalon } from '@/lib/challenge-auto-activate';
+import { eq, and } from 'drizzle-orm';
 import {
   Flame,
   Award,
@@ -137,36 +138,14 @@ export default async function DashboardPage() {
     }
   }
 
-  const dateLimit = new Date();
-  dateLimit.setDate(dateLimit.getDate() - 30);
-  const dateLimitStr = dateLimit.toISOString().split('T')[0];
-
-  const entriesLast30Days = await db.query.dailyEntries.findMany({
-    where: and(
-      eq(dailyEntries.userId, user.id),
-      gte(dailyEntries.date, dateLimitStr)
-    ),
-  });
-
-  const completedDays = entriesLast30Days.length;
-
-  const levelRequirements: Record<number, { target: number; next: string }> = {
-    1: { target: 18, next: 'Nivel 2 (Dirección)' },
-    2: { target: 25, next: 'Nivel 3 (Legado)' },
-    3: { target: 30, next: 'Nivel 4 (Maestro)' },
-    4: { target: 30, next: 'Nivel 5 (Leyenda)' },
-    5: { target: 30, next: 'Máximo nivel' },
-  };
-
-  const currentRequirement = levelRequirements[user.currentLevel] || { target: 18, next: 'Nivel 2' };
-  const progressPercent = Math.min(Math.round((completedDays / currentRequirement.target) * 100), 100);
+  const streak = user.streakCurrent || 0;
+  const currentEscalon = getCurrentEscalon(streak);
+  const nextEscalon = getNextEscalon(streak);
 
   const daysOfWeek = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const now = new Date();
   const formattedDate = `${daysOfWeek[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]}`;
-
-  const levelNames = ['', 'Fundamentos', 'Dirección', 'Legado', 'Maestro', 'Leyenda'];
 
   const bizProspectDone = todayEntry?.bizProspectCompleted === 1;
   const bizFollowUpDone = todayEntry?.bizFollowUpCompleted === 1;
@@ -211,14 +190,16 @@ export default async function DashboardPage() {
           </div>
           <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800" />
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <Award className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Award className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-sm font-extrabold text-zinc-800 dark:text-zinc-200 leading-none">
-                Lvl {user.currentLevel}
+                {currentEscalon.name}
               </p>
-              <p className="text-[9px] font-mono text-zinc-400 uppercase">{levelNames[user.currentLevel]}</p>
+              <p className="text-[9px] font-mono text-zinc-400 uppercase">
+                {nextEscalon ? `${nextEscalon.days - streak}d → ${nextEscalon.name}` : '¡Completado!'}
+              </p>
             </div>
           </div>
         </div>
@@ -369,25 +350,30 @@ export default async function DashboardPage() {
       <section className="surface-card p-5">
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
 
-          {/* Progreso de Nivel */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-mono">
-                Progreso de Nivel
-              </span>
-              <span className="text-[10px] font-bold font-mono text-zinc-400">
-                {progressPercent}%
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-zinc-200/60 dark:bg-zinc-800/60 rounded-full overflow-hidden">
+          {/* Tu Progreso — Escalones */}
+          <div className="bg-gradient-to-br from-amber-900/60 to-yellow-900/40 rounded-2xl p-5 border border-amber-700/30 flex-1 min-w-0">
+            <h3 className="text-amber-300 font-semibold text-sm flex items-center gap-2">
+              <Award className="w-4 h-4" />
+              Tu Progreso
+            </h3>
+            <p className="text-white text-lg font-bold mt-2">
+              {currentEscalon.name}
+            </p>
+            {nextEscalon ? (
+              <p className="text-amber-400/80 text-xs mt-1">
+                🎯 Te faltan {nextEscalon.days - streak} días para &quot;{nextEscalon.name}&quot;
+              </p>
+            ) : (
+              <p className="text-yellow-400 text-xs mt-1">
+                ✨ ¡Completaste todos los escalones!
+              </p>
+            )}
+            <div className="mt-3 w-full bg-amber-950/50 rounded-full h-2">
               <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-premium"
-                style={{ width: `${progressPercent}%` }}
+                className="bg-amber-400 h-2 rounded-full transition-all"
+                style={{ width: `${Math.min(100, (streak / 365) * 100)}%` }}
               />
             </div>
-            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1.5">
-              {completedDays} de {currentRequirement.target} registros → {currentRequirement.next}
-            </p>
           </div>
 
           <div className="hidden sm:block h-10 w-px bg-zinc-200/50 dark:bg-zinc-800/50" />

@@ -269,6 +269,7 @@ export const bibleVerses = sqliteTable('bible_verses', {
   text: text('text').notNull(),
   interpretation: text('interpretation'),
   recommendedLevel: integer('recommended_level').default(1).notNull(),
+  recommendedTier: text('recommended_tier'),
   topic: text('topic'),
 });
 

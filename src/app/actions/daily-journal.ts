@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getOrCreateUserProfile } from './auth';
 import { validateActiveChallenges } from './challenges';
+import { autoActivateChallenges } from '@/lib/challenge-auto-activate';
 import {
   validate,
   DailyEntrySchema,
@@ -28,13 +29,6 @@ function calculateStreak(
     return 1;
   }
   return currentStreak;
-}
-
-function checkLevelProgression(currentLevel: number, activeDaysCount: number): number {
-  if (currentLevel === 1 && activeDaysCount >= 18) return 2;
-  if (currentLevel === 2 && activeDaysCount >= 25) return 3;
-  if (currentLevel === 3 && activeDaysCount >= 28) return 3; // Lvl 4-5 requieren badges, no dias
-  return currentLevel;
 }
 
 export async function submitDailyEntry(formData: Record<string, any>) {
@@ -170,15 +164,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       ),
     });
 
-    const activeDaysCount = entriesLast30Days.length;
-    const targetLevel = checkLevelProgression(user.currentLevel, activeDaysCount);
-
-    if (targetLevel !== user.currentLevel) {
-      await db
-        .update(users)
-        .set({ currentLevel: targetLevel })
-        .where(eq(users.id, user.id));
-    }
+    // Levels deprecated — progression is now tracked via badges
 
     if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
       const todayStr = new Date().toISOString().split('T')[0];
@@ -336,14 +322,17 @@ export async function submitDailyEntry(formData: Record<string, any>) {
 
     let badgeUnlocked: string | null = null;
     if (!isUpdate) {
+      await autoActivateChallenges(user.id, entryData);
       const cr = await validateActiveChallenges(entryData, user);
       badgeUnlocked = cr.badgeUnlocked ?? null;
     }
 
+    const targetLevel = user.currentLevel;
+
     return {
       success: true,
       isUpdate,
-      levelUpgraded: targetLevel > user.currentLevel,
+      levelUpgraded: false,
       newLevel: targetLevel,
       badgeUnlocked,
     };
