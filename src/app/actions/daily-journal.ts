@@ -183,6 +183,10 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
       const todayStr = new Date().toISOString().split('T')[0];
 
+      const pilarHabits: { id: string; domain: string | null; currentStrength: number; lastStrengthDate: string | null }[] = [];
+      let totalNonPilarToComplete = 0;
+      let completedNonPilar = 0;
+
       for (const habitEntry of formData.dailyHabits) {
         if (!habitEntry.habitId) continue;
 
@@ -191,6 +195,19 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         });
 
         if (!habitRecord) continue;
+
+        if (habitRecord.habitType === 'pilar') {
+          pilarHabits.push({
+            id: habitRecord.id,
+            domain: habitRecord.domain,
+            currentStrength: habitRecord.currentStrength ?? 0,
+            lastStrengthDate: habitRecord.lastStrengthDate,
+          });
+          continue;
+        }
+
+        totalNonPilarToComplete++;
+        if (habitEntry.completed === true) completedNonPilar++;
 
         if (habitRecord.habitType === 'preciso') {
           if (habitEntry.completed === true) {
@@ -283,6 +300,44 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             await db.update(habits).set({
               temptationCount: (habitRecord.temptationCount ?? 0) + 1,
             }).where(eq(habits.id, habitEntry.habitId));
+          }
+        }
+      }
+
+      // Pilar: auto-derive completion from all other habits
+      if (pilarHabits.length > 0) {
+        const allNonPilarCompleted = totalNonPilarToComplete > 0 && totalNonPilarToComplete === completedNonPilar;
+
+        for (const pilar of pilarHabits) {
+          const { newStrength, newDate } = applyDecayAndBonus(
+            pilar.currentStrength,
+            pilar.lastStrengthDate,
+            todayStr,
+            allNonPilarCompleted,
+          );
+
+          await db.update(habits).set({
+            currentStrength: newStrength,
+            lastStrengthDate: newDate,
+            pilarCompleted: allNonPilarCompleted ? 1 : 0,
+          }).where(eq(habits.id, pilar.id));
+
+          // Keystone effect: boost same-domain habits when pilar is completed
+          if (allNonPilarCompleted && pilar.domain) {
+            const domainHabits = await db.query.habits.findMany({
+              where: and(
+                eq(habits.domain, pilar.domain),
+                eq(habits.isActive, 1),
+              ),
+            });
+
+            for (const dh of domainHabits) {
+              if (dh.id === pilar.id) continue;
+              const boostedStrength = Math.round(((dh.currentStrength ?? 0) + 0.1) * 100) / 100;
+              await db.update(habits).set({
+                currentStrength: boostedStrength,
+              }).where(eq(habits.id, dh.id));
+            }
           }
         }
       }

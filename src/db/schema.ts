@@ -208,6 +208,9 @@ export const habits = sqliteTable('habits', {
   triggerHitCount: integer('trigger_hit_count').default(0),
   actionExecutedCount: integer('action_executed_count').default(0),
 
+  // Type mechanics (Pilar)
+  pilarCompleted: integer('pilar_completed').default(0),
+
   // Meta
   createdAt: text('created_at').notNull(),
   isActive: integer('is_active').default(1).notNull(),
