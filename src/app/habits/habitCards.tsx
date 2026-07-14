@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { StrengthBar } from '@/components/StrengthBar';
 import { archiveHabit } from '../actions/habits';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { HabitCardSembrar } from './cards/HabitCardSembrar';
 
 interface HabitCardHabit {
   id: string;
@@ -37,6 +38,10 @@ const domainLabels: Record<string, string> = {
 };
 
 export function HabitCard({ habit }: { habit: HabitCardHabit }) {
+  if (habit.habitType === 'sembrar') {
+    return <HabitCardSembrar habit={habit} />;
+  }
+
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const config = typeConfig[habit.habitType || ''] || typeConfig.crecer;

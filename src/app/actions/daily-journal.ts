@@ -206,6 +206,40 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             lastStrengthDate: newDate,
           })
           .where(eq(habits.id, habitEntry.habitId));
+
+        if (habitRecord.habitType === 'sembrar') {
+          const currentDays = habitRecord.daysInCurrentCycle ?? 0;
+          if (habitEntry.completed === true && currentDays < 15) {
+            await db.update(habits).set({
+              daysInCurrentCycle: currentDays + 1,
+            }).where(eq(habits.id, habitEntry.habitId));
+          }
+        }
+
+        if (
+          !habitEntry.completed &&
+          habitRecord.rescueAction &&
+          habitRecord.activeAction !== habitRecord.rescueAction &&
+          newStrength < (habitRecord.currentStrength ?? 0) * 0.85
+        ) {
+          await db
+            .update(habits)
+            .set({ activeAction: habitRecord.rescueAction })
+            .where(eq(habits.id, habitEntry.habitId));
+        }
+
+        if (
+          habitEntry.completed === true &&
+          habitRecord.rescueAction &&
+          habitRecord.rescueAction !== habitRecord.activeAction
+        ) {
+          if (newStrength >= (habitRecord.currentStrength ?? 0) + 2.5) {
+            await db
+              .update(habits)
+              .set({ activeAction: habitRecord.rescueAction })
+              .where(eq(habits.id, habitEntry.habitId));
+          }
+        }
       }
     }
 
