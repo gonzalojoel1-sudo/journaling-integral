@@ -54,14 +54,25 @@ REGLA CRÍTICA DE SISTEMA: Tienes herramientas (tools) técnicas configuradas. S
 
 export async function POST(req: Request) {
   // ============================================================
-  // PROVIDER: OpenCode Zen (RAG + Chat)
+  // PROVIDERS: Primary (OpenRouter) + Fallback (OpenCode Zen)
   // ============================================================
+  const openrouter = createOpenAICompatible({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: process.env.OPENROUTER_API_KEY,
+    name: 'openrouter',
+  });
+
   const opencode = createOpenAICompatible({
     baseURL: 'https://opencode.ai/zen/v1',
     apiKey: process.env.OPENCODE_API_KEY,
     name: 'opencode',
   });
-  console.log('🔑 [DEBUG] API Key cargada:', !!process.env.OPENCODE_API_KEY);
+
+  const PRIMARY_MODEL = 'poolside/laguna-m.1:free';
+  const FALLBACK_MODEL = 'deepseek-v4-flash-free';
+
+  console.log('🔑 [DEBUG] OpenRouter API Key:', !!process.env.OPENROUTER_API_KEY);
+  console.log('🔑 [DEBUG] OpenCode API Key:', !!process.env.OPENCODE_API_KEY);
 
   // Rate limiting: hybrid key (userId or IP)
   const session = await getServerSession(authOptions);
@@ -120,14 +131,27 @@ export async function POST(req: Request) {
               .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
               .join('\n');
 
-            const standaloneQuery = await generateText({
-              model: opencode('deepseek-v4-flash-free'),
-              system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
-              prompt: conversationHistory,
-              temperature: 0.3,
-              maxOutputTokens: 30,
-              maxRetries: 0,
-            });
+            let standaloneQuery;
+            try {
+              standaloneQuery = await generateText({
+                model: openrouter(PRIMARY_MODEL),
+                system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
+                prompt: conversationHistory,
+                temperature: 0.3,
+                maxOutputTokens: 30,
+                maxRetries: 0,
+              });
+            } catch {
+              console.warn('[RAG] OpenRouter falló, usando OpenCode Zen como fallback');
+              standaloneQuery = await generateText({
+                model: opencode(FALLBACK_MODEL),
+                system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
+                prompt: conversationHistory,
+                temperature: 0.3,
+                maxOutputTokens: 30,
+                maxRetries: 0,
+              });
+            }
 
             if (standaloneQuery.text && standaloneQuery.text.trim()) {
               searchQuery = standaloneQuery.text.trim();
@@ -153,113 +177,129 @@ export async function POST(req: Request) {
   }
 
   // ============================================================
-  // CHAT PRINCIPAL: OpenCode (DeepSeek)
+  // CHAT PRINCIPAL: OpenRouter (Laguna M.1) con fallback a OpenCode
   // ============================================================
-  try {
-    console.log('🚀 [CHAT] Llamando a Opencode con modelo:', 'deepseek-v4-flash-free');
-    const result = await streamText({
-      model: opencode('deepseek-v4-flash-free'),
-      system: enrichedSystemPrompt,
-      messages,
-      temperature: 0.8,
-      maxOutputTokens: 2048,
-      tools: {
-        registrarTransaccionNegocio: tool({
-          description: 'Registra una nueva transacción financiera (ingreso o gasto) para el negocio de reventa de iPhones del usuario.',
-          inputSchema: z.object({
-            amount: z.number().describe('El valor total o precio de la transacción'),
-            cost: z.number().optional().default(0).describe('El costo del producto para calcular la ganancia'),
-            type: z.enum(['ingreso', 'gasto']).describe('Debe ser ingreso si es una venta, o gasto si es una compra/costo'),
-            description: z.string().describe('Descripción breve, ej: Venta de iPhone 15'),
-            source: z.string().optional().default('Chat').describe('Fuente o canal de la venta'),
-            isSale: z.number().describe('Usa 1 si es una venta de producto, de lo contrario 0'),
-          }),
-          execute: async ({ amount, cost, type, description, source, isSale }) => {
-            console.log('⚡ [TOOL EXECUTING] Registrar transacción:', { amount, cost, type, description, source, isSale });
-            if (!userId) {
-              return 'SISTEMA: Error - Usuario no autenticado.';
-            }
-            try {
-              const now = new Date();
-              const dateStr = now.toISOString().split('T')[0];
+  const tools = {
+    registrarTransaccionNegocio: tool({
+      description: 'Registra una nueva transacción financiera (ingreso o gasto) para el negocio de reventa de iPhones del usuario.',
+      inputSchema: z.object({
+        amount: z.number().describe('El valor total o precio de la transacción'),
+        cost: z.number().optional().default(0).describe('El costo del producto para calcular la ganancia'),
+        type: z.enum(['ingreso', 'gasto']).describe('Debe ser ingreso si es una venta, o gasto si es una compra/costo'),
+        description: z.string().describe('Descripción breve, ej: Venta de iPhone 15'),
+        source: z.string().optional().default('Chat').describe('Fuente o canal de la venta'),
+        isSale: z.number().describe('Usa 1 si es una venta de producto, de lo contrario 0'),
+      }),
+      execute: async ({ amount, cost, type, description, source, isSale }) => {
+        console.log('⚡ [TOOL EXECUTING] Registrar transacción:', { amount, cost, type, description, source, isSale });
+        if (!userId) {
+          return 'SISTEMA: Error - Usuario no autenticado.';
+        }
+        try {
+          const now = new Date();
+          const dateStr = now.toISOString().split('T')[0];
 
-              await db.insert(businessTransactions).values({
-                id: randomUUID(),
-                userId,
-                amount,
-                cost: cost ?? 0,
-                type,
-                description,
-                source: source ?? 'Chat Kairo',
-                isSale,
-                date: dateStr,
-                createdAt: now.toISOString(),
-              });
+          await db.insert(businessTransactions).values({
+            id: randomUUID(),
+            userId,
+            amount,
+            cost: cost ?? 0,
+            type,
+            description,
+            source: source ?? 'Chat Kairo',
+            isSale,
+            date: dateStr,
+            createdAt: now.toISOString(),
+          });
 
-              revalidatePath('/', 'layout');
-              return 'SISTEMA: Acción completada y guardada en SQLite con éxito. Informa al usuario.';
-            } catch (error) {
-              console.error('❌ [TOOL DB ERROR]:', error);
-              return 'SISTEMA: Error al guardar en la base de datos.';
-            }
-          },
-        }),
-        crearNuevoHabito: tool({
-          description: 'Crea un nuevo hábito o disciplina diaria en el sistema del usuario.',
-          inputSchema: z.object({
-            name: z.string().describe('Nombre del hábito, ej: Devocional Matutino'),
-            habitType: z.enum(['crecer', 'sembrar', 'cambiar', 'preciso', 'pilar']).default('crecer').describe('Tipo de hábito: crecer (nuevo), sembrar (mini), cambiar (reemplazo), preciso (if-then), pilar (keystone)'),
-            domain: z.enum(['cuerpo', 'mente', 'trabajo', 'relaciones', 'hogar', 'espiritual', 'finanzas']).optional().describe('Área de vida del hábito'),
-            rescueAction: z.string().describe('Versión mínima del hábito para días difíciles (menos de 2 minutos)'),
-            anchor: z.string().optional().describe('Rutina existente después de la cual se hará el hábito'),
-            celebration: z.string().optional().describe('Celebración al completar el hábito'),
-          }),
-          execute: async ({ name, habitType, domain, rescueAction, anchor, celebration }) => {
-            console.log('⚡ [TOOL EXECUTING] Crear hábito:', { name, habitType, domain, rescueAction, anchor });
-            if (!userId) {
-              return 'SISTEMA: Error - Usuario no autenticado.';
-            }
-            try {
-              const celebrationMap: Record<string, string> = {
-                crecer: '✅ Hecho',
-                sembrar: '🎉',
-                cambiar: '🔄 Avance',
-                preciso: '🎯 Ejecutado',
-                pilar: '🏛️ Un paso más',
-              };
-
-              await db.insert(habits).values({
-                id: randomUUID(),
-                userId,
-                name,
-                habitType: habitType || 'crecer',
-                domain: domain || null,
-                rescueAction: rescueAction,
-                activeAction: rescueAction,
-                celebration: celebration || celebrationMap[habitType || 'crecer'],
-                anchor: anchor || null,
-                currentStrength: 0.15,
-                isActive: 1,
-                createdAt: new Date().toISOString(),
-              });
-
-              revalidatePath('/', 'layout');
-              return 'SISTEMA: Acción completada y guardada en SQLite con éxito. Informa al usuario.';
-            } catch (error) {
-              console.error('❌ [TOOL DB ERROR]:', error);
-              return 'SISTEMA: Error al guardar en la base de datos.';
-            }
-          },
-        }),
+          revalidatePath('/', 'layout');
+          return 'SISTEMA: Acción completada y guardada en SQLite con éxito. Informa al usuario.';
+        } catch (error) {
+          console.error('❌ [TOOL DB ERROR]:', error);
+          return 'SISTEMA: Error al guardar en la base de datos.';
+        }
       },
-      toolChoice: 'auto',
-      stopWhen: stepCountIs(5),
-    });
+    }),
+    crearNuevoHabito: tool({
+      description: 'Crea un nuevo hábito o disciplina diaria en el sistema del usuario.',
+      inputSchema: z.object({
+        name: z.string().describe('Nombre del hábito, ej: Devocional Matutino'),
+        habitType: z.enum(['crecer', 'sembrar', 'cambiar', 'preciso', 'pilar']).default('crecer').describe('Tipo de hábito: crecer (nuevo), sembrar (mini), cambiar (reemplazo), preciso (if-then), pilar (keystone)'),
+        domain: z.enum(['cuerpo', 'mente', 'trabajo', 'relaciones', 'hogar', 'espiritual', 'finanzas']).optional().describe('Área de vida del hábito'),
+        rescueAction: z.string().describe('Versión mínima del hábito para días difíciles (menos de 2 minutos)'),
+        anchor: z.string().optional().describe('Rutina existente después de la cual se hará el hábito'),
+        celebration: z.string().optional().describe('Celebración al completar el hábito'),
+      }),
+      execute: async ({ name, habitType, domain, rescueAction, anchor, celebration }) => {
+        console.log('⚡ [TOOL EXECUTING] Crear hábito:', { name, habitType, domain, rescueAction, anchor });
+        if (!userId) {
+          return 'SISTEMA: Error - Usuario no autenticado.';
+        }
+        try {
+          const celebrationMap: Record<string, string> = {
+            crecer: '✅ Hecho',
+            sembrar: '🎉',
+            cambiar: '🔄 Avance',
+            preciso: '🎯 Ejecutado',
+            pilar: '🏛️ Un paso más',
+          };
 
-    console.log('✅ [CHAT] Stream inicializado exitosamente.');
+          await db.insert(habits).values({
+            id: randomUUID(),
+            userId,
+            name,
+            habitType: habitType || 'crecer',
+            domain: domain || null,
+            rescueAction: rescueAction,
+            activeAction: rescueAction,
+            celebration: celebration || celebrationMap[habitType || 'crecer'],
+            anchor: anchor || null,
+            currentStrength: 0.15,
+            isActive: 1,
+            createdAt: new Date().toISOString(),
+          });
+
+          revalidatePath('/', 'layout');
+          return 'SISTEMA: Acción completada y guardada en SQLite con éxito. Informa al usuario.';
+        } catch (error) {
+          console.error('❌ [TOOL DB ERROR]:', error);
+          return 'SISTEMA: Error al guardar en la base de datos.';
+        }
+      },
+    }),
+  };
+
+  const commonParams = {
+    system: enrichedSystemPrompt,
+    messages,
+    temperature: 0.8,
+    maxOutputTokens: 2048,
+    tools,
+    toolChoice: 'auto' as const,
+    stopWhen: stepCountIs(5),
+  };
+
+  try {
+    console.log(`🚀 [CHAT] Intentando con OpenRouter (${PRIMARY_MODEL})`);
+    const result = await streamText({
+      model: openrouter(PRIMARY_MODEL),
+      ...commonParams,
+    });
+    console.log(`✅ [CHAT] Stream con OpenRouter inicializado exitosamente.`);
     return result.toUIMessageStreamResponse();
-  } catch (err: any) {
-    console.error('[CHAT API ERROR]:', err?.message || err);
-    return new Response(err?.message || 'Internal Server Error', { status: 500 });
+  } catch (primaryErr: any) {
+    console.warn('[CHAT] OpenRouter falló, usando OpenCode Zen como fallback:', primaryErr?.message || primaryErr);
+    try {
+      console.log(`🚀 [CHAT] Intentando con OpenCode Zen (${FALLBACK_MODEL})`);
+      const result = await streamText({
+        model: opencode(FALLBACK_MODEL),
+        ...commonParams,
+      });
+      console.log(`✅ [CHAT] Stream con OpenCode Zen inicializado exitosamente.`);
+      return result.toUIMessageStreamResponse();
+    } catch (fallbackErr: any) {
+      console.error('[CHAT] Ambos proveedores fallaron:', fallbackErr?.message || fallbackErr);
+      return new Response(fallbackErr?.message || 'Service temporarily unavailable', { status: 500 });
+    }
   }
 }
