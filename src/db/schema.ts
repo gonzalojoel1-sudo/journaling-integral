@@ -420,3 +420,10 @@ export const journalEmbeddingsRelations = relations(journalEmbeddings, ({ one })
     references: [dailyEntries.id],
   }),
 }));
+
+export const rateLimits = sqliteTable('rate_limits', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(0),
+  windowStart: integer('window_start').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

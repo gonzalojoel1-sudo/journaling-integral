@@ -1,101 +1,71 @@
-/**
- * In-memory LRU Rate Limiter
- *
- * Suitable for single-server deployments (SQLite local).
- * For serverless/distributed deployments, migrate to @upstash/ratelimit.
- */
+import { db } from '../db/db';
+import { rateLimits } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
-
-const store = new Map<string, RateLimitEntry>();
-
-// Cleanup expired entries every 5 minutes
-const CLEANUP_INTERVAL = 5 * 60 * 1000;
-let lastCleanup = Date.now();
-
-function cleanup() {
+export async function rateLimit(
+  key: string,
+  limit: number = 20,
+  windowMs: number = 60000,
+): Promise<{ success: boolean; remaining: number; resetMs: number }> {
   const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
-  lastCleanup = now;
-  const entries = Array.from(store.entries());
-  for (const [key, entry] of entries) {
-    if (now > entry.resetTime) {
-      store.delete(key);
+  try {
+    const existing = await db
+      ?.select()
+      .from(rateLimits)
+      .where(eq(rateLimits.key, key))
+      .get();
+    if (!existing || now > existing.windowStart + windowMs) {
+      await db?.insert(rateLimits)
+        .values({ key, count: 1, windowStart: now, updatedAt: new Date().toISOString() })
+        .onConflictDoUpdate({ target: rateLimits.key, set: { count: 1, windowStart: now, updatedAt: new Date().toISOString() } })
+        .run();
+      return { success: true, remaining: limit - 1, resetMs: windowMs };
     }
+    if (existing.count >= limit) {
+      const resetMs = (existing.windowStart + windowMs) - now;
+      return { success: false, remaining: 0, resetMs: Math.max(0, resetMs) };
+    }
+    await db?.update(rateLimits)
+      .set({ count: existing.count + 1, updatedAt: new Date().toISOString() })
+      .where(eq(rateLimits.key, key))
+      .run();
+    const resetMs = (existing.windowStart + windowMs) - now;
+    return { success: true, remaining: limit - (existing.count + 1), resetMs: Math.max(0, resetMs) };
+  } catch (error) {
+    console.error('[RATE-LIMIT] Error accessing Turso:', error);
+    return { success: true, remaining: limit, resetMs: windowMs };
   }
 }
 
-/**
- * Check and increment rate limit for a given key.
- *
- * @param key - Unique identifier (e.g., "chat:user123" or "smart-entry:192.168.1.1")
- * @param limit - Max requests allowed in the window (default: 20)
- * @param windowMs - Time window in milliseconds (default: 60000 = 1 min)
- * @returns { success, remaining, resetMs }
- */
-export function rateLimit(
+export async function getRateLimitInfo(
   key: string,
   limit: number = 20,
   windowMs: number = 60000,
-): { success: boolean; remaining: number; resetMs: number } {
-  cleanup();
-
+): Promise<{ count: number; remaining: number; resetMs: number }> {
   const now = Date.now();
-  const entry = store.get(key);
-
-  // First request or window expired
-  if (!entry || now > entry.resetTime) {
-    store.set(key, { count: 1, resetTime: now + windowMs });
-    return { success: true, remaining: limit - 1, resetMs: windowMs };
-  }
-
-  // Within window, check limit
-  if (entry.count >= limit) {
-    const resetMs = entry.resetTime - now;
-    return { success: false, remaining: 0, resetMs };
-  }
-
-  entry.count++;
-  const resetMs = entry.resetTime - now;
-  return { success: true, remaining: limit - entry.count, resetMs };
-}
-
-/**
- * Get rate limit info without incrementing (for headers).
- */
-export function getRateLimitInfo(
-  key: string,
-  limit: number = 20,
-  windowMs: number = 60000,
-): { count: number; remaining: number; resetMs: number } {
-  const now = Date.now();
-  const entry = store.get(key);
-
-  if (!entry || now > entry.resetTime) {
+  try {
+    const existing = await db
+      ?.select()
+      .from(rateLimits)
+      .where(eq(rateLimits.key, key))
+      .get();
+    if (!existing || now > existing.windowStart + windowMs) {
+      return { count: 0, remaining: limit, resetMs: windowMs };
+    }
+    const resetMs = (existing.windowStart + windowMs) - now;
+    return {
+      count: existing.count,
+      remaining: Math.max(0, limit - existing.count),
+      resetMs: Math.max(0, resetMs),
+    };
+  } catch {
     return { count: 0, remaining: limit, resetMs: windowMs };
   }
-
-  return {
-    count: entry.count,
-    remaining: Math.max(0, limit - entry.count),
-    resetMs: entry.resetTime - now,
-  };
 }
 
-/**
- * Extract client identifier from request.
- * Priority: userId from cookie > x-forwarded-for IP > 127.0.0.1
- */
 export function getClientIdentifier(request: Request, userId?: string): string {
   if (userId) return userId;
-
   const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-
+  if (forwarded) return forwarded.split(',')[0].trim();
   return '127.0.0.1';
 }
