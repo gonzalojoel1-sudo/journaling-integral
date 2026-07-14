@@ -192,6 +192,16 @@ export async function submitDailyEntry(formData: Record<string, any>) {
 
         if (!habitRecord) continue;
 
+        if (habitRecord.habitType === 'preciso') {
+          if (habitEntry.completed === true) {
+            await db.update(habits).set({
+              triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
+              actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
+            }).where(eq(habits.id, habitEntry.habitId));
+          }
+          continue;
+        }
+
         const { newStrength, newDate } = applyDecayAndBonus(
           habitRecord.currentStrength ?? 0,
           habitRecord.lastStrengthDate,

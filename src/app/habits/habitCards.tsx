@@ -9,6 +9,7 @@ import { HabitCardSembrar } from './cards/HabitCardSembrar';
 import { HabitCardCadena } from './cards/HabitCardCadena';
 import { HabitCardCrecer } from './cards/HabitCardCrecer';
 import { HabitCardCambiar } from './cards/HabitCardCambiar';
+import { HabitCardPreciso } from './cards/HabitCardPreciso';
 
 interface ChainStep {
   id: string;
@@ -64,6 +65,10 @@ export function HabitCard({ habit }: { habit: HabitCardHabit }) {
 
   if (habit.habitType === 'cambiar') {
     return <HabitCardCambiar habit={habit} />;
+  }
+
+  if (habit.habitType === 'preciso') {
+    return <HabitCardPreciso habit={habit} />;
   }
 
   const router = useRouter();
