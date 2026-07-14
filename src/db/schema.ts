@@ -190,6 +190,24 @@ export const habits = sqliteTable('habits', {
   currentStrength: real('current_strength').default(0.0),
   lastStrengthDate: text('last_strength_date'),
 
+  // Type mechanics (Sembrar)
+  evolutionCycle: integer('evolution_cycle').default(0),
+  daysInCurrentCycle: integer('days_in_current_cycle').default(0),
+  evolutionOptimal: text('evolution_optimal'),
+  evolutionMinimum: text('evolution_minimum'),
+
+  // Type mechanics (Crecer)
+  streakShields: integer('streak_shields').default(0),
+  currentStreak: integer('current_streak').default(0),
+
+  // Type mechanics (Cambiar)
+  victoryCount: integer('victory_count').default(0),
+  temptationCount: integer('temptation_count').default(0),
+
+  // Type mechanics (Preciso)
+  triggerHitCount: integer('trigger_hit_count').default(0),
+  actionExecutedCount: integer('action_executed_count').default(0),
+
   // Meta
   createdAt: text('created_at').notNull(),
   isActive: integer('is_active').default(1).notNull(),
