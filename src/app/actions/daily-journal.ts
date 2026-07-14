@@ -216,7 +216,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
               actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
             }).where(eq(habits.id, habitEntry.habitId));
           }
-          continue;
+          if (!habitEntry.completed) continue;
         }
 
         const { newStrength, newDate } = applyDecayAndBonus(
@@ -322,23 +322,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             pilarCompleted: allNonPilarCompleted ? 1 : 0,
           }).where(eq(habits.id, pilar.id));
 
-          // Keystone effect: boost same-domain habits when pilar is completed
-          if (allNonPilarCompleted && pilar.domain) {
-            const domainHabits = await db.query.habits.findMany({
-              where: and(
-                eq(habits.domain, pilar.domain),
-                eq(habits.isActive, 1),
-              ),
-            });
-
-            for (const dh of domainHabits) {
-              if (dh.id === pilar.id) continue;
-              const boostedStrength = Math.round(((dh.currentStrength ?? 0) + 0.1) * 100) / 100;
-              await db.update(habits).set({
-                currentStrength: boostedStrength,
-              }).where(eq(habits.id, dh.id));
-            }
-          }
+          // Keystone effect: ephemeral bonus computed at display time, not persisted
         }
       }
     }
