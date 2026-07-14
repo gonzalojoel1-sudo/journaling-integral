@@ -1,18 +1,39 @@
-# Task 4: Guided Wizard — Report
+# Task 4: Cambiar 🔄 — New Neural Path Builder — Report
 
 ## Status: DONE
 
-## Commits
-- `0f6a599` feat: add guided habit wizard with 7-step flow
-
-## Summary
-Created `HabitWizard.tsx` with a 7-step modal wizard (name → type → feeling → anchor → rescue action → celebration → domain) and integrated it into `HabitsClient.tsx` with a "+ Nuevo hábito" trigger button and conditional rendering.
-
 ## Changes
-- **Created** `src/app/habits/HabitWizard.tsx` — 7-step guided wizard component with domain selector, step indicator, and submit flow
-- **Modified** `src/app/habits/HabitsClient.tsx` — added import, `showWizard` state, wizard trigger button, and conditional wizard rendering
 
-## Concerns
-- The brief's code had a typo (`celebbration` instead of `celebration`) — fixed in implementation
-- The brief's code was cut off at step 7; completed it with domain selector grid and submit button
-- The existing `createHabit` calls in HabitsClient (lines 58, 100) use the old 3-arg signature, but the action now expects an object — this is a pre-existing issue from Task 3 not addressed here
+### 1. Created `src/app/habits/cards/HabitCardCambiar.tsx`
+- Single victory bar (new path only — no old habit/shaming UI)
+- Victory count X/30 with amber progress bar
+- Expanded view shows new routine, execution rate, and completion message at 30
+- Uses `StrengthBar` for strength display
+- No reference to oldRoutine in the UI (only in backend for user reference)
+
+### 2. Modified `src/app/actions/daily-journal.ts`
+- Added cambiar victory tracking block after the crecer block (line 267)
+- On completion: `victoryCount + 1` (no penalty for miss)
+- On temptation appeared + not completed: `temptationCount + 1` (internal only, no UI display)
+- Follows existing pattern of `sembrar` and `crecer` type-specific blocks
+
+### 3. Modified `src/app/habits/HabitWizard.tsx`
+- Added `cue`, `oldRoutine`, `newRoutine` to `WizardData` type and state
+- Step 2 "cambiar" button now routes to new step 8 (cambiar details)
+- Step 8 collects: cue ("¿Qué disparador desencadena ese hábito?"), oldRoutine ("¿Qué haces exactamente?"), newRoutine ("¿Qué harás en su lugar?")
+- Step 8 → step 4 (anchor) on completion
+- `handleSubmit` passes `cue`, `oldRoutine`, `newRoutine` to `createHabit`
+- `Step` type expanded to include `8`
+
+### 4. Modified `src/app/habits/habitCards.tsx`
+- Imported `HabitCardCambiar`
+- Added routing: `habit.habitType === 'cambiar'` returns `<HabitCardCambiar />`
+
+## Verification
+- `npx tsc --noEmit` — **0 errors**
+
+## Commit
+- `dea3f1a` — `feat: Cambiar positive-only substitution with victory tracking and no-shame UI`
+
+## Artifacts
+- Report file: `/Users/joelpacheco/PROYECTOS/journaling-integral/.superpowers/sdd/task-4-report.md`

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Zap, CheckCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Zap, CheckCircle, Check, X } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
 
 interface PilarHabit {
@@ -10,6 +10,9 @@ interface PilarHabit {
   domain?: string | null;
   currentStrength?: number;
   pilarCompleted?: number;
+  otherHabitsCount?: number;
+  otherHabitsCompleted?: number;
+  otherHabits?: { name: string; completed: boolean; domain?: string | null }[];
 }
 
 const domainLabels: Record<string, string> = {
@@ -20,6 +23,7 @@ const domainLabels: Record<string, string> = {
 export function HabitCardPilar({ habit }: { habit: PilarHabit }) {
   const [expanded, setExpanded] = useState(false);
   const completed = habit.pilarCompleted === 1;
+  const hasDailyData = habit.otherHabitsCount !== undefined;
 
   return (
     <div className={`border-l-4 border-l-violet-500 bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800 cursor-pointer transition-all duration-300 hover:shadow-md ${
@@ -49,10 +53,38 @@ export function HabitCardPilar({ habit }: { habit: PilarHabit }) {
         )}
       </div>
 
+      {hasDailyData && (
+        <div className="mt-2 text-xs font-medium text-stone-500">
+          Hoy cumpliste {habit.otherHabitsCompleted} de {habit.otherHabitsCount} hábitos
+        </div>
+      )}
+
       {expanded && (
         <div className="mt-3 space-y-2 text-xs text-stone-500">
           <p>⚡ Al completarlo hoy, fortalece todos los hábitos de <strong>{domainLabels[habit.domain || ''] || 'su dominio'}</strong></p>
           <p>🏛️ Este hábito se completa automáticamente cuando cumples todos tus otros hábitos del día.</p>
+
+          {hasDailyData && habit.otherHabits && habit.otherHabits.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <p className="font-semibold text-stone-600 mb-1">Hábitos del día:</p>
+              {habit.otherHabits.map((h, i) => (
+                <div key={i} className="flex items-center gap-2 px-2 py-1 rounded bg-stone-50 dark:bg-stone-950">
+                  {h.completed ? (
+                    <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                  ) : (
+                    <X className="h-3 w-3 text-stone-300 dark:text-stone-600 shrink-0" />
+                  )}
+                  <span className={h.completed ? 'text-stone-500 line-through' : 'text-stone-700 dark:text-stone-300'}>
+                    {h.name}
+                  </span>
+                  {h.domain && (
+                    <span className="ml-auto text-[10px] text-stone-400">{domainLabels[h.domain] || h.domain}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
             <Zap className="h-3 w-3" />
             <span>Efecto dominó activo</span>

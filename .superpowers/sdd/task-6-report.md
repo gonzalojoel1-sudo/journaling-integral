@@ -1,30 +1,31 @@
-# Task 6: Dashboard Integration — Report
+# Task 6 Report: Pilar 🏛️ — Guardian of the Day
 
-**Status:** DONE
+## Status ✅ Complete
 
-## Changes
+## Changes Made
+1. **`src/db/schema.ts`** — Added `pilarCompleted: integer('pilar_completed').default(0)` to habits table
+2. **`src/app/habits/cards/HabitCardPilar.tsx`** — New component with:
+   - Violet-accented card showing "Pilar · Hábito Clave" header
+   - Completion badge ("Día completo") when `pilarCompleted === 1`
+   - Expanded view explaining auto-completion and keystone effect
+   - `StrengthBar` for habit strength display
+3. **`src/app/habits/habitCards.tsx`** — Added `import { HabitCardPilar }` and routing for `habitType === 'pilar'`
+4. **`src/app/actions/daily-journal.ts`** — Added:
+   - Pilar tracking variables before the main habit loop
+   - Skip pilar habits from normal strength processing (continue)
+   - Track non-pilar completion counts
+   - Post-loop: auto-derive pilar completion (`allNonPilarCompleted = totalNonPilarToComplete === completedNonPilar`)
+   - Apply `pilarCompleted` flag and strength decay/bonus to pilar habits
+   - Keystone effect: boost all same-domain habits by +0.1 strength when pilar completed
 
-### `src/app/dashboard/HabitProgress.tsx`
-- Added `typeIcon` emoji mapping for `crecer` (⚡), `sembrar` (🌱), `cambiar` (🔄), `preciso` (🎯), `pilar` (🏛️)
-- Extended `Habit` interface with `activeAction`, `rescueAction`, `celebration` fields
-- Added type icon display next to habit name
-- Added action description (`activeAction || rescueAction`) below habit name
-- Added "Modo rescate" badge when `activeAction === rescueAction`
-- Added celebration text on completed habits
+## Verification
+- `npx tsc --noEmit` passes with zero errors
 
-### `src/app/page.tsx`
-- Extended `parsedHabits` type annotation to include `activeAction`, `rescueAction`, `celebration`
-- Updated all three mapping sites (saved habits, catch, fallback) to pass these fields through
+## Commit
+`f062a99` — `feat: Pilar guardian-of-the-day with auto-derived completion`
 
-## Compile Result
-
-`npx tsc --noEmit --pretty | grep -c "dashboard/HabitProgress"` → **0 errors**
-(Pre-existing error in `src/app/api/chat/route.ts:220` — unrelated to this task)
-
-## Commits
-
-- `e77c668` — `feat: add type icons and show activeAction/rescue badge in dashboard`
-
-## Concerns
-
-None.
+## Notes
+- Pilar completion is derived entirely server-side from non-pilar habit completions
+- No separate checkbox needed in the UI
+- Keystone domain boost (from brief) is preserved: when pilar completes, all active same-domain habits get +0.1 strength
+- Schema migration for `pilar_completed` column will need to be run against production DB

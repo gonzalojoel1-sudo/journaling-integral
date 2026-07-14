@@ -1,273 +1,153 @@
-### Task 4: Guided Wizard Component
+### Task 4: Cambiar 🔄 — New Neural Path Builder (100% Positive)
 
 **Files:**
-- Create: `src/app/habits/HabitWizard.tsx`
-- Modify: `src/app/habits/HabitsClient.tsx` (replace old create button with wizard trigger)
+- Create: `src/app/habits/cards/HabitCardCambiar.tsx`
+- Modify: `src/app/habits/habitCards.tsx` (add Cambiar routing)
+- Modify: `src/app/habits/HabitWizard.tsx` (add paired creation flow)
+- Modify: `src/app/actions/daily-journal.ts` (victory tracking — no penalty)
 
 **Interfaces:**
-- Consumes: `createHabit()` action
-- Produces: HabitWizard component with 7-step flow, domain selector
+- Consumes: `habits.victoryCount`, `habits.temptationCount`, `habits.oldRoutine`, `habits.newRoutine`
+- Produces: single-bar victory tracker, no shame UI
 
-- [ ] **Step 1: Create the HabitWizard component**
+- [ ] **Step 1: Create HabitCardCambiar component**
 
-Create `src/app/habits/HabitWizard.tsx`:
+Create `src/app/habits/cards/HabitCardCambiar.tsx`:
 
 ```tsx
 'use client';
 
 import { useState } from 'react';
-import { createHabit } from '../actions/habits';
-import { useRouter } from 'next/navigation';
+import { ChevronDown, ChevronUp, Brain } from 'lucide-react';
+import { StrengthBar } from '@/components/StrengthBar';
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-
-type WizardData = {
+interface CambiarHabit {
+  id: string;
   name: string;
-  type: 'crecer' | 'sembrar' | 'cambiar' | 'preciso' | 'pilar';
-  anchor: string;
-  rescueAction: string;
-  celebration: string;
-  domain: string;
-};
+  newRoutine?: string | null;
+  oldRoutine?: string | null;
+  victoryCount?: number;
+  currentStrength?: number;
+}
 
-const DOMAINS = [
-  { id: 'cuerpo', label: 'Cuerpo', icon: '💪' },
-  { id: 'mente', label: 'Mente', icon: '🧠' },
-  { id: 'trabajo', label: 'Trabajo', icon: '💼' },
-  { id: 'relaciones', label: 'Relaciones', icon: '👥' },
-  { id: 'hogar', label: 'Hogar', icon: '🏠' },
-  { id: 'espiritual', label: 'Espiritual', icon: '✨' },
-  { id: 'finanzas', label: 'Finanzas', icon: '💰' },
-];
+const VICTORY_TARGET = 30;
 
-export function HabitWizard({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
-  const [data, setData] = useState<WizardData>({
-    name: '',
-    type: 'crecer',
-    anchor: '',
-    rescueAction: '',
-    celebration: '',
-    domain: '',
-  });
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const update = (partial: Partial<WizardData>) => setData(prev => ({ ...prev, ...partial }));
-
-  const handleNext = () => setStep(prev => Math.min(prev + 1, 7) as Step);
-  const handleBack = () => setStep(prev => Math.max(prev - 1, 1) as Step);
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setError('');
-
-    const celebrationMap: Record<string, string> = {
-      crecer: '✅ Hecho',
-      sembrar: data.celebbration || '🎉',
-      cambiar: '🔄 Avance',
-      preciso: '🎯 Ejecutado',
-      pilar: '🏛️ Un paso más',
-    };
-
-    const result = await createHabit({
-      name: data.name,
-      habitType: data.type,
-      domain: data.domain || undefined,
-      rescueAction: data.rescueAction,
-      anchor: data.anchor || undefined,
-      celebration: data.celebration || celebrationMap[data.type],
-    });
-
-    if (!result.success) {
-      setError(result.error || 'Error al crear el hábito');
-      setIsSubmitting(false);
-      return;
-    }
-
-    onClose();
-    router.refresh();
-  };
+export function HabitCardCambiar({ habit }: { habit: CambiarHabit }) {
+  const [expanded, setExpanded] = useState(false);
+  const victories = habit.victoryCount ?? 0;
+  const pct = Math.min(Math.round((victories / VICTORY_TARGET) * 100), 100);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-stone-900 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-2xl">
-        {/* Step indicator */}
-        <div className="flex gap-1 mb-6">
-          {[1,2,3,4,5,6,7].map(s => (
-            <div
-              key={s}
-              className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-stone-800 dark:bg-stone-200' : 'bg-stone-200 dark:bg-stone-700'}`}
-            />
-          ))}
+    <div className="border-l-4 border-l-amber-500 bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800 cursor-pointer transition-all duration-300 hover:shadow-md"
+      onClick={() => setExpanded(!expanded)}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">
+            🔄 Nueva Ruta Neuronal
+          </span>
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mt-1">{habit.name}</h3>
         </div>
+        {expanded ? <ChevronUp className="h-4 w-4 text-stone-400" /> : <ChevronDown className="h-4 w-4 text-stone-400" />}
+      </div>
 
-        {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">¿Qué hábito quieres crear o cambiar?</h2>
-            <input
-              autoFocus
-              type="text"
-              value={data.name}
-              onChange={e => update({ name: e.target.value })}
-              placeholder="Ej: Hacer ejercicio, meditar, dejar Instagram..."
-              className="w-full p-3 border border-stone-300 dark:border-stone-700 rounded-xl bg-transparent"
-            />
-            <div className="flex justify-end gap-2">
-              <button onClick={onClose} className="px-4 py-2 text-stone-500">Cancelar</button>
-              <button onClick={handleNext} disabled={!data.name.trim()} className="px-4 py-2 bg-stone-800 text-white rounded-xl disabled:opacity-50">
-                Siguiente
-              </button>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Brain className="h-4 w-4 text-amber-500" />
+          <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
+            🏆 {victories}/{VICTORY_TARGET} victorias
+          </span>
+        </div>
+        <div className="h-2 w-full bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-amber-500 rounded-full transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="mt-3 space-y-2 text-xs text-stone-500">
+          <p>🧠 Nuevo camino: <span className="text-stone-700 dark:text-stone-300 font-medium">{habit.newRoutine}</span></p>
+          <p>→ Has elegido tu nueva identidad {victories} veces</p>
+          {victories >= VICTORY_TARGET && (
+            <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center">
+              <p className="text-sm font-bold text-amber-600 dark:text-amber-400">¡Has construido una nueva ruta neuronal! 🧠✨</p>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {step === 2 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Esto es algo que...</h2>
-            <div className="space-y-3">
-              <button
-                onClick={() => { update({ type: 'crecer' }); handleNext(); }}
-                className="w-full p-4 text-left border border-stone-300 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800"
-              >
-                <span className="text-lg">⚡ Quiero EMPEZAR a hacer desde cero</span>
-                <p className="text-sm text-stone-500 mt-1">Un hábito nuevo que sume a mi vida</p>
-              </button>
-              <button
-                onClick={() => { update({ type: 'cambiar' }); handleNext(); }}
-                className="w-full p-4 text-left border border-stone-300 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800"
-              >
-                <span className="text-lg">🔄 Quiero DEJAR de hacer algo</span>
-                <p className="text-sm text-stone-500 mt-1">Reemplazar un mal hábito por algo mejor</p>
-              </button>
-            </div>
-            <button onClick={handleBack} className="text-sm text-stone-500">Atrás</button>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Al empezar, siento que...</h2>
-            <div className="space-y-3">
-              <button
-                onClick={() => { update({ type: 'crecer' }); handleNext(); }}
-                className="w-full p-4 text-left border border-stone-300 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800"
-              >
-                <span className="text-lg">⚡ Es fácil arrancar pero me cuesta mantenerlo</span>
-              </button>
-              <button
-                onClick={() => { update({ type: 'sembrar' }); handleNext(); }}
-                className="w-full p-4 text-left border border-stone-300 dark:border-stone-700 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800"
-              >
-                <span className="text-lg">🌱 Me da miedo, parece difícil, siempre lo dejo</span>
-              </button>
-            </div>
-            <button onClick={handleBack} className="text-sm text-stone-500">Atrás</button>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">¿Después de qué momento del día harías esto?</h2>
-            <input
-              autoFocus
-              type="text"
-              value={data.anchor}
-              onChange={e => update({ anchor: e.target.value })}
-              placeholder="Ej: después del café, al cepillarme los dientes..."
-              className="w-full p-3 border border-stone-300 dark:border-stone-700 rounded-xl bg-transparent"
-            />
-            <p className="text-sm text-stone-500">Un ancla es una rutina que ya haces todos los días sin fallar</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={handleBack} className="px-4 py-2 text-stone-500">Atrás</button>
-              <button onClick={handleNext} disabled={!data.anchor.trim()} className="px-4 py-2 bg-stone-800 text-white rounded-xl disabled:opacity-50">
-                Siguiente
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Versión para un día difícil</h2>
-            <p className="text-sm text-stone-500">Si tuvieras un día pésimo, sin energía... ¿cuál es la versión TAN pequeña que SÍ podrías hacer? (Debe tomar menos de 2 minutos)</p>
-            <input
-              autoFocus
-              type="text"
-              value={data.rescueAction}
-              onChange={e => update({ rescueAction: e.target.value })}
-              placeholder="Ej: 1 sentadilla, leer 1 párrafo..."
-              className="w-full p-3 border border-stone-300 dark:border-stone-700 rounded-xl bg-transparent"
-            />
-            <div className="flex justify-end gap-2">
-              <button onClick={handleBack} className="px-4 py-2 text-stone-500">Atrás</button>
-              <button
-                onClick={() => {
-                  if (data.type !== 'sembrar') {
-                    setStep(7); // Skip celebration step
-                  } else {
-                    handleNext();
-                  }
-                }}
-                disabled={!data.rescueAction.trim()}
-                className="px-4 py-2 bg-stone-800 text-white rounded-xl disabled:opacity-50"
-              >
-                Siguiente
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 6 && data.type === 'sembrar' && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">¿Cómo te vas a celebrar?</h2>
-            <p className="text-sm text-stone-500">La celebración fija el hábito en tu cerebro. Elige una:</p>
-            <div className="grid grid-cols-2 gap-3">
-              {['💪 Fist bump', '✅ "¡Hecho!"', '🎉 Yes!', '✨ Bien'].map(c => (
-                <button
-                  key={c}
-                  onClick={() => { update({ celebration: c }); handleNext(); }}
-                  className={`p-4 border rounded-xl text-center ${data.celebration === c ? 'border-stone-800 bg-stone-100 dark:border-stone-200 dark:bg-stone-800' : 'border-stone-300 dark:border-stone-700'}`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-            <button onClick={handleBack} className="text-sm text-stone-500">Atrás</button>
-          </div>
-        )}
-
-        {step === 7 && (
+      <div className="mt-3">
+        <StrengthBar strength={habit.currentStrength ?? 0} />
       </div>
     </div>
   );
 }
 ```
 
-- [ ] **Step 2: Integrate wizard into HabitsClient**
+- [ ] **Step 2: Add victory tracking to daily-journal.ts**
 
-In `src/app/habits/HabitsClient.tsx`, find the create button section and add:
+Inside the habit loop, after strength update:
 
-```tsx
-import { HabitWizard } from './HabitWizard';
-// Add state:
-const [showWizard, setShowWizard] = useState(false);
-
-// Replace old create button trigger with:
-<button onClick={() => setShowWizard(true)} className="...">
-  + Nuevo hábito
-</button>
-
-// At the bottom of the component:
-{showWizard && <HabitWizard onClose={() => setShowWizard(false)} />}
+```typescript
+if (habitRecord.habitType === 'cambiar') {
+  if (habitEntry.completed === true) {
+    // Only count victories — no penalty for misses
+    await db.update(habits).set({
+      victoryCount: (habitRecord.victoryCount ?? 0) + 1,
+    }).where(eq(habits.id, habitEntry.habitId));
+  }
+  // If temptation appeared but user didn't complete, log internally (no display)
+  if (habitEntry.temptationAppeared && !habitEntry.completed) {
+    await db.update(habits).set({
+      temptationCount: (habitRecord.temptationCount ?? 0) + 1,
+    }).where(eq(habits.id, habitEntry.habitId));
+  }
+}
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Modify HabitWizard for Cambiar paired creation**
+
+In `src/app/habits/HabitWizard.tsx`, add a new step or modify step 2 to capture the old routine when user selects "cambiar":
+
+Add to wizard data:
+```typescript
+type WizardData = {
+  // ... existing fields ...
+  oldRoutine: string;
+  newRoutine: string;
+  cue: string;
+};
+```
+
+After step 2 (if user chose "cambiar"), show:
+- "¿Qué disparador desencadena ese hábito?" → `cue`
+- "¿Qué haces exactamente?" → `oldRoutine`
+- "¿Qué harás en su lugar?" → `newRoutine`
+
+When submitting a Cambiar habit, pass `oldRoutine`, `newRoutine`, `cue`.
+
+- [ ] **Step 4: Add Cambiar routing to habitCards.tsx**
+
+```typescript
+import { HabitCardCambiar } from './cards/HabitCardCambiar';
+
+if (habit.habitType === 'cambiar') {
+  return <HabitCardCambiar habit={habit} />;
+}
+```
+
+- [ ] **Step 5: Verify TypeScript compiles**
+
+Run: `npx tsc --noEmit`
+Expected: No errors.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/app/habits/HabitWizard.tsx src/app/habits/HabitsClient.tsx
-git commit -m "feat: add guided habit wizard with 7-step flow"
+git add src/app/habits/cards/HabitCardCambiar.tsx src/app/actions/daily-journal.ts src/app/habits/HabitWizard.tsx src/app/habits/habitCards.tsx
+git commit -m "feat: Cambiar positive-only substitution with victory tracking and no-shame UI"
 ```
 
 ---

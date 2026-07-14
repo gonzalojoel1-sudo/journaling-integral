@@ -35,6 +35,9 @@ interface HabitCardHabit {
   currentStrength?: number;
   chainId?: string;
   chainSteps?: ChainStep[];
+  otherHabitsCount?: number;
+  otherHabitsCompleted?: number;
+  otherHabits?: { name: string; completed: boolean; domain?: string | null }[];
 }
 
 const typeConfig: Record<string, { icon: string; label: string; color: string }> = {

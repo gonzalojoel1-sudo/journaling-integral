@@ -1,37 +1,20 @@
-# Task 5: Per-Type Card Rendering — Report
+# Task 5: Preciso 🎯 — One-Click Execution — Report
 
-**Commit:** `a6240ad` feat: per-type habit card rendering with icon, action, and celebration
+**Status:** ✅ Complete
 
-## Changes Made
+**Commits:**
+- `226f011` — `feat: Preciso one-click execution with no-decay-when-no-trigger`
 
-### New file: `src/app/habits/habitCards.tsx`
-- Created `HabitCard` component with per-type rendering
-- Color-coded left border per type:
-  - `crecer` → stone (⚡)
-  - `sembrar` → emerald (🌱)
-  - `cambiar` → amber (🔄)
-  - `preciso` → sky (🎯)
-  - `pilar` → violet (🏛️)
-- Type-specific detail sections:
-  - `crecer`: anchor ("Después de") display
-  - `sembrar`: anchor + celebration display
-  - `cambiar`: cue + new routine display
-  - `preciso`: if-then trigger display
-  - `pilar`: "Hábito clave" badge
-- Action display (activeAction || rescueAction)
-- Identity label display
-- StrengthBar + celebration text
-- Archive button (calls `archiveHabit` directly)
+**Files changed:**
+- `src/app/habits/cards/HabitCardPreciso.tsx` — created (73 lines)
+- `src/app/actions/daily-journal.ts` — added Preciso logic before `applyDecayAndBonus` with full `continue` on no-trigger
+- `src/app/habits/habitCards.tsx` — added Preciso route import + early return
 
-### Modified: `src/app/habits/HabitsClient.tsx`
-- Updated `Habit` interface with all new fields (`habitType`, `domain`, `activeAction`, `rescueAction`, `celebration`, `anchor`, `ifTrigger`, `ifAction`, `cue`, `newRoutine`, `identityLabel`)
-- Made `type` and `strategyDetails` optional for compatibility with server data
-- Replaced old EOR three-column layout (Estandarizar / Optimizar / Reemplazar) with flat responsive grid of `HabitCard` components
-- Removed unused state (`showAddForm`, `name`, `type`, `strategyDetails`) and dead code (`handleCreate`, filter variables)
-- Cleaned up unused imports (`Plus`, `Zap`, `RefreshCw`, `StrengthBar`)
+**Test summary:** TypeScript compiles clean (`npx tsc --noEmit` → no output).
 
-## Status
+**Key design decisions:**
+- Preciso block placed BEFORE `applyDecayAndBonus` — when not completed, `continue` skips all decay + other type logic in one shot
+- When completed, both `triggerHitCount` and `actionExecutedCount` increment in a single DB update
+- HabitCardPreciso shows full "Cuando [trigger] → [action]" display, execution rate percentage, and expandable historical stats
 
-**Status:** DONE
-
-**Concerns:** The wizard trigger button was part of the removed catalog section — there is currently no way to open the wizard from the catalog tab. A "+ Nuevo hábito" button may need to be added in a follow-up.
+**Concerns:** None.
