@@ -23,6 +23,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   businessSettings: many(businessSettings),
   personalTransactions: many(personalTransactions),
   journalEmbeddings: many(journalEmbeddings),
+  circles: many(circles),
+  circleMemberships: many(circleMembers),
 }));
 
 export const dailyEntries = sqliteTable('daily_entries', {
@@ -428,3 +430,44 @@ export const rateLimits = sqliteTable('rate_limits', {
   windowStart: integer('window_start').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+export const circles = sqliteTable('circles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().default('Mi Círculo'),
+  createdBy: text('created_by').notNull().references(() => users.id),
+  visibilitySettings: text('visibility_settings').notNull().default('only_streak'),
+  createdAt: text('created_at').notNull(),
+});
+
+export const circlesRelations = relations(circles, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [circles.createdBy],
+    references: [users.id],
+  }),
+  members: many(circleMembers),
+}));
+
+export const circleMembers = sqliteTable('circle_members', {
+  id: text('id').primaryKey(),
+  circleId: text('circle_id').notNull().references(() => circles.id),
+  userId: text('user_id').notNull().references(() => users.id),
+  invitedBy: text('invited_by').notNull().references(() => users.id),
+  status: text('status').notNull().default('pending'),
+  joinedAt: text('joined_at'),
+  inviteCode: text('invite_code').unique().notNull(),
+});
+
+export const circleMembersRelations = relations(circleMembers, ({ one }) => ({
+  circle: one(circles, {
+    fields: [circleMembers.circleId],
+    references: [circles.id],
+  }),
+  user: one(users, {
+    fields: [circleMembers.userId],
+    references: [users.id],
+  }),
+  inviter: one(users, {
+    fields: [circleMembers.invitedBy],
+    references: [users.id],
+  }),
+}));

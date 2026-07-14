@@ -28,6 +28,7 @@ import { PriorityChecklist } from './dashboard/PriorityChecklist';
 import { HabitProgress } from './dashboard/HabitProgress';
 import { BizCompactPanel } from './dashboard/BizCompactPanel';
 import { PersonalFinanceWidget } from './dashboard/PersonalFinanceWidget';
+import { CircleWidget } from '@/components/circles/CircleWidget';
 
 export const dynamic = 'force-dynamic';
 
@@ -243,6 +244,11 @@ export default async function DashboardPage() {
 
         {/* Capital Personal */}
         {userSettings?.showFinancePanel && <PersonalFinanceWidget />}
+
+        {/* Círculo de Confianza */}
+        <section className="md:col-span-1">
+          <CircleWidget />
+        </section>
 
         {/* Hábitos EOR */}
         <HabitProgress habits={parsedHabits} initialCompletedIds={initialCompletedIds} />

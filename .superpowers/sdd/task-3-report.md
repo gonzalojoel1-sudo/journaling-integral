@@ -1,42 +1,30 @@
-# Task 3 Report: Crecer ⚡ — Momentum Streak with Shield
+# Task 3: Circles of Trust - Report
 
-**Status:** DONE
+## What was implemented
+- **Schema (`src/db/schema.ts`)**: Added `circles` and `circle_members` tables with full relations (creator, members, user, inviter). Updated `usersRelations` to include `circles` and `circleMemberships`.
+- **Server actions (`src/app/actions/circles.ts`)**: `createCircle`, `generateInvite`, `joinCircle`, `getCircleWidgetData`, `sendEncouragement`. Enforces `MAX_CIRCLE_SIZE = 3`.
+- **Client widget (`src/components/circles/CircleWidget.tsx`)**: Shows circle status, member streaks with red/green indicators, encourage button, invite link generation, and "create circle" prompt when none exists.
+- **API route (`src/app/api/circles/invite/route.ts`)**: Handles GET with `?code=` param, calls `joinCircle`, redirects to `/` on success.
+- **Dashboard (`src/app/page.tsx`)**: Added `CircleWidget` import and placed it in the ecosystem grid.
 
-## Changes Made
+## Test results
+- `npx drizzle-kit push` — ✓ Tables created (circles, circle_members)
+- `npx next build` — ✓ Compilation successful (no errors, warnings, or type issues)
 
-### 1. Created `src/app/habits/cards/HabitCardCrecer.tsx`
-- New card component for Crecer habits
-- Displays flame tier icons based on streak length (0-6: 🔥 Empezando, 7-13: 🔥 Consistente, 14-20: 🔥🔥 Disciplinado, 21-29: 🔥🔥🔥 Imparable, 30+: 👑 Maestro)
-- Shows shield icons (max 2) using lucide-react Shield
-- Expandable section shows anchor link and shield count
-
-### 2. Added shield earn/consume logic to `daily-journal.ts`
-- Inside the habit loop, after all existing blocks (Sembrar evolution, auto-rescue), added Crecer shield block
-- On completion: increments streak, earns 1 shield every 7 days (capped at 2)
-- On miss with shields > 0: consumes 1 shield, streak preserved
-- On miss with shields = 0: resets streak to 0
-- Imported `applyStreakShield` from habit-strength (though block uses inline logic per brief)
-
-### 3. Added `applyStreakShield` to `src/lib/habit-strength.ts`
-- Pure function calculating new streak and shields
-- Completed: streak+1, shield if newStreak % 7 === 0 (max 2)
-- Missed with shields: shields-1, streak preserved
-- Missed without shields: streak=0, shields=0
-
-### 4. Routed Crecer in `habitCards.tsx`
-- Imported `HabitCardCrecer`
-- Added early return for `habit.habitType === 'crecer'` before other type checks
-
-### 5. TypeScript verification
-- `npx tsc --noEmit` passes with no errors
-
-## Commit
-`1c94d1e` feat: Crecer momentum streak with shield system (earn 1 per 7 days, max 2)
-
-## Files modified
+## Files changed/created
 | File | Action |
 |------|--------|
-| `src/app/habits/cards/HabitCardCrecer.tsx` | Created |
-| `src/app/actions/daily-journal.ts` | Modified (Crecer shield block in habit loop) |
-| `src/lib/habit-strength.ts` | Modified (added `applyStreakShield`) |
-| `src/app/habits/habitCards.tsx` | Modified (added Crecer routing) |
+| `src/db/schema.ts` | Modified — added circles + circle_members tables, relations, updated usersRelations |
+| `src/app/actions/circles.ts` | Created |
+| `src/components/circles/CircleWidget.tsx` | Created |
+| `src/app/api/circles/invite/route.ts` | Created |
+| `src/app/page.tsx` | Modified — added CircleWidget import + grid placement |
+
+## Self-review findings
+- The `circleMembers.userId` has `.notNull()` which means the `pending` invite record with empty string `userId: ''` in `generateInvite` will work (empty string is not null). This matches the brief's code exactly.
+- The `onDelete: 'cascade'` pattern from other tables was intentionally **not** included on the new tables' foreign keys, matching the brief's exact code. This means deleting a user will not cascade to circles/circle_members — acceptable since this is a social feature.
+- The `members.length >= MAX_CIRCLE_SIZE - 1` check (i.e., `>= 2`) correctly limits to 1 creator + 2 members = 3 total.
+
+## Concerns
+- No migration file was generated (used `drizzle-kit push` directly). If the app needs deployable migrations, a `drizzle-kit generate` should be run separately.
+- `any` type used in `getCircleWidgetData` for the mapped member — this matches the brief. Could be typed with the Drizzle inferred type in a follow-up.
