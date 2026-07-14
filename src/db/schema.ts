@@ -237,6 +237,7 @@ export const chainItems = sqliteTable('chain_items', {
   habitId: text('habit_id')
     .notNull()
     .references(() => habits.id, { onDelete: 'cascade' }),
+  name: text('name'),
   order: integer('order').notNull(),
 });
 

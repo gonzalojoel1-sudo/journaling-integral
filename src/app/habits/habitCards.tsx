@@ -6,6 +6,13 @@ import { StrengthBar } from '@/components/StrengthBar';
 import { archiveHabit } from '../actions/habits';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { HabitCardSembrar } from './cards/HabitCardSembrar';
+import { HabitCardCadena } from './cards/HabitCardCadena';
+
+interface ChainStep {
+  id: string;
+  name: string;
+  order: number;
+}
 
 interface HabitCardHabit {
   id: string;
@@ -22,6 +29,8 @@ interface HabitCardHabit {
   newRoutine?: string | null;
   identityLabel?: string | null;
   currentStrength?: number;
+  chainId?: string;
+  chainSteps?: ChainStep[];
 }
 
 const typeConfig: Record<string, { icon: string; label: string; color: string }> = {
@@ -30,6 +39,7 @@ const typeConfig: Record<string, { icon: string; label: string; color: string }>
   cambiar: { icon: '🔄', label: 'Cambiar', color: 'border-l-amber-500' },
   preciso: { icon: '🎯', label: 'Preciso', color: 'border-l-sky-500' },
   pilar: { icon: '🏛️', label: 'Pilar', color: 'border-l-violet-500' },
+  cadena: { icon: '⛓️', label: 'Cadena', color: 'border-l-stone-400' },
 };
 
 const domainLabels: Record<string, string> = {
@@ -38,6 +48,10 @@ const domainLabels: Record<string, string> = {
 };
 
 export function HabitCard({ habit }: { habit: HabitCardHabit }) {
+  if (habit.habitType === 'cadena') {
+    return <HabitCardCadena habit={habit} />;
+  }
+
   if (habit.habitType === 'sembrar') {
     return <HabitCardSembrar habit={habit} />;
   }
