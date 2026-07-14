@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { CheckCircle2, Circle, BookOpen } from 'lucide-react';
 import { getDevotionalForDay } from '@/lib/devotionalGuide';
+import { saveHabitsDraft } from '@/app/actions/save-habits-draft';
 
 interface DailyHabit {
   habitId: string;
@@ -47,12 +48,21 @@ export function StepDevocional({
   dailyHabits,
   setDailyHabits,
 }: StepDevocionalProps) {
+  const saveTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const persistHabits = useCallback((habits: DailyHabit[]) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveHabitsDraft(habits);
+    }, 500);
+  }, []);
+
   const toggleHabit = (habitId: string) => {
-    setDailyHabits(
-      dailyHabits.map((h) =>
-        h.habitId === habitId ? { ...h, completed: !h.completed } : h
-      )
+    const next = dailyHabits.map((h) =>
+      h.habitId === habitId ? { ...h, completed: !h.completed } : h
     );
+    setDailyHabits(next);
+    persistHabits(next);
   };
 
   const completedCount = dailyHabits.filter((h) => h.completed).length;
