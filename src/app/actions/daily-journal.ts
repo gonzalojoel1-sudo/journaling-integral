@@ -2,7 +2,7 @@
 
 import { db } from '../../db/db';
 import { dailyEntries, users, habits, businessTransactions } from '../../db/schema';
-import { applyDecayAndBonus, applyStreakShield } from '../../lib/habit-strength';
+import { applyDecayAndBonus } from '../../lib/habit-strength';
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
