@@ -7,6 +7,7 @@ import { archiveHabit } from '../actions/habits';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { HabitCardSembrar } from './cards/HabitCardSembrar';
 import { HabitCardCadena } from './cards/HabitCardCadena';
+import { HabitCardCrecer } from './cards/HabitCardCrecer';
 
 interface ChainStep {
   id: string;
@@ -48,6 +49,10 @@ const domainLabels: Record<string, string> = {
 };
 
 export function HabitCard({ habit }: { habit: HabitCardHabit }) {
+  if (habit.habitType === 'crecer') {
+    return <HabitCardCrecer habit={habit} />;
+  }
+
   if (habit.habitType === 'cadena') {
     return <HabitCardCadena habit={habit} />;
   }

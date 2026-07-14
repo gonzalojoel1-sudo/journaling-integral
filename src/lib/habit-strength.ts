@@ -44,3 +44,21 @@ export function getRealTimeStrength(
   const strength = currentStrength * Math.pow(DECAY_RATE, daysSince);
   return Math.round(strength * 100) / 100;
 }
+
+export function applyStreakShield(
+  currentStreak: number,
+  currentShields: number,
+  completedToday: boolean,
+): { newStreak: number; newShields: number } {
+  if (completedToday) {
+    const newStreak = currentStreak + 1;
+    const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
+    return { newStreak, newShields };
+  }
+
+  if (currentShields > 0) {
+    return { newStreak: currentStreak, newShields: currentShields - 1 };
+  }
+
+  return { newStreak: 0, newShields: 0 };
+}

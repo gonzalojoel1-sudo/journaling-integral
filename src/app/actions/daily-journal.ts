@@ -2,7 +2,7 @@
 
 import { db } from '../../db/db';
 import { dailyEntries, users, habits, businessTransactions } from '../../db/schema';
-import { applyDecayAndBonus } from '../../lib/habit-strength';
+import { applyDecayAndBonus, applyStreakShield } from '../../lib/habit-strength';
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
@@ -238,6 +238,28 @@ export async function submitDailyEntry(formData: Record<string, any>) {
               .update(habits)
               .set({ activeAction: habitRecord.rescueAction })
               .where(eq(habits.id, habitEntry.habitId));
+          }
+        }
+
+        if (habitRecord.habitType === 'crecer') {
+          const currentStreak = habitRecord.currentStreak ?? 0;
+          const currentShields = habitRecord.streakShields ?? 0;
+
+          if (habitEntry.completed === true) {
+            const newStreak = currentStreak + 1;
+            const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
+            await db.update(habits).set({
+              currentStreak: newStreak,
+              streakShields: newShields,
+            }).where(eq(habits.id, habitEntry.habitId));
+          } else if (currentShields > 0) {
+            await db.update(habits).set({
+              streakShields: currentShields - 1,
+            }).where(eq(habits.id, habitEntry.habitId));
+          } else {
+            await db.update(habits).set({
+              currentStreak: 0,
+            }).where(eq(habits.id, habitEntry.habitId));
           }
         }
       }
