@@ -173,6 +173,9 @@ export async function upsertBusinessSetting(data: {
   defaultSaleAmount: number;
   defaultSaleCost: number;
   isActive?: boolean;
+  category?: string;
+  monthlyGoal?: number;
+  isRecurring?: boolean;
 }) {
   try {
     const v = validate(UpsertBusinessSettingSchema, data);
@@ -180,26 +183,29 @@ export async function upsertBusinessSetting(data: {
 
     const userId = await getCurrentUserId();
 
-    if (data.id) {
-      await db.update(businessSettings)
-        .set({
-          name: data.name,
-          defaultSaleAmount: data.defaultSaleAmount,
-          defaultSaleCost: data.defaultSaleCost,
-          isActive: data.isActive ? 1 : 0,
-        })
-        .where(eq(businessSettings.id, data.id));
-    } else {
-      await db.insert(businessSettings).values({
-        id: randomUUID(),
-        userId,
+    await db.insert(businessSettings).values({
+      id: data.id || randomUUID(),
+      userId,
+      name: data.name,
+      defaultSaleAmount: data.defaultSaleAmount ?? 0,
+      defaultSaleCost: data.defaultSaleCost ?? 0,
+      isActive: data.isActive ? 1 : 0,
+      category: data.category ?? 'Servicio',
+      monthlyGoal: data.monthlyGoal ?? 0,
+      isRecurring: data.isRecurring ? 1 : 0,
+      createdAt: new Date().toISOString(),
+    }).onConflictDoUpdate({
+      target: businessSettings.id,
+      set: {
         name: data.name,
-        defaultSaleAmount: data.defaultSaleAmount,
-        defaultSaleCost: data.defaultSaleCost,
+        defaultSaleAmount: data.defaultSaleAmount ?? 0,
+        defaultSaleCost: data.defaultSaleCost ?? 0,
         isActive: data.isActive ? 1 : 0,
-        createdAt: new Date().toISOString(),
-      });
-    }
+        category: data.category ?? 'Servicio',
+        monthlyGoal: data.monthlyGoal ?? 0,
+        isRecurring: data.isRecurring ? 1 : 0,
+      },
+    });
 
     revalidatePath('/negocio');
     revalidatePath('/');
