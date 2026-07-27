@@ -11,9 +11,9 @@ interface BusinessSetting {
   defaultSaleAmount: number;
   defaultSaleCost: number;
   isActive: number;
-  category: string;
-  monthlyGoal: number;
-  isRecurring: number;
+  category?: string;
+  monthlyGoal?: number;
+  isRecurring?: number;
 }
 
 interface BusinessSettingsModalProps {

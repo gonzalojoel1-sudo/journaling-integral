@@ -170,12 +170,12 @@ export async function getBusinessSettingsList() {
 export async function upsertBusinessSetting(data: {
   id?: string;
   name: string;
-  defaultSaleAmount: number;
-  defaultSaleCost: number;
+  defaultSaleAmount?: number;
+  defaultSaleCost?: number;
   isActive?: boolean;
   category?: string;
   monthlyGoal?: number;
-  isRecurring?: boolean;
+  isRecurring?: number;
 }) {
   try {
     const v = validate(UpsertBusinessSettingSchema, data);

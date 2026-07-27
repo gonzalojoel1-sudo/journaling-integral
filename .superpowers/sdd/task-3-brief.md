@@ -1,164 +1,96 @@
-### Task 3: Crecer ⚡ — Momentum Streak with Shield
+## Task 3: BusinessSettingsModal - add 3 new fields to form
 
 **Files:**
-- Create: `src/app/habits/cards/HabitCardCrecer.tsx`
-- Modify: `src/app/habits/habitCards.tsx` (add Crecer routing)
-- Modify: `src/app/actions/daily-journal.ts` (shield earn/consume logic)
-- Modify: `src/lib/habit-strength.ts` (add shield calculation)
+- Modify: `src/components/business/BusinessSettingsModal.tsx`
 
 **Interfaces:**
-- Consumes: `habits.streakShields`, `habits.currentStreak`
-- Produces: HabitCardCrecer with flame tiers + shield icons
+- Produces: BusinessSettingsModal form now includes category select, monthlyGoal input, isRecurring toggle
 
-- [ ] **Step 1: Create HabitCardCrecer component**
+- [ ] **Step 1: Add new state fields**
 
-Create `src/app/habits/cards/HabitCardCrecer.tsx`:
+In `BusinessSettingsModal`, add state for the 3 new fields:
+```typescript
+const [newCategory, setNewCategory] = useState('Servicio');
+const [newMonthlyGoal, setNewMonthlyGoal] = useState('');
+const [newIsRecurring, setNewIsRecurring] = useState(false);
+```
 
+- [ ] **Step 2: Add category select to new unit form**
+
+In the `showNew` form (around line 152-175), add after the name input:
 ```tsx
-'use client';
-
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Shield } from 'lucide-react';
-
-interface CrecerHabit {
-  id: string;
-  name: string;
-  anchor?: string | null;
-  currentStrength?: number;
-  currentStreak?: number;
-  streakShields?: number;
-}
-
-const STREAK_TIERS = [
-  { min: 0, icon: '🔥', label: 'Empezando' },
-  { min: 7, icon: '🔥', label: 'Consistente' },
-  { min: 14, icon: '🔥🔥', label: 'Disciplinado' },
-  { min: 21, icon: '🔥🔥🔥', label: 'Imparable' },
-  { min: 30, icon: '👑', label: 'Maestro' },
-];
-
-function getTier(streak: number) {
-  for (let i = STREAK_TIERS.length - 1; i >= 0; i--) {
-    if (streak >= STREAK_TIERS[i].min) return STREAK_TIERS[i];
-  }
-  return STREAK_TIERS[0];
-}
-
-export function HabitCardCrecer({ habit }: { habit: CrecerHabit }) {
-  const [expanded, setExpanded] = useState(false);
-  const streak = habit.currentStreak ?? 0;
-  const shields = habit.streakShields ?? 0;
-  const tier = getTier(streak);
-
-  return (
-    <div className="border-l-4 border-l-stone-600 bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800 cursor-pointer transition-all duration-300 hover:shadow-md"
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">
-            ⚡ Crecer · {tier.icon} {tier.label}
-          </span>
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mt-1">{habit.name}</h3>
-        </div>
-        <div className="flex items-center gap-1">
-          {Array.from({ length: shields }).map((_, i) => (
-            <Shield key={i} className="h-4 w-4 text-amber-500" />
-          ))}
-          {expanded ? <ChevronUp className="h-4 w-4 text-stone-400" /> : <ChevronDown className="h-4 w-4 text-stone-400" />}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-2xl">{tier.icon}</span>
-        <span className="font-bold text-stone-800 dark:text-stone-200">{streak} días seguidos</span>
-      </div>
-
-      {expanded && (
-        <div className="mt-3 space-y-2 text-xs text-stone-500">
-          {habit.anchor && <p>🔗 Anclado a: <span className="text-stone-700 dark:text-stone-300">{habit.anchor}</span></p>}
-          <p>🛡️ Escudos: {shields}/2 (1 cada 7 días)</p>
-        </div>
-      )}
-    </div>
-  );
-}
+<select
+  value={newCategory}
+  onChange={(e) => setNewCategory(e.target.value)}
+  className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200 outline-none focus:border-emerald-500/50"
+>
+  <option value="Servicio">Servicio</option>
+  <option value="Producto">Producto</option>
+  <option value="Curso">Curso</option>
+  <option value="Mentoría">Mentoría</option>
+</select>
 ```
 
-- [ ] **Step 2: Add shield earn/consume logic to daily-journal.ts**
+- [ ] **Step 3: Add monthlyGoal input**
 
-In `src/app/actions/daily-journal.ts`, inside the habit loop, after strength update, add Crecer logic:
+Add after the cost input:
+```tsx
+<input
+  type="number"
+  value={newMonthlyGoal}
+  onChange={(e) => setNewMonthlyGoal(e.target.value)}
+  placeholder="Meta mensual ($)"
+  className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+/>
+```
 
+- [ ] **Step 4: Add isRecurring toggle**
+
+Add a toggle after the form fields:
+```tsx
+<label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer">
+  <input
+    type="checkbox"
+    checked={newIsRecurring}
+    onChange={(e) => setNewIsRecurring(e.target.checked)}
+    className="rounded border-zinc-300 dark:border-zinc-600"
+  />
+  ¿Es recurrente? (ingresos mensuales/suscripciones)
+</label>
+```
+
+- [ ] **Step 5: Update handleCreate to pass new fields**
+
+In `handleCreate`, add the 3 new fields to the upsert call:
 ```typescript
-if (habitRecord.habitType === 'crecer') {
-  const currentStreak = habitRecord.currentStreak ?? 0;
-  const currentShields = habitRecord.streakShields ?? 0;
-
-  if (habitEntry.completed === true) {
-    const newStreak = currentStreak + 1;
-    const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
-    await db.update(habits).set({
-      currentStreak: newStreak,
-      streakShields: newShields,
-    }).where(eq(habits.id, habitEntry.habitId));
-  } else if (currentShields > 0) {
-    // Consume a shield — streak freezes, doesn't reset
-    await db.update(habits).set({
-      streakShields: currentShields - 1,
-    }).where(eq(habits.id, habitEntry.habitId));
-  } else {
-    // No shields — streak resets
-    await db.update(habits).set({
-      currentStreak: 0,
-    }).where(eq(habits.id, habitEntry.habitId));
-  }
-}
+await upsertBusinessSetting({
+  name: newName,
+  defaultSaleAmount: Number(newAmount) || 0,
+  defaultSaleCost: Number(newCost) || 0,
+  category: newCategory,
+  monthlyGoal: Number(newMonthlyGoal) || 0,
+  isRecurring: newIsRecurring ? 1 : 0,
+  isActive: true,
+});
 ```
 
-- [ ] **Step 3: Add shield logic to habit-strength.ts**
-
-Add a new exported function:
-
+Also reset the new fields after creation:
 ```typescript
-export function applyStreakShield(
-  currentStreak: number,
-  currentShields: number,
-  completedToday: boolean,
-): { newStreak: number; newShields: number } {
-  if (completedToday) {
-    const newStreak = currentStreak + 1;
-    const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
-    return { newStreak, newShields };
-  }
-
-  if (currentShields > 0) {
-    return { newStreak: currentStreak, newShields: currentShields - 1 };
-  }
-
-  return { newStreak: 0, newShields: 0 };
-}
+setNewCategory('Servicio');
+setNewMonthlyGoal('');
+setNewIsRecurring(false);
 ```
 
-- [ ] **Step 4: Add Crecer routing to habitCards.tsx**
+- [ ] **Step 6: Add fields to existing unit editing**
 
-```typescript
-import { HabitCardCrecer } from './cards/HabitCardCrecer';
+In the `handleSaveItem` function and the per-unit editing UI (inside the `items.map`), add the same 3 fields so existing units can be updated. This requires:
+- Update the `handleUpdateField` to handle 'category', 'monthlyGoal', 'isRecurring'
+- Add category select, monthlyGoal input, and recurring toggle to each existing unit card
 
-if (habit.habitType === 'crecer') {
-  return <HabitCardCrecer habit={habit} />;
-}
-```
-
-- [ ] **Step 5: Verify TypeScript compiles**
-
-Run: `npx tsc --noEmit`
-Expected: No errors.
-
-- [ ] **Step 6: Commit**
-
+- [ ] **Step 7: Commit**
 ```bash
-git add src/app/habits/cards/HabitCardCrecer.tsx src/app/actions/daily-journal.ts src/lib/habit-strength.ts src/app/habits/habitCards.tsx
-git commit -m "feat: Crecer momentum streak with shield system (earn 1 per 7 days, max 2)"
+git add src/components/business/BusinessSettingsModal.tsx
+git commit -m "feat(business): add category, monthlyGoal, isRecurring to unit form"
 ```
 
 ---

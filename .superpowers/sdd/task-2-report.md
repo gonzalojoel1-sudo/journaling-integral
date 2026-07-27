@@ -1,27 +1,58 @@
-# Task 2: Cadena ⛓️ — Sequential Chain with Anchor
+# Task 2 Report: upsertBusinessSetting accepts new fields
 
-**Status:** DONE_WITH_CONCERNS
+**Date:** 2026-07-26
+**Status:** Completed
 
-## Commits
-- `bd7da36` feat: Cadena sequential chain with anchor block and step-by-step progress
+## Changes Made
 
-## Files Changed
-| File | Action |
-|------|--------|
-| `src/app/habits/cards/HabitCardCadena.tsx` | Created |
-| `src/lib/cadena-store.ts` | Created |
-| `src/app/habits/habitCards.tsx` | Modified — added Cadena routing, typeConfig, and ChainStep interface |
-| `src/db/schema.ts` | Modified — added `name` column to `chain_items` table |
+Modified `src/app/actions/business.ts` - `upsertBusinessSetting` function:
 
-## What Was Done
-- **HabitCardCadena**: Expandable card with anchor block (non-interactive), numbered steps with mini-checkboxes, vertical progress line that illuminates per tick, neon glow on all-steps-complete, and compact summary.
-- **cadena-store.ts**: `getChainWithSteps(chainId)` function querying `chains` + `chain_items` via Drizzle ORM.
-- **habitCards.tsx**: Added `cadena` → `HabitCardCadena` routing before `sembrar`. Added `ChainStep` interface and `chainSteps`/`chainId` to `HabitCardHabit`.
-- **Schema**: Added optional `name` column to `chain_items` — steps are inline (name-only), not reliant on the `habitId` FK.
+### Function Signature Updated
+Added 3 new optional parameters to the data object:
+- `category?: string` (default: 'Servicio')
+- `monthlyGoal?: number` (default: 0)
+- `isRecurring?: boolean` (default: 0/false)
 
-## TypeScript Verification
-- `npx tsc --noEmit` — **No errors.**
+### Implementation
+Converted from conditional update/insert pattern to upsert with `onConflictDoUpdate`:
 
-## Concerns
-1. **DB migration needed**: The `chain_items.name` column was added to the schema but no migration was run. The table in SQLite won't have the column until a migration (`drizzle-kit push` or similar) is executed. Without it, the app will error at runtime when trying to read/write `.name`.
-2. **Inline vs FK**: The existing `chain_items.habitId` FK remains in the schema but isn't used by the Cadena component. This is intentional per the brief (steps are inline), but the FK reference might cause confusion. Consider either dropping it in a future migration or keeping it for legacy.
+**Insert values now include:**
+- `category: data.category ?? 'Servicio'`
+- `monthlyGoal: data.monthlyGoal ?? 0`
+- `isRecurring: data.isRecurring ? 1 : 0`
+
+**onConflictDoUpdate set now includes:**
+- `category: data.category ?? 'Servicio'`
+- `monthlyGoal: data.monthlyGoal ?? 0`
+- `isRecurring: data.isRecurring ? 1 : 0`
+
+## Commit
+Message: `feat(business): upsertBusinessSetting accepts category, monthlyGoal, isRecurring`
+
+---
+
+## Review Verdict
+
+**Date:** 2026-07-26
+
+### SPEC COMPLIANCE: PASS
+
+| Requirement | Implementation | Status |
+|-------------|----------------|--------|
+| `category` default 'Servicio' | `data.category ?? 'Servicio'` | ✓ |
+| `monthlyGoal` default 0 | `data.monthlyGoal ?? 0` | ✓ |
+| `isRecurring` default 0 | `data.isRecurring ? 1 : 0` | ✓ |
+| Insert includes all 3 fields | Insert values block includes category, monthlyGoal, isRecurring | ✓ |
+| onConflictDoUpdate updates all 3 | set object includes category, monthlyGoal, isRecurring | ✓ |
+
+### CODE QUALITY: PASS
+
+1. **Upsert pattern correct**: Properly converted from conditional update/insert to single `db.insert().onConflictDoUpdate()` call
+2. **Target correct**: `target: businessSettings.id` correctly specified
+3. **Set object complete**: All fields (including existing ones) are in the update set
+4. **Type handling**: Boolean `isRecurring` correctly converted to integer 0/1 for SQLite storage
+5. **Default handling**: Consistent use of `??` operator for category and monthlyGoal; `? :` pattern for isRecurring (equivalent since undefined is falsy)
+
+### Summary
+
+Implementation correctly follows the brief. All 3 new fields are properly accepted with correct defaults, included in insert values, and updated via onConflictDoUpdate.

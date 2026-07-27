@@ -1,129 +1,134 @@
-### Task 5: Preciso 🎯 — One-Click Execution
+## Task 5: CentroMandoDashboard - add gate + prominent CTA button
 
 **Files:**
-- Create: `src/app/habits/cards/HabitCardPreciso.tsx`
-- Modify: `src/app/habits/habitCards.tsx` (add Preciso routing)
-- Modify: `src/app/actions/daily-journal.ts` (single-click + no-decay-if-no-trigger)
+- Modify: `src/app/negocio/CentroMandoDashboard.tsx`
 
 **Interfaces:**
-- Consumes: `habits.ifTrigger`, `habits.ifAction`, `habits.triggerHitCount`, `habits.actionExecutedCount`
-- Produces: single smart button, execution rate display
+- Consumes: `settingsList` prop
+- Produces: Gate renders when no units, new "CREAR UNIDAD" button in header
 
-- [ ] **Step 1: Create HabitCardPreciso component**
+- [ ] **Step 1: Add gate logic**
 
-Create `src/app/habits/cards/HabitCardPreciso.tsx`:
-
+In `CentroMandoDashboard`, add check at the top of render:
 ```tsx
-'use client';
-
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Target } from 'lucide-react';
-import { StrengthBar } from '@/components/StrengthBar';
-
-interface PrecisoHabit {
-  id: string;
-  name: string;
-  ifTrigger?: string | null;
-  ifAction?: string | null;
-  triggerHitCount?: number;
-  actionExecutedCount?: number;
-  currentStrength?: number;
-}
-
-export function HabitCardPreciso({ habit }: { habit: PrecisoHabit }) {
-  const [expanded, setExpanded] = useState(false);
-  const hits = habit.triggerHitCount ?? 0;
-  const executed = habit.actionExecutedCount ?? 0;
-  const rate = hits > 0 ? Math.round((executed / hits) * 100) : 0;
-
+if (settingsList.length === 0) {
   return (
-    <div className="border-l-4 border-l-sky-500 bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800 cursor-pointer transition-all duration-300 hover:shadow-md"
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="flex items-start justify-between mb-2">
+    <div className="space-y-6 animate-fade-in">
+      <header className="flex items-center justify-between">
         <div>
-          <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">
-            🎯 Preciso
-          </span>
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mt-1">{habit.name}</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono">Panel Financiero</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 mt-1">Centro de Mando</h1>
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-stone-400" /> : <ChevronDown className="h-4 w-4 text-stone-400" />}
-      </div>
-
-      <p className="text-sm text-stone-600 dark:text-stone-400 mb-2">
-        Cuando <strong>{habit.ifTrigger}</strong> → <strong>{habit.ifAction}</strong>
-      </p>
-
-      <div className="flex items-center gap-2 text-xs text-stone-500">
-        <Target className="h-3 w-3" />
-        <span>Ejecución: <strong className="text-stone-700 dark:text-stone-300">{rate}%</strong></span>
-      </div>
-
-      {expanded && (
-        <div className="mt-3 space-y-1 text-xs text-stone-500">
-          <p>📊 Se presentó: {hits} veces</p>
-          <p>✅ Ejecutado: {executed} veces</p>
-        </div>
-      )}
-
-      <div className="mt-3">
-        <StrengthBar strength={habit.currentStrength ?? 0} />
-      </div>
+      </header>
+      <CreateFirstUnitGate />
     </div>
   );
 }
 ```
 
-- [ ] **Step 2: Add Preciso logic to daily-journal.ts**
+Import `CreateFirstUnitGate`:
+```tsx
+import { CreateFirstUnitGate } from '@/components/business/CreateFirstUnitGate';
+```
 
-Inside the habit loop, add:
+- [ ] **Step 2: Replace gear icon with prominent button**
 
-```typescript
-if (habitRecord.habitType === 'preciso') {
-  if (habitEntry.completed === true) {
-    // User clicked "trigger occurred AND executed"
-    await db.update(habits).set({
-      triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
-      actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
-    }).where(eq(habits.id, habitEntry.habitId));
-  }
-  // If not completed, trigger didn't occur — no decay applied
-  // (the caller logic in submitDailyEntry must skip decay for preciso when not completed)
+In the header, replace the `<BusinessSettings initialSettings={settingsList} />` button with:
+
+```tsx
+<div className="flex items-center gap-2">
+  {settingsList.length > 0 && (
+    <button
+      onClick={() => {/* open modal to create new unit */}}
+      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-md shadow-emerald-600/20 cursor-pointer"
+    >
+      <Plus className="h-4 w-4" />
+      CREAR UNIDAD DE NEGOCIO
+    </button>
+  )}
+  <BusinessSettings initialSettings={settingsList} />
+</div>
+```
+
+Wait — `BusinessSettings` is a button that opens a modal. We need to expose its internal toggle state OR create a new approach. Look at `BusinessSettings.tsx` — it has internal `show` state.
+
+Better approach: Make `BusinessSettings` expose an `onCreateNew` prop, OR just render the button directly in `CentroMandoDashboard` and call a server action to create.
+
+Actually, the simplest approach: keep `BusinessSettings` as-is for managing existing units. Add a separate "CREAR UNIDAD DE NEGOCIO" button that directly calls `upsertBusinessSetting` with minimal fields OR opens a dedicated modal.
+
+**Simpler approach**: Add `showNew={true}` prop to `BusinessSettingsModal` when creating from the CTA. But `BusinessSettingsModal` starts with `showNew=false`.
+
+Actually the cleanest approach: Extract the modal opening state from `BusinessSettings` or just open `BusinessSettingsModal` directly. Let me check if we can pass an initial `showNew` prop.
+
+Looking at the current `BusinessSettings` component:
+```tsx
+export function BusinessSettings({ initialSettings }: BusinessSettingsProps) {
+  const [show, setShow] = useState(false);
+  ...
+  {show && <BusinessSettingsModal settings={initialSettings} onClose={() => setShow(false)} />}
 }
 ```
 
-- [ ] **Step 3: Skip decay for Preciso when not completed**
-
-In `submitDailyEntry`, before applying decay, check:
-
-```typescript
-// Inside the habit loop, before applyDecayAndBonus:
-if (habitRecord.habitType === 'preciso' && !habitEntry.completed) {
-  // Trigger didn't occur — skip decay entirely
-  continue;
-}
+We can modify `BusinessSettings` to accept an optional `openOnMount` prop:
+```tsx
+export function BusinessSettings({ initialSettings, openOnMount = false }: BusinessSettingsProps) {
+  const [show, setShow] = useState(openOnMount);
 ```
 
-- [ ] **Step 4: Add Preciso routing to habitCards.tsx**
-
-```typescript
-import { HabitCardPreciso } from './cards/HabitCardPreciso';
-
-if (habit.habitType === 'preciso') {
-  return <HabitCardPreciso habit={habit} />;
-}
+Then in `CentroMandoDashboard`, add the button:
+```tsx
+<button
+  onClick={() => {/* open modal with new unit form visible */}}
+  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-md shadow-emerald-600/20 cursor-pointer"
+>
+  <Plus className="h-4 w-4" />
+  CREAR UNIDAD DE NEGOCIO
+</button>
 ```
 
-- [ ] **Step 5: Verify TypeScript compiles**
+But we still need to open the modal. Let me use a simpler approach: wrap the button in a state that controls the modal.
 
-Run: `npx tsc --noEmit`
-Expected: No errors.
+**Simpler approach**: Create a local `showModal` state in `CentroMandoDashboard` and render `BusinessSettingsModal` directly with `showNew={true}` for the CTA click:
 
-- [ ] **Step 6: Commit**
+```tsx
+const [showCreateModal, setShowCreateModal] = useState(false);
+...
+<button
+  onClick={() => setShowCreateModal(true)}
+  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-md shadow-emerald-600/20 cursor-pointer"
+>
+  <Plus className="h-4 w-4" />
+  CREAR UNIDAD DE NEGOCIO
+</button>
+...
+{showCreateModal && (
+  <BusinessSettingsModal
+    settings={settingsList}
+    onClose={() => setShowCreateModal(false)}
+    initialShowNew={true}
+  />
+)}
+```
 
+Modify `BusinessSettingsModal` to accept `initialShowNew` prop:
+```tsx
+interface BusinessSettingsModalProps {
+  settings: BusinessSetting[];
+  onClose: () => void;
+  initialShowNew?: boolean;
+}
+
+export function BusinessSettingsModal({ settings, onClose, initialShowNew = false }: BusinessSettingsModalProps) {
+  const [showNew, setShowNew] = useState(initialShowNew);
+```
+
+- [ ] **Step 3: Add Plus import if not present**
+Add `Plus` to lucide-react imports.
+
+- [ ] **Step 4: Commit**
 ```bash
-git add src/app/habits/cards/HabitCardPreciso.tsx src/app/actions/daily-journal.ts src/app/habits/habitCards.tsx
-git commit -m "feat: Preciso one-click execution with no-decay-when-no-trigger"
+git add src/app/negocio/CentroMandoDashboard.tsx
+git commit -m "feat(business): add unit creation gate and prominent CTA in CentroMandoDashboard"
 ```
 
 ---

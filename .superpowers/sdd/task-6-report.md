@@ -1,31 +1,35 @@
-# Task 6 Report: Pilar 🏛️ — Guardian of the Day
+# Task 6 Report: UnitPerformanceBreakdown - category/recurring badges and monthly goal progress
 
-## Status ✅ Complete
+## Status: VERIFIED - ALL REQUIREMENTS MET
 
-## Changes Made
-1. **`src/db/schema.ts`** — Added `pilarCompleted: integer('pilar_completed').default(0)` to habits table
-2. **`src/app/habits/cards/HabitCardPilar.tsx`** — New component with:
-   - Violet-accented card showing "Pilar · Hábito Clave" header
-   - Completion badge ("Día completo") when `pilarCompleted === 1`
-   - Expanded view explaining auto-completion and keystone effect
-   - `StrengthBar` for habit strength display
-3. **`src/app/habits/habitCards.tsx`** — Added `import { HabitCardPilar }` and routing for `habitType === 'pilar'`
-4. **`src/app/actions/daily-journal.ts`** — Added:
-   - Pilar tracking variables before the main habit loop
-   - Skip pilar habits from normal strength processing (continue)
-   - Track non-pilar completion counts
-   - Post-loop: auto-derive pilar completion (`allNonPilarCompleted = totalNonPilarToComplete === completedNonPilar`)
-   - Apply `pilarCompleted` flag and strength decay/bonus to pilar habits
-   - Keystone effect: boost all same-domain habits by +0.1 strength when pilar completed
+## SPEC Compliance Checklist
 
-## Verification
-- `npx tsc --noEmit` passes with zero errors
+| # | Requirement | Status |
+|---|-------------|--------|
+| 1 | UnitPerformance interface has category, isRecurring, monthlyGoal fields | ✅ Lines 79-81 |
+| 2 | CentroMandoDashboard passes these fields from settingsList into unitPerformance | ✅ Lines 163-165, preserved via spread at line 184 |
+| 3 | Category badge shows in unit row | ✅ Line 87: `{unit.category ?? 'Servicio'}` |
+| 4 | Recurring badge shows when isRecurring === 1 | ✅ Line 89: `{unit.isRecurring === 1 && ...}` |
+| 5 | Monthly goal progress bar shows when monthlyGoal > 0 | ✅ Line 146: `{unit.monthlyGoal && unit.monthlyGoal > 0 && ...}` |
+
+## Code Quality Analysis
+
+**Data Flow:**
+- `settingsList.forEach` (line 154-167): Initializes buckets with category/isRecurring/monthlyGoal from DB settings
+- `filteredTransactions.forEach` (line 169-191): Preserves these fields via `...initial` spread (line 184)
+- Fields correctly flow from settings → bucket → UnitPerformance array
+
+**Edge Case - "Sin clasificar" bucket:**
+- Transactions with source not in `settingsList` create a bucket without category/isRecurring/monthlyGoal
+- This is expected: unclassified transactions have no associated business unit settings
+- UI gracefully handles: category defaults to 'Servicio', no recurring badge, no progress bar
+
+## Type Errors
+Pre-existing type errors unrelated to this task:
+- `BusinessSetting[]` vs `BusinessUnit[]` type mismatch between components
+- These errors existed before this task (verified via `git stash` + tsc)
 
 ## Commit
-`f062a99` — `feat: Pilar guardian-of-the-day with auto-derived completion`
-
-## Notes
-- Pilar completion is derived entirely server-side from non-pilar habit completions
-- No separate checkbox needed in the UI
-- Keystone domain boost (from brief) is preserved: when pilar completes, all active same-domain habits get +0.1 strength
-- Schema migration for `pilar_completed` column will need to be run against production DB
+```
+feat(business): show category/recurring badges and monthly goal progress in breakdown
+```

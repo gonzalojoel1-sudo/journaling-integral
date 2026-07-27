@@ -261,9 +261,12 @@ export const UpsertBusinessSettingSchema = z.object({
     .string()
     .min(1, 'El nombre es requerido')
     .max(100, 'Máximo 100 caracteres'),
-  defaultSaleAmount: z.number().positive('El monto de venta debe ser positivo'),
-  defaultSaleCost: z.number().min(0, 'El costo no puede ser negativo'),
+  defaultSaleAmount: z.number().min(0).optional(),
+  defaultSaleCost: z.number().min(0).optional(),
   isActive: z.boolean().optional(),
+  category: z.string().optional(),
+  monthlyGoal: z.number().min(0).optional(),
+  isRecurring: z.number().min(0).max(1).optional(),
 });
 
 export type UpsertBusinessSettingInput = z.infer<

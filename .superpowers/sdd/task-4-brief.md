@@ -1,153 +1,149 @@
-### Task 4: Cambiar 🔄 — New Neural Path Builder (100% Positive)
+## Task 4: CreateFirstUnitGate component
 
 **Files:**
-- Create: `src/app/habits/cards/HabitCardCambiar.tsx`
-- Modify: `src/app/habits/habitCards.tsx` (add Cambiar routing)
-- Modify: `src/app/habits/HabitWizard.tsx` (add paired creation flow)
-- Modify: `src/app/actions/daily-journal.ts` (victory tracking — no penalty)
+- Create: `src/components/business/CreateFirstUnitGate.tsx`
 
 **Interfaces:**
-- Consumes: `habits.victoryCount`, `habits.temptationCount`, `habits.oldRoutine`, `habits.newRoutine`
-- Produces: single-bar victory tracker, no shame UI
+- Consumes: `onCreated: () => void` callback
+- Produces: `CreateFirstUnitGate` component
 
-- [ ] **Step 1: Create HabitCardCambiar component**
+- [ ] **Step 1: Create the component**
 
-Create `src/app/habits/cards/HabitCardCambiar.tsx`:
+Create `src/components/business/CreateFirstUnitGate.tsx` with a full-page centered layout:
 
 ```tsx
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Brain } from 'lucide-react';
-import { StrengthBar } from '@/components/StrengthBar';
+import React, { useState } from 'react';
+import { Briefcase } from 'lucide-react';
+import { upsertBusinessSetting } from '@/app/actions/business';
+import { useRouter } from 'next/navigation';
 
-interface CambiarHabit {
-  id: string;
-  name: string;
-  newRoutine?: string | null;
-  oldRoutine?: string | null;
-  victoryCount?: number;
-  currentStrength?: number;
-}
+const CATEGORIES = ['Servicio', 'Producto', 'Curso', 'Mentoría'];
 
-const VICTORY_TARGET = 30;
+export function CreateFirstUnitGate() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('Servicio');
+  const [saleAmount, setSaleAmount] = useState('');
+  const [cost, setCost] = useState('');
+  const [monthlyGoal, setMonthlyGoal] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-export function HabitCardCambiar({ habit }: { habit: CambiarHabit }) {
-  const [expanded, setExpanded] = useState(false);
-  const victories = habit.victoryCount ?? 0;
-  const pct = Math.min(Math.round((victories / VICTORY_TARGET) * 100), 100);
+  const handleCreate = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    await upsertBusinessSetting({
+      name,
+      defaultSaleAmount: Number(saleAmount) || 0,
+      defaultSaleCost: Number(cost) || 0,
+      category,
+      monthlyGoal: Number(monthlyGoal) || 0,
+      isRecurring: isRecurring ? 1 : 0,
+      isActive: true,
+    });
+    router.refresh();
+  };
 
   return (
-    <div className="border-l-4 border-l-amber-500 bg-white dark:bg-stone-900 rounded-xl p-4 shadow-sm border border-stone-200 dark:border-stone-800 cursor-pointer transition-all duration-300 hover:shadow-md"
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">
-            🔄 Nueva Ruta Neuronal
-          </span>
-          <h3 className="text-lg font-semibold text-stone-900 dark:text-stone-100 mt-1">{habit.name}</h3>
+    <div className="min-h-[70vh] flex items-center justify-center">
+      <div className="max-w-lg w-full p-8 space-y-6 text-center">
+        <div className="inline-flex h-16 w-16 rounded-2xl bg-emerald-500/10 items-center justify-center mb-4">
+          <Briefcase className="h-8 w-8 text-emerald-500" />
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-stone-400" /> : <ChevronDown className="h-4 w-4 text-stone-400" />}
-      </div>
+        <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-100">
+          Crea tu primera unidad de negocio
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Define qué vendes para empezar a trackear tu negocio. Puedes agregar más después.
+        </p>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Brain className="h-4 w-4 text-amber-500" />
-          <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
-            🏆 {victories}/{VICTORY_TARGET} victorias
-          </span>
-        </div>
-        <div className="h-2 w-full bg-stone-200 dark:bg-stone-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-amber-500 rounded-full transition-all duration-700"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6 space-y-4 text-left">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono block mb-1">Nombre</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej. Sesión de Coaching, Curso de Marketing"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400"
+            />
+          </div>
 
-      {expanded && (
-        <div className="mt-3 space-y-2 text-xs text-stone-500">
-          <p>🧠 Nuevo camino: <span className="text-stone-700 dark:text-stone-300 font-medium">{habit.newRoutine}</span></p>
-          <p>→ Has elegido tu nueva identidad {victories} veces</p>
-          {victories >= VICTORY_TARGET && (
-            <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center">
-              <p className="text-sm font-bold text-amber-600 dark:text-amber-400">¡Has construido una nueva ruta neuronal! 🧠✨</p>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono block mb-1">Categoría</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-emerald-500/50"
+            >
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono block mb-1">Precio de venta ($)</label>
+              <input
+                type="number"
+                value={saleAmount}
+                onChange={(e) => setSaleAmount(e.target.value)}
+                placeholder="0"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400"
+              />
             </div>
-          )}
-        </div>
-      )}
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono block mb-1">Costo ($)</label>
+              <input
+                type="number"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                placeholder="0"
+                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400"
+              />
+            </div>
+          </div>
 
-      <div className="mt-3">
-        <StrengthBar strength={habit.currentStrength ?? 0} />
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono block mb-1">Meta mensual ($)</label>
+            <input
+              type="number"
+              value={monthlyGoal}
+              onChange={(e) => setMonthlyGoal(e.target.value)}
+              placeholder="Ingreso objetivo mensual"
+              className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400"
+            />
+          </div>
+
+          <label className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl">
+            <input
+              type="checkbox"
+              checked={isRecurring}
+              onChange={(e) => setIsRecurring(e.target.checked)}
+              className="rounded border-zinc-300 dark:border-zinc-600 w-4 h-4"
+            />
+            ¿Es recurrente? (ingresos mensuales o suscripciones)
+          </label>
+
+          <button
+            onClick={handleCreate}
+            disabled={saving || !name.trim()}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-bold px-6 py-4 rounded-xl text-sm transition-colors shadow-md shadow-emerald-600/20 cursor-pointer"
+          >
+            {saving ? 'Creando...' : 'Crear mi primera unidad'}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 ```
 
-- [ ] **Step 2: Add victory tracking to daily-journal.ts**
-
-Inside the habit loop, after strength update:
-
-```typescript
-if (habitRecord.habitType === 'cambiar') {
-  if (habitEntry.completed === true) {
-    // Only count victories — no penalty for misses
-    await db.update(habits).set({
-      victoryCount: (habitRecord.victoryCount ?? 0) + 1,
-    }).where(eq(habits.id, habitEntry.habitId));
-  }
-  // If temptation appeared but user didn't complete, log internally (no display)
-  if (habitEntry.temptationAppeared && !habitEntry.completed) {
-    await db.update(habits).set({
-      temptationCount: (habitRecord.temptationCount ?? 0) + 1,
-    }).where(eq(habits.id, habitEntry.habitId));
-  }
-}
-```
-
-- [ ] **Step 3: Modify HabitWizard for Cambiar paired creation**
-
-In `src/app/habits/HabitWizard.tsx`, add a new step or modify step 2 to capture the old routine when user selects "cambiar":
-
-Add to wizard data:
-```typescript
-type WizardData = {
-  // ... existing fields ...
-  oldRoutine: string;
-  newRoutine: string;
-  cue: string;
-};
-```
-
-After step 2 (if user chose "cambiar"), show:
-- "¿Qué disparador desencadena ese hábito?" → `cue`
-- "¿Qué haces exactamente?" → `oldRoutine`
-- "¿Qué harás en su lugar?" → `newRoutine`
-
-When submitting a Cambiar habit, pass `oldRoutine`, `newRoutine`, `cue`.
-
-- [ ] **Step 4: Add Cambiar routing to habitCards.tsx**
-
-```typescript
-import { HabitCardCambiar } from './cards/HabitCardCambiar';
-
-if (habit.habitType === 'cambiar') {
-  return <HabitCardCambiar habit={habit} />;
-}
-```
-
-- [ ] **Step 5: Verify TypeScript compiles**
-
-Run: `npx tsc --noEmit`
-Expected: No errors.
-
-- [ ] **Step 6: Commit**
-
+- [ ] **Step 2: Commit**
 ```bash
-git add src/app/habits/cards/HabitCardCambiar.tsx src/app/actions/daily-journal.ts src/app/habits/HabitWizard.tsx src/app/habits/habitCards.tsx
-git commit -m "feat: Cambiar positive-only substitution with victory tracking and no-shame UI"
+git add src/components/business/CreateFirstUnitGate.tsx
+git commit -m "feat(business): add CreateFirstUnitGate full-page component"
 ```
 
 ---
