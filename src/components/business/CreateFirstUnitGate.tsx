@@ -20,19 +20,27 @@ export function CreateFirstUnitGate() {
   const handleCreate = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    const result = await upsertBusinessSetting({
-      name,
-      defaultSaleAmount: Number(saleAmount) || 0,
-      defaultSaleCost: Number(cost) || 0,
-      category,
-      monthlyGoal: Number(monthlyGoal) || 0,
-      isRecurring: isRecurring ? 1 : 0,
-      isActive: true,
-    });
-    if (result?.success) {
-      router.refresh();
-      router.push('/negocio');
-    } else {
+    console.log('[GATE] Creating unit:', { name, category, saleAmount, cost, monthlyGoal, isRecurring });
+    try {
+      const result = await upsertBusinessSetting({
+        name,
+        defaultSaleAmount: Number(saleAmount) || 0,
+        defaultSaleCost: Number(cost) || 0,
+        category,
+        monthlyGoal: Number(monthlyGoal) || 0,
+        isRecurring: isRecurring ? 1 : 0,
+        isActive: true,
+      });
+      console.log('[GATE] Result:', result);
+      if (result?.success) {
+        router.refresh();
+        router.replace('/negocio');
+      } else {
+        console.error('[GATE] Server returned error:', result?.error);
+        setSaving(false);
+      }
+    } catch (err) {
+      console.error('[GATE] Client exception:', err);
       setSaving(false);
     }
   };

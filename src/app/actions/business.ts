@@ -179,11 +179,15 @@ export async function upsertBusinessSetting(data: {
 }) {
   try {
     const v = validate(UpsertBusinessSettingSchema, data);
-    if (!v.success) return { success: false, error: v.error };
+    if (!v.success) {
+      console.error('[SETTINGS] Validation failed:', v.error);
+      return { success: false, error: v.error };
+    }
 
     const userId = await getCurrentUserId();
+    console.log('[SETTINGS] Creating/updating:', { userId, data });
 
-    await db.insert(businessSettings).values({
+    const insertResult = await db.insert(businessSettings).values({
       id: data.id || randomUUID(),
       userId,
       name: data.name,
@@ -207,12 +211,13 @@ export async function upsertBusinessSetting(data: {
       },
     });
 
+    console.log('[SETTINGS] Insert result:', JSON.stringify(insertResult));
     revalidatePath('/negocio');
     revalidatePath('/');
     return { success: true };
   } catch (error) {
     console.error('[SETTINGS] Error:', error);
-    return { success: false, error: 'Failed to save settings' };
+    return { success: false, error: String(error) };
   }
 }
 
