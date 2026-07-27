@@ -20,7 +20,7 @@ export function CreateFirstUnitGate() {
   const handleCreate = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    await upsertBusinessSetting({
+    const result = await upsertBusinessSetting({
       name,
       defaultSaleAmount: Number(saleAmount) || 0,
       defaultSaleCost: Number(cost) || 0,
@@ -29,7 +29,12 @@ export function CreateFirstUnitGate() {
       isRecurring: isRecurring ? 1 : 0,
       isActive: true,
     });
-    router.refresh();
+    if (result?.success) {
+      router.refresh();
+      router.push('/negocio');
+    } else {
+      setSaving(false);
+    }
   };
 
   return (
