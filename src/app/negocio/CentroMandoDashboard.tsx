@@ -27,6 +27,9 @@ interface BusinessUnit {
   defaultSaleAmount: number;
   defaultSaleCost: number;
   isActive: number;
+  category?: string;
+  isRecurring?: number;
+  monthlyGoal?: number;
 }
 
 interface Transaction {
@@ -157,6 +160,9 @@ export function CentroMandoDashboard({
         net: 0,
         margin: 0,
         count: 0,
+        category: s.category,
+        isRecurring: s.isRecurring,
+        monthlyGoal: s.monthlyGoal,
       });
     });
 

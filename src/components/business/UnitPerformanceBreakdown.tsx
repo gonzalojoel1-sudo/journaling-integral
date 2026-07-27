@@ -11,6 +11,9 @@ export interface UnitPerformance {
   net: number;
   margin: number;
   count: number;
+  category?: string;
+  isRecurring?: number;
+  monthlyGoal?: number;
 }
 
 interface UnitPerformanceBreakdownProps {
@@ -75,9 +78,21 @@ export function UnitPerformanceBreakdown({ data, periodLabel }: UnitPerformanceB
 
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
-                      {unit.name}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">
+                        {unit.name}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
+                          {unit.category ?? 'Servicio'}
+                        </span>
+                        {unit.isRecurring === 1 && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                            Recurrente
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span
                         className={`text-[9px] font-mono tabular-nums ${
@@ -128,6 +143,20 @@ export function UnitPerformanceBreakdown({ data, periodLabel }: UnitPerformanceB
                       {unit.count} {unit.count === 1 ? 'mov.' : 'movs.'}
                     </span>
                   </div>
+                  {unit.monthlyGoal && unit.monthlyGoal > 0 && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-[9px] font-mono text-zinc-400 mb-1">
+                        <span>Meta mensual</span>
+                        <span>{formatCurrency(unit.income)} / {formatCurrency(unit.monthlyGoal)}</span>
+                      </div>
+                      <div className="relative h-1.5 bg-zinc-100 dark:bg-zinc-800/50 rounded-full overflow-hidden">
+                        <div
+                          className="absolute inset-y-0 left-0 bg-emerald-500/70 rounded-full transition-all duration-700"
+                          style={{ width: `${Math.min(100, (unit.income / unit.monthlyGoal) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
