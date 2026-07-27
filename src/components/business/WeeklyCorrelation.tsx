@@ -59,11 +59,11 @@ export function WeeklyCorrelation({ data }: WeeklyCorrelationProps) {
 
       <div className="flex items-end justify-between gap-1 h-28 px-1">
         {data.map((day) => {
-          const barHeight = Math.max(Math.round((day.cashCollected / maxCash) * 100), 2);
+          const barHeight = Math.max(Math.round((day.cashCollected / maxCash) * 100), 4);
 
           return (
-            <div key={day.date} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-              <div className="flex flex-col items-center gap-1 w-full">
+            <div key={day.date} className="flex-1 h-full flex flex-col items-center gap-1.5 min-w-0">
+              <div className="flex-1 w-full flex flex-col items-center justify-end">
                 <div
                   className="w-full max-w-[28px] bg-zinc-400/60 dark:bg-zinc-400/50 rounded-t-sm transition-all duration-700"
                   style={{ height: `${barHeight}%` }}

@@ -195,3 +195,4 @@ CREATE TABLE `weekly_plans` (
 	`created_at` text NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
+

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Plus, Pencil, Trash2, X, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   updateBusinessTransaction,
@@ -24,6 +24,16 @@ interface TransactionLedgerProps {
   transactions: Transaction[];
 }
 
+type FilterPeriod = 'today' | 'week' | 'month' | 'sixMonths' | 'all';
+
+const FILTERS: { key: FilterPeriod; label: string }[] = [
+  { key: 'today', label: 'Hoy' },
+  { key: 'week', label: 'Esta semana' },
+  { key: 'month', label: 'Este mes' },
+  { key: 'sixMonths', label: 'Últimos 6 meses' },
+  { key: 'all', label: 'Siempre' },
+];
+
 function formatDate(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   return `${d}/${m}`;
@@ -31,6 +41,35 @@ function formatDate(dateStr: string): string {
 
 function formatCurrency(n: number): string {
   return `$${n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function filterTransactions(transactions: Transaction[], period: FilterPeriod): Transaction[] {
+  if (period === 'all') return transactions;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  const cutoff = new Date(today);
+  if (period === 'today') {
+    return transactions.filter((t) => t.date === todayStr);
+  }
+  if (period === 'week') {
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return transactions.filter((t) => t.date >= cutoffStr);
+  }
+  if (period === 'month') {
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return transactions.filter((t) => t.date >= cutoffStr);
+  }
+  if (period === 'sixMonths') {
+    cutoff.setDate(cutoff.getDate() - 183);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return transactions.filter((t) => t.date >= cutoffStr);
+  }
+  return transactions;
 }
 
 interface EditFormData {
@@ -59,6 +98,13 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
   const [showNew, setShowNew] = useState(false);
   const [editForm, setEditForm] = useState<EditFormData>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(transactions.length <= 20);
+  const [filter, setFilter] = useState<FilterPeriod>('month');
+
+  const filteredTransactions = useMemo(
+    () => filterTransactions(transactions, filter),
+    [transactions, filter],
+  );
 
   const handleEdit = (tx: Transaction) => {
     setEditingId(tx.id);
@@ -202,24 +248,72 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
 
   return (
     <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono">
-          Ledger de Transacciones
-        </span>
-        <div className="flex items-center gap-3">
-          <span className="text-[9px] font-mono text-zinc-400 dark:text-zinc-600">
-            {transactions.length} registros
+      <div
+        className="flex items-center justify-between mb-4 cursor-pointer select-none"
+        onClick={() => setIsExpanded((v) => !v)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono">
+            Ledger de Transacciones
           </span>
+          <span className="text-[9px] font-mono text-zinc-400 dark:text-zinc-600">
+            ({filteredTransactions.length} de {transactions.length})
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {isExpanded && (
+            <>
+              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/50 rounded-lg p-0.5">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFilter(f.key);
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-medium transition-colors ${
+                      filter === f.key
+                        ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openNew();
+                }}
+                className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-300 font-medium px-3 py-1.5 rounded-lg text-[10px] transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Nueva
+              </button>
+            </>
+          )}
           <button
-            onClick={openNew}
-            className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-300 font-medium px-3 py-1.5 rounded-lg text-[10px] transition-colors"
+            type="button"
+            aria-label={isExpanded ? 'Colapsar ledger' : 'Expandir ledger'}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded((v) => !v);
+            }}
+            className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 transition-colors"
           >
-            <Plus className="h-3 w-3" />
-            Nueva
+            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
         </div>
       </div>
 
+      {!isExpanded && (
+        <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 text-center py-3">
+          Click para expandir · {filteredTransactions.length} {filteredTransactions.length === 1 ? 'transacción' : 'transacciones'} visibles con el filtro &quot;{FILTERS.find((f) => f.key === filter)?.label}&quot;
+        </p>
+      )}
+
+      {isExpanded && (
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -320,7 +414,7 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
               </tr>
             )}
 
-            {transactions.map((tx) => {
+            {filteredTransactions.map((tx) => {
               if (editingId === tx.id) return editRow(tx);
 
               const marginAmount = tx.type === 'ingreso' ? tx.amount - tx.cost : null;
@@ -404,6 +498,12 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
           </tbody>
         </table>
       </div>
+      )}
+      {isExpanded && filteredTransactions.length === 0 && (
+        <p className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 text-center py-6">
+          No hay transacciones en este periodo
+        </p>
+      )}
     </div>
   );
 }

@@ -23,7 +23,6 @@ import {
   AlertTriangle,
   BookOpen,
   Trophy,
-  Mic,
 } from 'lucide-react';
 import { PriorityChecklist } from './dashboard/PriorityChecklist';
 import { HabitProgress } from './dashboard/HabitProgress';
@@ -179,13 +178,6 @@ export default async function DashboardPage() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <Link
-            href="/voice-journal"
-            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white rounded-xl transition-all shadow-lg text-xs"
-          >
-            <Mic className="w-4 h-4" />
-            <span className="font-medium hidden sm:inline">Diario por Voz</span>
-          </Link>
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center">
               <Flame className="h-3.5 w-3.5 text-amber-500" />

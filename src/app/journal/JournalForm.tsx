@@ -44,6 +44,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   const [showPlanBModal, setShowPlanBModal] = useState(!existingEntry);
   const [isPlanB, setIsPlanB] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   const [activeStep, setActiveStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -135,8 +136,12 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     return () => clearInterval(interval);
   }, [lastSaved]);
 
-  const handleSelectMode = (planB: boolean) => {
-    setIsPlanB(planB);
+  const handleSelectMode = (mode: 'normal' | 'fast' | 'voice') => {
+    if (mode === 'voice') {
+      router.push('/voice-journal');
+      return;
+    }
+    setIsPlanB(mode === 'fast');
     setShowPlanBModal(false);
   };
 
