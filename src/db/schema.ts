@@ -349,6 +349,9 @@ export const businessSettings = sqliteTable('business_settings', {
   defaultSaleAmount: real('default_sale_amount').default(0.0).notNull(),
   defaultSaleCost: real('default_sale_cost').default(0.0).notNull(),
   isActive: integer('is_active').default(1).notNull(),
+  category: text('category').default('Servicio').notNull(),
+  monthlyGoal: real('monthly_goal').default(0).notNull(),
+  isRecurring: integer('is_recurring').default(0).notNull(),
   createdAt: text('created_at').notNull(),
 });
 
@@ -450,7 +453,7 @@ export const circlesRelations = relations(circles, ({ one, many }) => ({
 export const circleMembers = sqliteTable('circle_members', {
   id: text('id').primaryKey(),
   circleId: text('circle_id').notNull().references(() => circles.id),
-  userId: text('user_id').notNull().references(() => users.id),
+  userId: text('user_id').references(() => users.id),
   invitedBy: text('invited_by').notNull().references(() => users.id),
   status: text('status').notNull().default('pending'),
   joinedAt: text('joined_at'),
