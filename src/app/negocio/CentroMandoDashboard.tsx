@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Briefcase, TrendingDown, Percent, ArrowRightLeft } from 'lucide-react';
+import { Briefcase, TrendingDown, Percent, ArrowRightLeft, Plus } from 'lucide-react';
 import { MetricCard } from '@/components/business/MetricCard';
 import { UnitPerformanceBreakdown } from '@/components/business/UnitPerformanceBreakdown';
 import type { UnitPerformance } from '@/components/business/UnitPerformanceBreakdown';
 import { TransactionLedger } from '@/components/business/TransactionLedger';
 import { BusinessSettings } from '@/app/negocio/BusinessSettings';
 import { WithdrawButton } from '@/app/negocio/WithdrawButton';
+import { CreateFirstUnitGate } from '@/components/business/CreateFirstUnitGate';
+import { BusinessSettingsModal } from '@/components/business/BusinessSettingsModal';
 
 export type FilterPeriod = 'today' | 'week' | 'month' | 'sixMonths' | 'all';
 
@@ -75,6 +77,21 @@ export function CentroMandoDashboard({
   settingsList,
 }: CentroMandoDashboardProps) {
   const [filter, setFilter] = useState<FilterPeriod>('sixMonths');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  if (settingsList.length === 0) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <header className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono">Panel Financiero</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 mt-1">Centro de Mando</h1>
+          </div>
+        </header>
+        <CreateFirstUnitGate />
+      </div>
+    );
+  }
 
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => today.toISOString().split('T')[0], [today]);
@@ -206,7 +223,16 @@ export function CentroMandoDashboard({
               </button>
             ))}
           </div>
-          <BusinessSettings initialSettings={settingsList} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors shadow-md shadow-emerald-600/20 cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              CREAR UNIDAD DE NEGOCIO
+            </button>
+            <BusinessSettings initialSettings={settingsList} />
+          </div>
           <WithdrawButton />
         </div>
       </header>
@@ -249,6 +275,14 @@ export function CentroMandoDashboard({
       <section>
         <TransactionLedger transactions={transactions} />
       </section>
+
+      {showCreateModal && (
+        <BusinessSettingsModal
+          settings={settingsList}
+          onClose={() => setShowCreateModal(false)}
+          initialShowNew={true}
+        />
+      )}
     </div>
   );
 }

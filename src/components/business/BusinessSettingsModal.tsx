@@ -19,9 +19,10 @@ interface BusinessSetting {
 interface BusinessSettingsModalProps {
   settings: BusinessSetting[];
   onClose: () => void;
+  initialShowNew?: boolean;
 }
 
-export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsModalProps) {
+export function BusinessSettingsModal({ settings, onClose, initialShowNew = false }: BusinessSettingsModalProps) {
   const router = useRouter();
   const [items, setItems] = useState(settings);
   const [saving, setSaving] = useState(false);
@@ -32,7 +33,7 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
   const [newCategory, setNewCategory] = useState('Servicio');
   const [newMonthlyGoal, setNewMonthlyGoal] = useState('');
   const [newIsRecurring, setNewIsRecurring] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+  const [showNew, setShowNew] = useState(initialShowNew);
 
   const handleSaveItem = async (item: BusinessSetting) => {
     setSaving(true);
