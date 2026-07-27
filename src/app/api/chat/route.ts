@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const userId = (session?.user as any)?.id;
   const clientId = getClientIdentifier(req, userId);
-  const { success: rateLimitOk, remaining } = rateLimit(`chat:${clientId}`, 20, 60000);
+  const { success: rateLimitOk, remaining } = await rateLimit(`chat:${clientId}`, 20, 60000);
 
   if (!rateLimitOk) {
     return new Response(
