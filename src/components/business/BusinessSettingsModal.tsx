@@ -44,7 +44,7 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
       isActive: true,
       category: item.category,
       monthlyGoal: item.monthlyGoal,
-      isRecurring: item.isRecurring ? true : false,
+      isRecurring: item.isRecurring ? 1 : 0,
     });
     setSaving(false);
     router.refresh();
@@ -68,7 +68,7 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
       isActive: true,
       category: newCategory,
       monthlyGoal: Number(newMonthlyGoal) || 0,
-      isRecurring: newIsRecurring,
+      isRecurring: newIsRecurring ? 1 : 0,
     });
     setNewName('');
     setNewAmount('');
