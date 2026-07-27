@@ -11,6 +11,9 @@ interface BusinessSetting {
   defaultSaleAmount: number;
   defaultSaleCost: number;
   isActive: number;
+  category: string;
+  monthlyGoal: number;
+  isRecurring: number;
 }
 
 interface BusinessSettingsModalProps {
@@ -26,6 +29,9 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
   const [newName, setNewName] = useState('');
   const [newAmount, setNewAmount] = useState('');
   const [newCost, setNewCost] = useState('');
+  const [newCategory, setNewCategory] = useState('Servicio');
+  const [newMonthlyGoal, setNewMonthlyGoal] = useState('');
+  const [newIsRecurring, setNewIsRecurring] = useState(false);
   const [showNew, setShowNew] = useState(false);
 
   const handleSaveItem = async (item: BusinessSetting) => {
@@ -36,6 +42,9 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
       defaultSaleAmount: item.defaultSaleAmount,
       defaultSaleCost: item.defaultSaleCost,
       isActive: true,
+      category: item.category,
+      monthlyGoal: item.monthlyGoal,
+      isRecurring: item.isRecurring ? true : false,
     });
     setSaving(false);
     router.refresh();
@@ -57,10 +66,16 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
       defaultSaleAmount: Number(newAmount) || 0,
       defaultSaleCost: Number(newCost) || 0,
       isActive: true,
+      category: newCategory,
+      monthlyGoal: Number(newMonthlyGoal) || 0,
+      isRecurring: newIsRecurring,
     });
     setNewName('');
     setNewAmount('');
     setNewCost('');
+    setNewCategory('Servicio');
+    setNewMonthlyGoal('');
+    setNewIsRecurring(false);
     setShowNew(false);
     setSaving(false);
     router.refresh();
@@ -108,6 +123,16 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
                   Eliminar
                 </button>
               </div>
+              <select
+                value={item.category}
+                onChange={(e) => handleUpdateField(item.id, 'category', e.target.value)}
+                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1.5 text-xs text-zinc-800 dark:text-zinc-300 outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
+              >
+                <option value="Servicio">Servicio</option>
+                <option value="Producto">Producto</option>
+                <option value="Curso">Curso</option>
+                <option value="Mentoría">Mentoría</option>
+              </select>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
                   <span className="text-[9px] font-mono text-zinc-500 block mb-0.5">
@@ -136,6 +161,34 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <span className="text-[9px] font-mono text-zinc-500 block mb-0.5">
+                    Meta mensual ($)
+                  </span>
+                  <input
+                    type="number"
+                    value={item.monthlyGoal}
+                    onChange={(e) =>
+                      handleUpdateField(item.id, 'monthlyGoal', Number(e.target.value))
+                    }
+                    className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1.5 text-xs text-zinc-800 dark:text-zinc-300 outline-none focus:border-zinc-400 dark:focus:border-zinc-600"
+                  />
+                </div>
+                <div className="flex-1 flex items-end">
+                  <label className="flex items-center gap-1.5 text-[9px] font-mono text-zinc-500 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.isRecurring === 1}
+                      onChange={(e) =>
+                        handleUpdateField(item.id, 'isRecurring', e.target.checked ? 1 : 0)
+                      }
+                      className="rounded border-zinc-300 dark:border-zinc-600"
+                    />
+                    ¿Recurrente?
+                  </label>
+                </div>
+              </div>
               <button
                 onClick={() => handleSaveItem(item)}
                 disabled={saving}
@@ -157,6 +210,16 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
               placeholder="Nombre del negocio"
               className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
             />
+            <select
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 outline-none focus:border-emerald-500/50"
+            >
+              <option value="Servicio">Servicio</option>
+              <option value="Producto">Producto</option>
+              <option value="Curso">Curso</option>
+              <option value="Mentoría">Mentoría</option>
+            </select>
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -173,6 +236,22 @@ export function BusinessSettingsModal({ settings, onClose }: BusinessSettingsMod
                 className="flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
               />
             </div>
+            <input
+              type="number"
+              value={newMonthlyGoal}
+              onChange={(e) => setNewMonthlyGoal(e.target.value)}
+              placeholder="Meta mensual ($)"
+              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/5 rounded-lg px-3 py-2 text-xs text-zinc-800 dark:text-zinc-300 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
+            />
+            <label className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newIsRecurring}
+                onChange={(e) => setNewIsRecurring(e.target.checked)}
+                className="rounded border-zinc-300 dark:border-zinc-600"
+              />
+              ¿Es recurrente? (ingresos mensuales/suscripciones)
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={handleCreate}
