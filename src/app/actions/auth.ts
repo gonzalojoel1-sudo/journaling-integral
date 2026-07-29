@@ -32,6 +32,36 @@ export const getCurrentUserId = cache(async (): Promise<string> => {
   return DEMO_USER_ID;
 });
 
+export async function requireCurrentUserId(): Promise<string> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      throw new Error('Unauthorized');
+    }
+
+    if (session.user.email) {
+      const dbUser = await db.query.users.findFirst({
+        where: eq(users.email, session.user.email),
+      });
+      if (dbUser) {
+        return dbUser.id;
+      }
+    }
+
+    const sessionUserId = (session.user as { id?: string }).id;
+    if (sessionUserId) {
+      return sessionUserId;
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      throw error;
+    }
+    console.error('Error al resolver ID de usuario autenticado:', error);
+  }
+
+  throw new Error('Unauthorized');
+}
+
 export const getOrCreateUserProfile = cache(async () => {
   try {
     const userId = await getCurrentUserId();
@@ -72,12 +102,12 @@ export const getOrCreateUserProfile = cache(async () => {
   }
 });
 
-export async function updateUserLevel(level: number) {
+export async function updateUserLevel(level: number, targetUserId?: string) {
   try {
     const v = validate(UpdateUserLevelSchema, { level });
     if (!v.success) return { success: false, error: v.error };
 
-    const userId = await getCurrentUserId();
+    const userId = targetUserId ?? (await getCurrentUserId());
     await db
       .update(users)
       .set({ currentLevel: level })
