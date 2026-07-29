@@ -7,6 +7,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { ThemeToggle } from './ThemeToggle';
 import { AdminControls } from './AdminControls';
 import { getUserSettings } from '@/app/actions/user-settings';
+import { ROLE_ADMIN } from '@/lib/constants-domain';
 import {
   LayoutDashboard,
   BookOpen,
@@ -67,7 +68,7 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
   const [showQuarterly, setShowQuarterly] = useState(true);
   const [showChallenges, setShowChallenges] = useState(true);
 
-  const isAdmin = session?.user?.role === 'admin';
+  const isAdmin = session?.user?.role === ROLE_ADMIN;
 
   useEffect(() => {
     setMounted(true);
@@ -171,7 +172,7 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
 function MobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === 'admin';
+  const isAdmin = session?.user?.role === ROLE_ADMIN;
   const [showBusiness, setShowBusiness] = useState(true);
   const [showFinance, setShowFinance] = useState(true);
   const [showHabits, setShowHabits] = useState(true);

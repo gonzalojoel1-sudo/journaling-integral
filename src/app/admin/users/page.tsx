@@ -5,13 +5,14 @@ import { users, dailyEntries, habits } from '../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { AdminUsersClient } from './AdminUsersClient';
 import { getUserRole } from '@/lib/auth';
+import { ROLE_ADMIN, ROLE_USER } from '@/lib/constants-domain';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminUsersPage() {
   const role = await getUserRole();
 
-  if (role !== 'admin') {
+  if (role !== ROLE_ADMIN) {
     redirect('/');
   }
 
@@ -42,7 +43,7 @@ export default async function AdminUsersPage() {
       id: u.id,
       name: u.name,
       email: u.email,
-      role: u.role || 'user',
+      role: u.role || ROLE_USER,
       currentLevel: u.currentLevel,
       streakCurrent: u.streakCurrent,
       streakMax: u.streakMax,

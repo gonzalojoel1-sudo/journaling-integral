@@ -3,6 +3,14 @@ import { users, userSettings, habits, dailyEntries, businessTransactions, person
 import { randomUUID } from 'crypto';
 import { storeEntryEmbedding, buildEntryContent } from '../lib/rag';
 import { logger } from '@/lib/logger';
+import {
+  HABIT_TYPE_PILAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CRECER,
+  ROLE_USER,
+  ANALYTICS_DAYS_WINDOW,
+} from '@/lib/constants-domain';
 
 async function runSimulationSeed() {
   if (process.env.NODE_ENV === 'production') {
@@ -22,7 +30,7 @@ async function runSimulationSeed() {
     name: 'Joel Simulador',
     email: userEmail,
     password: '$2b$10$dummy_hash_for_simulation', // Hash bcrypt dummy
-    role: 'user',
+    role: ROLE_USER,
     currentLevel: 28,
     streakCurrent: 22,
     streakMax: 45,
@@ -43,12 +51,12 @@ async function runSimulationSeed() {
 
   // 3. Crear Hábitos Core
   const habitList = [
-    { id: randomUUID(), name: 'Devocional Matutino y Oración', habitType: 'pilar', domain: 'espiritual' },
-    { id: randomUUID(), name: 'Prospectar 5 clientes (iRon Tech)', habitType: 'preciso', domain: 'trabajo' },
-    { id: randomUUID(), name: 'Cerrar caja y flujo de caja diario', habitType: 'sembrar', domain: 'trabajo' },
-    { id: randomUUID(), name: 'Entrenamiento de Fuerza', habitType: 'crecer', domain: 'cuerpo' },
-    { id: randomUUID(), name: 'Lectura de Estrategia', habitType: 'sembrar', domain: 'mente' },
-    { id: randomUUID(), name: 'Tiempo de calidad sin pantallas con la familia', habitType: 'pilar', domain: 'relaciones' },
+    { id: randomUUID(), name: 'Devocional Matutino y Oración', habitType: HABIT_TYPE_PILAR, domain: 'espiritual' },
+    { id: randomUUID(), name: 'Prospectar 5 clientes (iRon Tech)', habitType: HABIT_TYPE_PRECISO, domain: 'trabajo' },
+    { id: randomUUID(), name: 'Cerrar caja y flujo de caja diario', habitType: HABIT_TYPE_SEMBRAR, domain: 'trabajo' },
+    { id: randomUUID(), name: 'Entrenamiento de Fuerza', habitType: HABIT_TYPE_CRECER, domain: 'cuerpo' },
+    { id: randomUUID(), name: 'Lectura de Estrategia', habitType: HABIT_TYPE_SEMBRAR, domain: 'mente' },
+    { id: randomUUID(), name: 'Tiempo de calidad sin pantallas con la familia', habitType: HABIT_TYPE_PILAR, domain: 'relaciones' },
   ];
 
   for (const h of habitList) {
@@ -67,7 +75,7 @@ async function runSimulationSeed() {
   }
 
   // 4. Generar Historial de 30 Días (Simulación narrativa)
-  logger.info('simulation_generating_history', { days: 30 });
+  logger.info('simulation_generating_history', { days: ANALYTICS_DAYS_WINDOW });
 
   const textosDevocionales = [
     'Reflexión sobre la paciencia y la sabiduría en los negocios. Proverbios 16:3.',
@@ -83,7 +91,7 @@ async function runSimulationSeed() {
     'Seguimiento a prospectos antiguos. El servicio premium al cliente siempre paga.',
   ];
 
-  for (let i = 30; i >= 0; i--) {
+  for (let i = ANALYTICS_DAYS_WINDOW; i >= 0; i--) {
     const currentDate = new Date();
     currentDate.setDate(currentDate.getDate() - i);
     const dateStr = currentDate.toISOString().split('T')[0];

@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { validate, AdminDeleteUserSchema, AdminSetRoleSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
 import { requireAdmin } from '@/lib/auth';
+import type { Role } from '@/lib/constants-domain';
 
 async function checkAdmin() {
   await requireAdmin();
@@ -27,7 +28,7 @@ export async function adminDeleteUser(userId: string) {
   }
 }
 
-export async function adminSetRole(userId: string, role: 'admin' | 'user') {
+export async function adminSetRole(userId: string, role: Role) {
   try {
     const v = validate(AdminSetRoleSchema, { userId, role });
     if (!v.success) return { success: false, error: v.error };

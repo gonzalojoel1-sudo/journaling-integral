@@ -3,13 +3,14 @@ import { redirect } from 'next/navigation';
 import { getSystemTelemetry, TelemetryData } from '../../actions/admin';
 import { logger } from '@/lib/logger';
 import { getUserRole } from '@/lib/auth';
+import { ROLE_ADMIN } from '@/lib/constants-domain';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ObservabilityPage() {
   const role = await getUserRole();
 
-  if (role !== 'admin') {
+  if (role !== ROLE_ADMIN) {
     redirect('/');
   }
 

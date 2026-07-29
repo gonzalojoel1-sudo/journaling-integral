@@ -11,6 +11,16 @@ import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
 import { getSessionUser } from '@/lib/auth';
 import {
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_PILAR,
+  HABIT_NEW_HABIT_INITIAL_STRENGTH,
+  RATE_LIMIT_CHAT_PER_MIN,
+  MS_PER_MINUTE,
+} from '@/lib/constants-domain';
+import {
   formatContextForPrompt,
   type SimilarEntry,
 } from '@/lib/chat-context';
@@ -71,7 +81,7 @@ export async function POST(req: Request) {
   const sessionUser = await getSessionUser();
   const userId = sessionUser?.id ?? undefined;
   const clientId = getClientIdentifier(req, userId);
-  const { success: rateLimitOk, remaining } = await rateLimit(`chat:${clientId}`, 20, 60000);
+  const { success: rateLimitOk, remaining } = await rateLimit(`chat:${clientId}`, RATE_LIMIT_CHAT_PER_MIN, MS_PER_MINUTE);
 
   if (!rateLimitOk) {
     return new Response(
@@ -222,7 +232,7 @@ export async function POST(req: Request) {
       description: 'Crea un nuevo hábito o disciplina diaria en el sistema del usuario.',
       inputSchema: z.object({
         name: z.string().describe('Nombre del hábito, ej: Devocional Matutino'),
-        habitType: z.enum(['crecer', 'sembrar', 'cambiar', 'preciso', 'pilar']).default('crecer').describe('Tipo de hábito: crecer (nuevo), sembrar (mini), cambiar (reemplazo), preciso (if-then), pilar (keystone)'),
+        habitType: z.enum([HABIT_TYPE_CRECER, HABIT_TYPE_SEMBRAR, HABIT_TYPE_CAMBIAR, HABIT_TYPE_PRECISO, HABIT_TYPE_PILAR]).default(HABIT_TYPE_CRECER).describe('Tipo de hábito: crecer (nuevo), sembrar (mini), cambiar (reemplazo), preciso (if-then), pilar (keystone)'),
         domain: z.enum(['cuerpo', 'mente', 'trabajo', 'relaciones', 'hogar', 'espiritual', 'finanzas']).optional().describe('Área de vida del hábito'),
         rescueAction: z.string().describe('Versión mínima del hábito para días difíciles (menos de 2 minutos)'),
         anchor: z.string().optional().describe('Rutina existente después de la cual se hará el hábito'),
@@ -239,24 +249,24 @@ export async function POST(req: Request) {
         }
         try {
           const celebrationMap: Record<string, string> = {
-            crecer: '✅ Hecho',
-            sembrar: '🎉',
-            cambiar: '🔄 Avance',
-            preciso: '🎯 Ejecutado',
-            pilar: '🏛️ Un paso más',
+            [HABIT_TYPE_CRECER]: '✅ Hecho',
+            [HABIT_TYPE_SEMBRAR]: '🎉',
+            [HABIT_TYPE_CAMBIAR]: '🔄 Avance',
+            [HABIT_TYPE_PRECISO]: '🎯 Ejecutado',
+            [HABIT_TYPE_PILAR]: '🏛️ Un paso más',
           };
 
           await db.insert(habits).values({
             id: randomUUID(),
             userId,
             name,
-            habitType: habitType || 'crecer',
+            habitType: habitType || HABIT_TYPE_CRECER,
             domain: domain || null,
             rescueAction: rescueAction,
             activeAction: rescueAction,
-            celebration: celebration || celebrationMap[habitType || 'crecer'],
+            celebration: celebration || celebrationMap[habitType || HABIT_TYPE_CRECER],
             anchor: anchor || null,
-            currentStrength: 0.15,
+            currentStrength: HABIT_NEW_HABIT_INITIAL_STRENGTH,
             isActive: 1,
             createdAt: new Date().toISOString(),
           });

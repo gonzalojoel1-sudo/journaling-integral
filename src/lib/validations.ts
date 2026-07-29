@@ -1,4 +1,13 @@
 import { z } from 'zod';
+import {
+  ROLE_ADMIN,
+  ROLE_USER,
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_PILAR,
+} from './constants-domain';
 
 // ============================================================
 // COMMON / SHARED SCHEMAS
@@ -189,11 +198,11 @@ export type HabitsDraftInput = z.infer<typeof HabitsDraftSchema>;
 // ============================================================
 
 export const HabitTypeEnum = z.enum([
-  'crecer',
-  'sembrar',
-  'cambiar',
-  'preciso',
-  'pilar',
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_PILAR,
 ]);
 
 export const DomainEnum = z.enum([
@@ -394,7 +403,7 @@ export const AdminDeleteUserSchema = z.object({
 
 export const AdminSetRoleSchema = z.object({
   userId: UUIDSchema,
-  role: z.enum(['admin', 'user']),
+  role: z.enum([ROLE_ADMIN, ROLE_USER]),
 });
 
 // ============================================================

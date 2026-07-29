@@ -3,7 +3,7 @@
 import { db } from '../../db/db';
 import { bibleVerses } from '../../db/schema';
 import { eq, sql } from 'drizzle-orm';
-import { FALLBACK_VERSES } from '@/lib/constants';
+import { FALLBACK_VERSES } from '@/lib/constants-bible';
 import { logger } from '@/lib/logger';
 
 export async function getRandomVerse(level: number = 1) {

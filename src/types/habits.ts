@@ -1,7 +1,9 @@
+import type { HabitType } from '@/lib/constants-domain';
+
 export interface IBaseHabit {
   id: string;
   name: string;
-  habitType?: string;
+  habitType: HabitType;
   domain?: string | null;
   currentStrength?: number;
   activeAction?: string | null;

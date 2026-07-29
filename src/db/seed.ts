@@ -2,7 +2,8 @@ import { db } from './db';
 import { users, bibleVerses, habits, quarterlyPlans } from './schema';
 import { randomUUID } from 'crypto';
 import { BIBLE_VERSES_SEED } from './seed/data/bible-verses';
-import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH } from '@/lib/constants';
+import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH } from '@/lib/constants-demo';
+import { HABIT_TYPE_PILAR, HABIT_TYPE_CAMBIAR } from '@/lib/constants-domain';
 import { logger } from '@/lib/logger';
 import { todayStr } from '../lib/dates';
 
@@ -51,7 +52,7 @@ async function seed() {
       id: randomUUID(),
       userId: DEMO_USER_ID,
       name: 'Orar 3 minutos al despertar',
-      habitType: 'pilar',
+      habitType: HABIT_TYPE_PILAR,
       domain: 'espiritual',
       rescueAction: 'Orar 1 minuto',
       activeAction: 'Orar 3 minutos al despertar',
@@ -63,7 +64,7 @@ async function seed() {
       id: randomUUID(),
       userId: DEMO_USER_ID,
       name: 'No revisar el celular la primera hora',
-      habitType: 'cambiar',
+      habitType: HABIT_TYPE_CAMBIAR,
       domain: 'mente',
       rescueAction: '5 minutos sin celular',
       activeAction: '60 minutos sin celular al despertar',

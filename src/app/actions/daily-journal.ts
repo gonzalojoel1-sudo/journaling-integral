@@ -17,6 +17,19 @@ import {
 import { storeEntryEmbedding, buildEntryContent } from '@/lib/rag';
 import { logger } from '@/lib/logger';
 import { todayStr, yesterdayStr, formatDateKey } from '@/lib/dates';
+import {
+  HABIT_TYPE_PILAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_RESCUE_DECAY_THRESHOLD,
+  HABIT_RESCUE_MIN_GAIN,
+  SEMBRAR_MAX_DAYS_PER_CYCLE,
+  STREAK_SHIELD_MAX,
+  STREAK_SHIELD_AWARD_DAYS,
+  ANALYTICS_DAYS_WINDOW,
+} from '@/lib/constants-domain';
 
 function calculateStreak(
   lastEntryDate: string | null,
@@ -178,7 +191,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
           const habitRecord = habitMap.get(habitEntry.habitId);
           if (!habitRecord) continue;
 
-          if (habitRecord.habitType === 'pilar') {
+          if (habitRecord.habitType === HABIT_TYPE_PILAR) {
             pilarHabits.push({
               id: habitRecord.id,
               domain: habitRecord.domain,
@@ -191,7 +204,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
           totalNonPilarToComplete++;
           if (habitEntry.completed === true) completedNonPilar++;
 
-          if (habitRecord.habitType === 'preciso') {
+          if (habitRecord.habitType === HABIT_TYPE_PRECISO) {
             if (habitEntry.completed === true) {
               await tx.update(habits).set({
                 triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
@@ -216,9 +229,9 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             })
             .where(eq(habits.id, habitEntry.habitId));
 
-          if (habitRecord.habitType === 'sembrar') {
+          if (habitRecord.habitType === HABIT_TYPE_SEMBRAR) {
             const currentDays = habitRecord.daysInCurrentCycle ?? 0;
-            if (habitEntry.completed === true && currentDays < 15) {
+            if (habitEntry.completed === true && currentDays < SEMBRAR_MAX_DAYS_PER_CYCLE) {
               await tx.update(habits).set({
                 daysInCurrentCycle: currentDays + 1,
               }).where(eq(habits.id, habitEntry.habitId));
@@ -229,7 +242,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             !habitEntry.completed &&
             habitRecord.rescueAction &&
             habitRecord.activeAction !== habitRecord.rescueAction &&
-            newStrength < (habitRecord.currentStrength ?? 0) * 0.85
+            newStrength < (habitRecord.currentStrength ?? 0) * HABIT_RESCUE_DECAY_THRESHOLD
           ) {
             await tx
               .update(habits)
@@ -242,7 +255,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             habitRecord.rescueAction &&
             habitRecord.rescueAction !== habitRecord.activeAction
           ) {
-            if (newStrength >= (habitRecord.currentStrength ?? 0) + 2.5) {
+            if (newStrength >= (habitRecord.currentStrength ?? 0) + HABIT_RESCUE_MIN_GAIN) {
               await tx
                 .update(habits)
                 .set({ activeAction: habitRecord.rescueAction })
@@ -250,13 +263,16 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             }
           }
 
-          if (habitRecord.habitType === 'crecer') {
+          if (habitRecord.habitType === HABIT_TYPE_CRECER) {
             const currentStreak = habitRecord.currentStreak ?? 0;
             const currentShields = habitRecord.streakShields ?? 0;
 
             if (habitEntry.completed === true) {
               const newStreak = currentStreak + 1;
-              const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
+              const newShields = Math.min(
+                currentShields + (newStreak % STREAK_SHIELD_AWARD_DAYS === 0 ? 1 : 0),
+                STREAK_SHIELD_MAX,
+              );
               await tx.update(habits).set({
                 currentStreak: newStreak,
                 streakShields: newShields,
@@ -272,7 +288,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             }
           }
 
-          if (habitRecord.habitType === 'cambiar') {
+          if (habitRecord.habitType === HABIT_TYPE_CAMBIAR) {
             if (habitEntry.completed === true) {
               await tx.update(habits).set({
                 victoryCount: (habitRecord.victoryCount ?? 0) + 1,
@@ -317,7 +333,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     );
 
     const dateLimit = new Date();
-    dateLimit.setDate(dateLimit.getDate() - 30);
+    dateLimit.setDate(dateLimit.getDate() - ANALYTICS_DAYS_WINDOW);
     const dateLimitStr = formatDateKey(dateLimit);
 
     const entriesLast30Days = await db.query.dailyEntries.findMany({
@@ -362,7 +378,7 @@ export async function getAnalyticsData() {
     const entries = await db.query.dailyEntries.findMany({
       where: eq(dailyEntries.userId, userId),
       orderBy: [desc(dailyEntries.date)],
-      limit: 30,
+      limit: ANALYTICS_DAYS_WINDOW,
     });
     return { success: true, entries };
   } catch (error) {

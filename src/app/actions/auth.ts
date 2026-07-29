@@ -12,7 +12,8 @@ import {
   DEMO_USER_EMAIL,
   DEMO_USER_NAME,
   DEMO_USER_PASSWORD_HASH,
-} from '@/lib/constants';
+} from '@/lib/constants-demo';
+import { ROLE_USER } from '@/lib/constants-domain';
 import { validate, UpdateUserLevelSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
 
@@ -84,7 +85,7 @@ export const getOrCreateUserProfile = cache(async () => {
           name: DEMO_USER_NAME,
           email: DEMO_USER_EMAIL,
           password: DEMO_USER_PASSWORD_HASH,
-          role: 'user',
+          role: ROLE_USER,
           currentLevel: 1,
           streakCurrent: 0,
           streakMax: 0,

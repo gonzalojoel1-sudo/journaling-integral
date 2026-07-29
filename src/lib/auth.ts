@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
+import { ROLE_ADMIN, ROLE_USER, type Role } from '@/lib/constants-domain';
 
 export type SessionUser = {
   id: string;
@@ -10,7 +11,7 @@ export type SessionUser = {
   currentLevel?: number;
 };
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = Role;
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const session = await getServerSession(authOptions);
@@ -21,7 +22,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 export async function getUserRole(): Promise<UserRole | null> {
   const user = await getSessionUser();
   const role = user?.role;
-  if (role === 'admin' || role === 'user') {
+  if (role === ROLE_ADMIN || role === ROLE_USER) {
     return role;
   }
   return null;
@@ -29,7 +30,7 @@ export async function getUserRole(): Promise<UserRole | null> {
 
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (user?.role !== 'admin') {
+  if (user?.role !== ROLE_ADMIN) {
     throw new Error('Unauthorized: admin role required');
   }
   return user;

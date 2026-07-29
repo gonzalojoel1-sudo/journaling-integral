@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCurrentUserId } from './auth';
 import { validate, SaveWeeklyPlanSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
+import { MS_PER_DAY } from '@/lib/constants-domain';
 
 function getISOWeekLabel(date: Date = new Date()): string {
   const tempDate = new Date(date.getTime());
@@ -17,7 +18,7 @@ function getISOWeekLabel(date: Date = new Date()): string {
   const weekNum =
     1 +
     Math.round(
-      ((tempDate.getTime() - week1.getTime()) / 86400000 -
+      ((tempDate.getTime() - week1.getTime()) / MS_PER_DAY -
         3 +
         ((week1.getDay() + 6) % 7)) /
         7,

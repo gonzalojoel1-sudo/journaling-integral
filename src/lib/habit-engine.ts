@@ -2,6 +2,18 @@ import { db } from '../db/db';
 import { habits } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { applyDecayAndBonus } from './habit-strength';
+import {
+  HABIT_TYPE_PILAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_RESCUE_DECAY_THRESHOLD,
+  HABIT_RESCUE_MIN_GAIN,
+  SEMBRAR_MAX_DAYS_PER_CYCLE,
+  STREAK_SHIELD_MAX,
+  STREAK_SHIELD_AWARD_DAYS,
+} from './constants-domain';
 
 type HabitRow = typeof habits.$inferSelect;
 
@@ -46,7 +58,7 @@ export async function processDailyHabits(
     const habitRecord = habitMap.get(habitEntry.habitId);
     if (!habitRecord) continue;
 
-    if (habitRecord.habitType === 'pilar') {
+    if (habitRecord.habitType === HABIT_TYPE_PILAR) {
       pilarHabits.push({
         id: habitRecord.id,
         domain: habitRecord.domain,
@@ -91,7 +103,7 @@ async function processNonPilarHabit(
   entry: HabitEntry,
   todayStr: string,
 ): Promise<void> {
-  if (habit.habitType === 'preciso') {
+  if (habit.habitType === HABIT_TYPE_PRECISO) {
     if (entry.completed === true) {
       await db
         .update(habits)
@@ -119,9 +131,9 @@ async function processNonPilarHabit(
     })
     .where(eq(habits.id, habit.id));
 
-  if (habit.habitType === 'sembrar') {
+  if (habit.habitType === HABIT_TYPE_SEMBRAR) {
     const currentDays = habit.daysInCurrentCycle ?? 0;
-    if (entry.completed === true && currentDays < 15) {
+    if (entry.completed === true && currentDays < SEMBRAR_MAX_DAYS_PER_CYCLE) {
       await db
         .update(habits)
         .set({ daysInCurrentCycle: currentDays + 1 })
@@ -133,7 +145,7 @@ async function processNonPilarHabit(
     !entry.completed &&
     habit.rescueAction &&
     habit.activeAction !== habit.rescueAction &&
-    newStrength < (habit.currentStrength ?? 0) * 0.85
+    newStrength < (habit.currentStrength ?? 0) * HABIT_RESCUE_DECAY_THRESHOLD
   ) {
     await db
       .update(habits)
@@ -146,7 +158,7 @@ async function processNonPilarHabit(
     habit.rescueAction &&
     habit.rescueAction !== habit.activeAction
   ) {
-    if (newStrength >= (habit.currentStrength ?? 0) + 2.5) {
+    if (newStrength >= (habit.currentStrength ?? 0) + HABIT_RESCUE_MIN_GAIN) {
       await db
         .update(habits)
         .set({ activeAction: habit.rescueAction })
@@ -154,13 +166,16 @@ async function processNonPilarHabit(
     }
   }
 
-  if (habit.habitType === 'crecer') {
+  if (habit.habitType === HABIT_TYPE_CRECER) {
     const currentStreak = habit.currentStreak ?? 0;
     const currentShields = habit.streakShields ?? 0;
 
     if (entry.completed === true) {
       const newStreak = currentStreak + 1;
-      const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
+      const newShields = Math.min(
+        currentShields + (newStreak % STREAK_SHIELD_AWARD_DAYS === 0 ? 1 : 0),
+        STREAK_SHIELD_MAX,
+      );
       await db
         .update(habits)
         .set({ currentStreak: newStreak, streakShields: newShields })
@@ -178,7 +193,7 @@ async function processNonPilarHabit(
     }
   }
 
-  if (habit.habitType === 'cambiar') {
+  if (habit.habitType === HABIT_TYPE_CAMBIAR) {
     if (entry.completed === true) {
       await db
         .update(habits)
