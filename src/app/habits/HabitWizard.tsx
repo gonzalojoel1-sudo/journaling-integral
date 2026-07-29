@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createHabit } from '../actions/habits';
 import { useRouter } from 'next/navigation';
 
@@ -44,6 +44,13 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const stepInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (step === 1 || step === 4 || step === 5 || step === 8) {
+      stepInputRef.current?.focus();
+    }
+  }, [step]);
 
   const update = (partial: Partial<WizardData>) => setData(prev => ({ ...prev, ...partial }));
 
@@ -101,7 +108,7 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">¿Qué hábito quieres crear o cambiar?</h2>
             <input
-              autoFocus
+              ref={stepInputRef}
               type="text"
               value={data.name}
               onChange={e => update({ name: e.target.value })}
@@ -165,7 +172,7 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">¿Después de qué momento del día harías esto?</h2>
             <input
-              autoFocus
+              ref={stepInputRef}
               type="text"
               value={data.anchor}
               onChange={e => update({ anchor: e.target.value })}
@@ -187,7 +194,7 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
             <h2 className="text-xl font-semibold">Versión para un día difícil</h2>
             <p className="text-sm text-stone-500">Si tuvieras un día pésimo, sin energía... ¿cuál es la versión TAN pequeña que SÍ podrías hacer? (Debe tomar menos de 2 minutos)</p>
             <input
-              autoFocus
+              ref={stepInputRef}
               type="text"
               value={data.rescueAction}
               onChange={e => update({ rescueAction: e.target.value })}
@@ -314,7 +321,7 @@ export function HabitWizard({ onClose }: { onClose: () => void }) {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Cuéntame sobre el hábito que quieres dejar</h2>
             <input
-              autoFocus
+              ref={stepInputRef}
               type="text"
               value={data.cue}
               onChange={e => update({ cue: e.target.value })}

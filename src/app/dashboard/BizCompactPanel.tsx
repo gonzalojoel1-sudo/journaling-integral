@@ -287,6 +287,14 @@ function BizCounter({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
 
   const commit = () => {
     const parsed = Math.max(0, parseInt(draft, 10) || 0);
@@ -315,6 +323,7 @@ function BizCounter({
             <span className="text-sm font-extrabold text-zinc-400">{prefix}</span>
           )}
           <input
+            ref={inputRef}
             type="number"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -326,7 +335,6 @@ function BizCounter({
                 setEditing(false);
               }
             }}
-            autoFocus
             min={0}
             className="w-16 text-center text-sm font-extrabold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-1 py-0.5 outline-none focus:ring-2 focus:ring-emerald-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />

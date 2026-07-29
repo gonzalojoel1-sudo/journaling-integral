@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowDownToLine } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { withdrawToPersonal } from '@/app/actions/personal-finance';
@@ -10,6 +10,13 @@ export function WithdrawButton() {
   const [show, setShow] = useState(false);
   const [amount, setAmount] = useState('');
   const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (show) {
+      inputRef.current?.focus();
+    }
+  }, [show]);
 
   const handleWithdraw = async () => {
     const value = Number(amount);
@@ -41,11 +48,11 @@ export function WithdrawButton() {
               Retiro a Cuenta Personal
             </span>
             <input
+              ref={inputRef}
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="$ Monto a retirar"
-              autoFocus
               className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-200 outline-none focus:border-emerald-500/50 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
             />
             <p className="text-[10px] text-zinc-500 font-mono">

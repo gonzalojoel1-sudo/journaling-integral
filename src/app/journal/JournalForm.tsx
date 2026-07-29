@@ -223,10 +223,10 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   const handleSmartDictation = useCallback((data: any) => {
     if (data.energy) {
-      if (data.energy.sleepRating != null) setSleepRating(data.energy.sleepRating);
-      if (data.energy.energyRating != null) setEnergyRating(data.energy.energyRating);
-      if (data.energy.focusRating != null) setFocusRating(data.energy.focusRating);
-      if (data.energy.stressRating != null) setStressRating(data.energy.stressRating);
+      if (data.energy.sleepRating !== null && data.energy.sleepRating !== undefined) setSleepRating(data.energy.sleepRating);
+      if (data.energy.energyRating !== null && data.energy.energyRating !== undefined) setEnergyRating(data.energy.energyRating);
+      if (data.energy.focusRating !== null && data.energy.focusRating !== undefined) setFocusRating(data.energy.focusRating);
+      if (data.energy.stressRating !== null && data.energy.stressRating !== undefined) setStressRating(data.energy.stressRating);
       if (data.energy.quickEnergyAction) setQuickEnergyAction(data.energy.quickEnergyAction);
     }
     if (data.gratitude) {
@@ -261,11 +261,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     }
     if (data.mit) {
       if (data.mit.ser) setMitSer(data.mit.ser);
-      if (data.mit.serCompleted != null) setMitSerCompleted(data.mit.serCompleted);
+      if (data.mit.serCompleted !== null && data.mit.serCompleted !== undefined) setMitSerCompleted(data.mit.serCompleted);
       if (data.mit.negocio) setMitNegocio(data.mit.negocio);
-      if (data.mit.negocioCompleted != null) setMitNegocioCompleted(data.mit.negocioCompleted);
+      if (data.mit.negocioCompleted !== null && data.mit.negocioCompleted !== undefined) setMitNegocioCompleted(data.mit.negocioCompleted);
       if (data.mit.relaciones) setMitRelaciones(data.mit.relaciones);
-      if (data.mit.relacionesCompleted != null) setMitRelacionesCompleted(data.mit.relacionesCompleted);
+      if (data.mit.relacionesCompleted !== null && data.mit.relacionesCompleted !== undefined) setMitRelacionesCompleted(data.mit.relacionesCompleted);
     }
     if (data.closure) {
       if (data.closure.whatWorked) setWhatWorked(data.closure.whatWorked);
