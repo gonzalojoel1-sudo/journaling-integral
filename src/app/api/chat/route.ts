@@ -25,6 +25,7 @@ import {
   type SimilarEntry,
 } from '@/lib/chat-context';
 import { PRIMARY_MODEL, FAST_MODEL, MINIMAX_BASE_URL } from '@/config/ai';
+import { MINIMAX_NO_THINKING } from '@/lib/minimax-options';
 
 const CHAT_TIMEOUT_MS = 30_000;
 
@@ -130,6 +131,7 @@ export async function POST(req: Request) {
             try {
               standaloneQuery = await generateText({
                 model: minimax(PRIMARY_MODEL),
+                providerOptions: MINIMAX_NO_THINKING,
                 system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
                 prompt: conversationHistory,
                 temperature: 0.3,
@@ -140,6 +142,7 @@ export async function POST(req: Request) {
               logger.warn('rag_standalone_query_primary_failed');
               standaloneQuery = await generateText({
                 model: minimax(FALLBACK_MODEL),
+                providerOptions: MINIMAX_NO_THINKING,
                 system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
                 prompt: conversationHistory,
                 temperature: 0.3,
@@ -281,6 +284,7 @@ export async function POST(req: Request) {
     tools,
     toolChoice: 'auto' as const,
     stopWhen: stepCountIs(3),
+    providerOptions: MINIMAX_NO_THINKING,
   };
 
   const streamWithTimeout = async (

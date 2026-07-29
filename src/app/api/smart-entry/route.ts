@@ -5,6 +5,7 @@ import { validate, SmartEntryRequestSchema } from '@/lib/validations';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { getSessionUser } from '@/lib/auth';
+import { MINIMAX_NO_THINKING } from '@/lib/minimax-options';
 
 const SYSTEM_PROMPT = `Eres un extractor de datos para un diario personal de desarrollo integral. El usuario te dara una transcripcion de voz donde describe su dia: niveles de energia, gratitud, identidad, devocional, habitos completados, tareas importantes, y cierre del dia.
 
@@ -45,6 +46,7 @@ async function tryPrimary(transcript: string): Promise<any> {
   const result = await Promise.race([
     generateText({
       model: minimax(PRIMARY_MODEL),
+      providerOptions: MINIMAX_NO_THINKING,
       system: JSON_RESPONSE_PROMPT,
       prompt: transcript,
       temperature: 0.1,
@@ -69,6 +71,7 @@ async function tryFast(transcript: string): Promise<any> {
   const result = await Promise.race([
     generateText({
       model: minimax(FAST_MODEL),
+      providerOptions: MINIMAX_NO_THINKING,
       system: JSON_RESPONSE_PROMPT,
       prompt: transcript,
       temperature: 0.1,
