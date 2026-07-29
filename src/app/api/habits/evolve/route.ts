@@ -3,13 +3,26 @@ import { db } from '@/db/db';
 import { habits } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { requireCurrentUserId } from '@/app/actions/auth';
+import { validate, EvolveHabitSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireCurrentUserId();
-    const { habitId, evolutionOptimal, evolutionMinimum } = await req.json();
-    if (!habitId) return NextResponse.json({ error: 'habitId required' }, { status: 400 });
+
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const v = validate(EvolveHabitSchema, body);
+    if (!v.success) {
+      return NextResponse.json({ error: v.error }, { status: 400 });
+    }
+
+    const { habitId, evolutionOptimal, evolutionMinimum } = v.data;
 
     const habit = await db.query.habits.findFirst({
       where: and(eq(habits.id, habitId), eq(habits.userId, userId)),

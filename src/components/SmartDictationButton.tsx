@@ -93,6 +93,8 @@ function getSpeechAPI(): MySpeechRecognitionConstructor | null {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
+const MAX_TRANSCRIPT_LENGTH = 10_000;
+
 export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDictationButtonProps) {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -180,6 +182,9 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
         const result = event.results[i];
         if (result.isFinal) {
           finalTranscript += result[0].transcript + ' ';
+          if (finalTranscript.length > MAX_TRANSCRIPT_LENGTH) {
+            finalTranscript = finalTranscript.slice(-MAX_TRANSCRIPT_LENGTH);
+          }
         }
       }
     };

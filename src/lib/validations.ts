@@ -235,6 +235,14 @@ export const ArchiveHabitSchema = z.object({
 
 export type ArchiveHabitInput = z.infer<typeof ArchiveHabitSchema>;
 
+export const EvolveHabitSchema = z.object({
+  habitId: UUIDSchema,
+  evolutionOptimal: z.string().max(500).optional().nullable(),
+  evolutionMinimum: z.string().max(500).optional().nullable(),
+});
+
+export type EvolveHabitInput = z.infer<typeof EvolveHabitSchema>;
+
 // ============================================================
 // PERSONAL TRANSACTIONS
 // ============================================================
