@@ -3,6 +3,8 @@ import { habits } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { applyDecayAndBonus } from './habit-strength';
 
+type HabitRow = typeof habits.$inferSelect;
+
 interface HabitEntry {
   habitId: string;
   completed?: boolean;
@@ -85,7 +87,7 @@ export async function processDailyHabits(
 }
 
 async function processNonPilarHabit(
-  habit: any,
+  habit: HabitRow,
   entry: HabitEntry,
   todayStr: string,
 ): Promise<void> {

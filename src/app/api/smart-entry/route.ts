@@ -3,9 +3,8 @@ import Groq from 'groq-sdk';
 import { GEMINI_MODEL, GROQ_MODEL, TIMEOUT_MS, getApiKeys } from '@/config/ai';
 import { validate, SmartEntryRequestSchema } from '@/lib/validations';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { logger } from '@/lib/logger';
+import { getSessionUser } from '@/lib/auth';
 
 const JOURNAL_RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT as const,
@@ -196,8 +195,8 @@ async function tryGroq(transcript: string): Promise<any> {
 
 export async function POST(request: Request) {
   // Rate limiting: hybrid key (userId or IP), stricter limit for heavy AI calls
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id;
+  const sessionUser = await getSessionUser();
+  const userId = sessionUser?.id ?? undefined;
   const clientId = getClientIdentifier(request, userId);
   const { success: rateLimitOk, remaining } = await rateLimit(`smart-entry:${clientId}`, 5, 60000);
 

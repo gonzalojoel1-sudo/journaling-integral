@@ -4,16 +4,12 @@ import { db } from '@/db/db';
 import { users, dailyEntries, journalEmbeddings } from '@/db/schema';
 import { eq, desc, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { validate, AdminDeleteUserSchema, AdminSetRoleSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
+import { requireAdmin } from '@/lib/auth';
 
 async function checkAdmin() {
-  const session = await getServerSession(authOptions);
-  if ((session?.user as any)?.role !== 'admin') {
-    throw new Error('Unauthorized');
-  }
+  await requireAdmin();
 }
 
 export async function adminDeleteUser(userId: string) {

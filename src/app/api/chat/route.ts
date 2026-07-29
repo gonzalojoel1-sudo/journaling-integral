@@ -4,13 +4,12 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { validate, ChatRequestSchema } from '@/lib/validations';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { searchSimilarEntries } from '@/lib/rag';
 import { db } from '@/db/db';
 import { businessTransactions, habits } from '@/db/schema';
 import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
+import { getSessionUser } from '@/lib/auth';
 
 // ============================================================
 // RAG: Format context for prompt injection
@@ -78,8 +77,8 @@ export async function POST(req: Request) {
   });
 
   // Rate limiting: hybrid key (userId or IP)
-  const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id;
+  const sessionUser = await getSessionUser();
+  const userId = sessionUser?.id ?? undefined;
   const clientId = getClientIdentifier(req, userId);
   const { success: rateLimitOk, remaining } = await rateLimit(`chat:${clientId}`, 20, 60000);
 

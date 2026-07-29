@@ -1,16 +1,15 @@
 import React from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../api/auth/[...nextauth]/options';
 import { redirect } from 'next/navigation';
 import { getSystemTelemetry, TelemetryData } from '../../actions/admin';
 import { logger } from '@/lib/logger';
+import { getUserRole } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ObservabilityPage() {
-  const session = await getServerSession(authOptions);
+  const role = await getUserRole();
 
-  if ((session?.user as any)?.role !== 'admin') {
+  if (role !== 'admin') {
     redirect('/');
   }
 

@@ -56,8 +56,8 @@ export const DailyEntrySchema = z.object({
   devotionalNotes: z.string().max(2000).nullable().optional(),
 
   // Auto-education & Implementation Intentions (JSON arrays)
-  autoeducation: z.any().nullable().optional(),
-  implementationIntentions: z.any().nullable().optional(),
+  autoeducation: z.array(z.string().max(500)).max(50).nullable().optional(),
+  implementationIntentions: z.array(z.string().max(500)).max(50).nullable().optional(),
 
   // MITs (Most Important Tasks)
   mitSer: z.string().max(500).nullable().optional(),
@@ -78,7 +78,7 @@ export const DailyEntrySchema = z.object({
     .optional(),
 
   // Achievements & Reflection
-  achievementsTop3: z.any().nullable().optional(),
+  achievementsTop3: z.array(z.string().max(200)).max(10).nullable().optional(),
   whatWorked: z.string().max(1000).nullable().optional(),
   whatDidNotWork: z.string().max(1000).nullable().optional(),
   improvementIdea: z.string().max(1000).nullable().optional(),
@@ -107,7 +107,7 @@ export const DailyEntrySchema = z.object({
   mindsetEmpoweringAction: z.string().max(500).nullable().optional(),
 
   // Prep tomorrow
-  prepTomorrow: z.any().nullable().optional(),
+  prepTomorrow: z.array(z.string().max(500)).max(50).nullable().optional(),
 
   // Closure
   legacyReflection: z.string().max(1000).nullable().optional(),
@@ -358,7 +358,15 @@ export type CompleteOnboardingInput = z.infer<typeof CompleteOnboardingSchema>;
 
 export const SaveWeeklyPlanSchema = z.object({
   focus: z.string().max(500).optional().default(''),
-  tasks: z.any().optional(),
+  tasks: z
+    .array(
+      z.object({
+        day: z.string().max(50),
+        task: z.string().max(500),
+      }),
+    )
+    .max(50)
+    .optional(),
   relationToNutre: z.string().max(1000).nullable().optional(),
 });
 
@@ -382,8 +390,37 @@ export const SaveQuarterlyPlanSchema = z.object({
   quarterlyBusiness: z.string().max(2000).nullable().optional(),
   quarterlyRelations: z.string().max(2000).nullable().optional(),
 
-  smartObjectives: z.any().nullable().optional(),
-  actionsPlan: z.any().nullable().optional(),
+  smartObjectives: z
+    .array(
+      z.object({
+        id: z.string().max(50),
+        objective: z.string().max(1000),
+        targetDate: z.string().max(20),
+        isCompleted: z.boolean(),
+      }),
+    )
+    .max(20)
+    .nullable()
+    .optional(),
+  actionsPlan: z
+    .array(
+      z.object({
+        metaIndex: z.number(),
+        metaTitle: z.string().max(200),
+        actions: z
+          .array(
+            z.object({
+              action: z.string().max(500),
+              frequency: z.string().max(100),
+              indicator: z.string().max(200),
+            }),
+          )
+          .max(50),
+      }),
+    )
+    .max(20)
+    .nullable()
+    .optional(),
   legacyAuditNotes: z.string().max(2000).nullable().optional(),
 });
 
