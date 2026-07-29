@@ -3,7 +3,7 @@
 import { db } from '../../db/db';
 import { dailyEntries, users, habits, businessTransactions } from '../../db/schema';
 import { applyDecayAndBonus } from '../../lib/habit-strength';
-import { eq, and, desc, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getOrCreateUserProfile } from './auth';
@@ -129,25 +129,186 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       createdAt: existingEntry?.createdAt || new Date().toISOString(),
     };
 
-    if (existingEntry) {
-      await db.update(dailyEntries).set(entryData).where(eq(dailyEntries.id, existingEntry.id));
-    } else {
-      await db.insert(dailyEntries).values(entryData);
-
-      const newStreak = calculateStreak(user.lastEntryDate, user.streakCurrent, todayStr);
-      const newMaxStreak = Math.max(newStreak, user.streakMax);
-
-      await db
-        .update(users)
-        .set({
-          streakCurrent: newStreak,
-          streakMax: newMaxStreak,
-          lastEntryDate: todayStr,
+    // Pre-load all habits referenced in formData in a single query (eliminates N+1)
+    const habitIds = (formData.dailyHabits || [])
+      .map((h: { habitId?: string }) => h.habitId)
+      .filter(Boolean) as string[];
+    const habitRecords = habitIds.length > 0
+      ? await db.query.habits.findMany({
+          where: and(eq(habits.userId, user.id), inArray(habits.id, habitIds)),
         })
-        .where(eq(users.id, user.id));
-    }
+      : [];
+    const habitMap = new Map(habitRecords.map((h) => [h.id, h]));
 
-    // RAG: Generate embedding in background (non-blocking)
+    // Atomic core: entry insert/update + streak update + all habit updates.
+    // If any mutation fails, the entire batch rolls back — DB never half-updates.
+    await db.transaction(async (tx) => {
+      if (existingEntry) {
+        await tx.update(dailyEntries).set(entryData).where(eq(dailyEntries.id, existingEntry.id));
+      } else {
+        await tx.insert(dailyEntries).values(entryData);
+
+        const newStreak = calculateStreak(user.lastEntryDate, user.streakCurrent, todayStr);
+        const newMaxStreak = Math.max(newStreak, user.streakMax);
+
+        await tx
+          .update(users)
+          .set({
+            streakCurrent: newStreak,
+            streakMax: newMaxStreak,
+            lastEntryDate: todayStr,
+          })
+          .where(eq(users.id, user.id));
+      }
+
+      // Levels deprecated — progression is now tracked via badges
+
+      if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const pilarHabits: { id: string; domain: string | null; currentStrength: number; lastStrengthDate: string | null }[] = [];
+        let totalNonPilarToComplete = 0;
+        let completedNonPilar = 0;
+
+        for (const habitEntry of formData.dailyHabits) {
+          if (!habitEntry.habitId) continue;
+
+          const habitRecord = habitMap.get(habitEntry.habitId);
+          if (!habitRecord) continue;
+
+          if (habitRecord.habitType === 'pilar') {
+            pilarHabits.push({
+              id: habitRecord.id,
+              domain: habitRecord.domain,
+              currentStrength: habitRecord.currentStrength ?? 0,
+              lastStrengthDate: habitRecord.lastStrengthDate,
+            });
+            continue;
+          }
+
+          totalNonPilarToComplete++;
+          if (habitEntry.completed === true) completedNonPilar++;
+
+          if (habitRecord.habitType === 'preciso') {
+            if (habitEntry.completed === true) {
+              await tx.update(habits).set({
+                triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
+                actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+            if (!habitEntry.completed) continue;
+          }
+
+          const { newStrength, newDate } = applyDecayAndBonus(
+            habitRecord.currentStrength ?? 0,
+            habitRecord.lastStrengthDate,
+            todayStr,
+            habitEntry.completed === true,
+          );
+
+          await tx
+            .update(habits)
+            .set({
+              currentStrength: newStrength,
+              lastStrengthDate: newDate,
+            })
+            .where(eq(habits.id, habitEntry.habitId));
+
+          if (habitRecord.habitType === 'sembrar') {
+            const currentDays = habitRecord.daysInCurrentCycle ?? 0;
+            if (habitEntry.completed === true && currentDays < 15) {
+              await tx.update(habits).set({
+                daysInCurrentCycle: currentDays + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+          }
+
+          if (
+            !habitEntry.completed &&
+            habitRecord.rescueAction &&
+            habitRecord.activeAction !== habitRecord.rescueAction &&
+            newStrength < (habitRecord.currentStrength ?? 0) * 0.85
+          ) {
+            await tx
+              .update(habits)
+              .set({ activeAction: habitRecord.rescueAction })
+              .where(eq(habits.id, habitEntry.habitId));
+          }
+
+          if (
+            habitEntry.completed === true &&
+            habitRecord.rescueAction &&
+            habitRecord.rescueAction !== habitRecord.activeAction
+          ) {
+            if (newStrength >= (habitRecord.currentStrength ?? 0) + 2.5) {
+              await tx
+                .update(habits)
+                .set({ activeAction: habitRecord.rescueAction })
+                .where(eq(habits.id, habitEntry.habitId));
+            }
+          }
+
+          if (habitRecord.habitType === 'crecer') {
+            const currentStreak = habitRecord.currentStreak ?? 0;
+            const currentShields = habitRecord.streakShields ?? 0;
+
+            if (habitEntry.completed === true) {
+              const newStreak = currentStreak + 1;
+              const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
+              await tx.update(habits).set({
+                currentStreak: newStreak,
+                streakShields: newShields,
+              }).where(eq(habits.id, habitEntry.habitId));
+            } else if (currentShields > 0) {
+              await tx.update(habits).set({
+                streakShields: currentShields - 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            } else {
+              await tx.update(habits).set({
+                currentStreak: 0,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+          }
+
+          if (habitRecord.habitType === 'cambiar') {
+            if (habitEntry.completed === true) {
+              await tx.update(habits).set({
+                victoryCount: (habitRecord.victoryCount ?? 0) + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+            if (habitEntry.temptationAppeared && !habitEntry.completed) {
+              await tx.update(habits).set({
+                temptationCount: (habitRecord.temptationCount ?? 0) + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+          }
+        }
+
+        // Pilar: auto-derive completion from all other habits
+        if (pilarHabits.length > 0) {
+          const allNonPilarCompleted = totalNonPilarToComplete > 0 && totalNonPilarToComplete === completedNonPilar;
+
+          for (const pilar of pilarHabits) {
+            const { newStrength, newDate } = applyDecayAndBonus(
+              pilar.currentStrength,
+              pilar.lastStrengthDate,
+              todayStr,
+              allNonPilarCompleted,
+            );
+
+            await tx.update(habits).set({
+              currentStrength: newStrength,
+              lastStrengthDate: newDate,
+              pilarCompleted: allNonPilarCompleted ? 1 : 0,
+            }).where(eq(habits.id, pilar.id));
+
+            // Keystone effect: ephemeral bonus computed at display time, not persisted
+          }
+        }
+      }
+    });
+
+    // RAG: Generate embedding in background (non-blocking) — fired AFTER the commit
     const contentForEmbedding = buildEntryContent(entryData);
     storeEntryEmbedding(user.id, entryId, contentForEmbedding).catch((err) =>
       console.error('[RAG] Falló la generación del embedding en segundo plano:', err),
@@ -163,155 +324,6 @@ export async function submitDailyEntry(formData: Record<string, any>) {
         gte(dailyEntries.date, dateLimitStr),
       ),
     });
-
-    // Levels deprecated — progression is now tracked via badges
-
-    if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      const pilarHabits: { id: string; domain: string | null; currentStrength: number; lastStrengthDate: string | null }[] = [];
-      let totalNonPilarToComplete = 0;
-      let completedNonPilar = 0;
-
-      for (const habitEntry of formData.dailyHabits) {
-        if (!habitEntry.habitId) continue;
-
-        const habitRecord = await db.query.habits.findFirst({
-          where: eq(habits.id, habitEntry.habitId),
-        });
-
-        if (!habitRecord) continue;
-
-        if (habitRecord.habitType === 'pilar') {
-          pilarHabits.push({
-            id: habitRecord.id,
-            domain: habitRecord.domain,
-            currentStrength: habitRecord.currentStrength ?? 0,
-            lastStrengthDate: habitRecord.lastStrengthDate,
-          });
-          continue;
-        }
-
-        totalNonPilarToComplete++;
-        if (habitEntry.completed === true) completedNonPilar++;
-
-        if (habitRecord.habitType === 'preciso') {
-          if (habitEntry.completed === true) {
-            await db.update(habits).set({
-              triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
-              actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-          if (!habitEntry.completed) continue;
-        }
-
-        const { newStrength, newDate } = applyDecayAndBonus(
-          habitRecord.currentStrength ?? 0,
-          habitRecord.lastStrengthDate,
-          todayStr,
-          habitEntry.completed === true,
-        );
-
-        await db
-          .update(habits)
-          .set({
-            currentStrength: newStrength,
-            lastStrengthDate: newDate,
-          })
-          .where(eq(habits.id, habitEntry.habitId));
-
-        if (habitRecord.habitType === 'sembrar') {
-          const currentDays = habitRecord.daysInCurrentCycle ?? 0;
-          if (habitEntry.completed === true && currentDays < 15) {
-            await db.update(habits).set({
-              daysInCurrentCycle: currentDays + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-        }
-
-        if (
-          !habitEntry.completed &&
-          habitRecord.rescueAction &&
-          habitRecord.activeAction !== habitRecord.rescueAction &&
-          newStrength < (habitRecord.currentStrength ?? 0) * 0.85
-        ) {
-          await db
-            .update(habits)
-            .set({ activeAction: habitRecord.rescueAction })
-            .where(eq(habits.id, habitEntry.habitId));
-        }
-
-        if (
-          habitEntry.completed === true &&
-          habitRecord.rescueAction &&
-          habitRecord.rescueAction !== habitRecord.activeAction
-        ) {
-          if (newStrength >= (habitRecord.currentStrength ?? 0) + 2.5) {
-            await db
-              .update(habits)
-              .set({ activeAction: habitRecord.rescueAction })
-              .where(eq(habits.id, habitEntry.habitId));
-          }
-        }
-
-        if (habitRecord.habitType === 'crecer') {
-          const currentStreak = habitRecord.currentStreak ?? 0;
-          const currentShields = habitRecord.streakShields ?? 0;
-
-          if (habitEntry.completed === true) {
-            const newStreak = currentStreak + 1;
-            const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
-            await db.update(habits).set({
-              currentStreak: newStreak,
-              streakShields: newShields,
-            }).where(eq(habits.id, habitEntry.habitId));
-          } else if (currentShields > 0) {
-            await db.update(habits).set({
-              streakShields: currentShields - 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          } else {
-            await db.update(habits).set({
-              currentStreak: 0,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-        }
-
-        if (habitRecord.habitType === 'cambiar') {
-          if (habitEntry.completed === true) {
-            await db.update(habits).set({
-              victoryCount: (habitRecord.victoryCount ?? 0) + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-          if (habitEntry.temptationAppeared && !habitEntry.completed) {
-            await db.update(habits).set({
-              temptationCount: (habitRecord.temptationCount ?? 0) + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-        }
-      }
-
-      // Pilar: auto-derive completion from all other habits
-      if (pilarHabits.length > 0) {
-        const allNonPilarCompleted = totalNonPilarToComplete > 0 && totalNonPilarToComplete === completedNonPilar;
-
-        for (const pilar of pilarHabits) {
-          const { newStrength, newDate } = applyDecayAndBonus(
-            pilar.currentStrength,
-            pilar.lastStrengthDate,
-            todayStr,
-            allNonPilarCompleted,
-          );
-
-          await db.update(habits).set({
-            currentStrength: newStrength,
-            lastStrengthDate: newDate,
-            pilarCompleted: allNonPilarCompleted ? 1 : 0,
-          }).where(eq(habits.id, pilar.id));
-
-          // Keystone effect: ephemeral bonus computed at display time, not persisted
-        }
-      }
-    }
 
     revalidatePath('/');
     revalidatePath('/journal');
