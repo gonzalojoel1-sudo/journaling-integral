@@ -7,10 +7,11 @@
 //   import { MINIMAX_NO_THINKING } from '@/lib/minimax-options';
 //   generateText({ model: minimax('MiniMax-M3'), providerOptions: MINIMAX_NO_THINKING, ... })
 
-import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
-
-export const MINIMAX_NO_THINKING: SharedV3ProviderOptions = {
+// Note: SharedV3ProviderOptions from @ai-sdk/provider is a transitive
+// dependency. Using a structural type here keeps this module
+// self-contained while AI SDK validates the value at runtime.
+export const MINIMAX_NO_THINKING = {
   openai: {
     thinking: { type: 'disabled' },
   },
-};
+} as const;
