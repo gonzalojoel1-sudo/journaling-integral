@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface DailyHabit {
   habitId: string;
@@ -92,6 +93,8 @@ function getSpeechAPI(): MySpeechRecognitionConstructor | null {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
+const MAX_TRANSCRIPT_LENGTH = 10_000;
+
 export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDictationButtonProps) {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -103,7 +106,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
   useEffect(() => {
     setMounted(true);
     SpeechAPI.current = getSpeechAPI();
-    console.log('Dictado: Inicializando...', {
+    logger.debug('dictation_init', {
       supported: !!SpeechAPI.current,
       hasWindow: typeof window !== 'undefined',
       SpeechRecognition: !!window.SpeechRecognition,
@@ -127,13 +130,13 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
         try {
           errorBody = await res.json();
         } catch {}
-        console.error('[DICTATION] API error:', res.status, errorBody);
+        logger.error('dictation_api_error', { status: res.status }, errorBody);
         throw new Error(errorBody?.error || `API error (${res.status})`);
       }
 
       const json = await res.json();
       if (!json.success) {
-        console.error('[DICTATION] Processing error:', json);
+        logger.error('dictation_processing_error', {}, json);
         throw new Error(json.error || 'Unknown error');
       }
 
@@ -149,7 +152,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
 
       onDataExtracted(rawData);
     } catch (err) {
-      console.error('[DICTATION] Error:', err);
+      logger.error('dictation_error', {}, err);
       setError('Error al procesar');
     } finally {
       setProcessing(false);
@@ -159,13 +162,13 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
   const startListening = useCallback(() => {
     const api = SpeechAPI.current;
     if (!api) {
-      console.error('Dictado ERROR: SpeechRecognition API not available');
+      logger.error('dictation_api_not_available');
       setError('Navegador no compatible');
       return;
     }
 
     setError(null);
-    console.log('Dictado: Iniciando grabación...');
+    logger.debug('dictation_recording_starting');
 
     const recognition = new api();
     recognition.continuous = true;
@@ -179,13 +182,16 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
         const result = event.results[i];
         if (result.isFinal) {
           finalTranscript += result[0].transcript + ' ';
+          if (finalTranscript.length > MAX_TRANSCRIPT_LENGTH) {
+            finalTranscript = finalTranscript.slice(-MAX_TRANSCRIPT_LENGTH);
+          }
         }
       }
     };
 
     recognition.onerror = (event: Event) => {
       const err = event as MySpeechRecognitionErrorEvent;
-      console.error('Dictado ERROR:', err.error, err.message || '');
+      logger.error('dictation_recognition_error', { code: err.error });
 
       switch (err.error) {
         case 'not-allowed':
@@ -209,7 +215,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
     };
 
     recognition.onend = async () => {
-      console.log('Dictado: Grabación finalizada. Transcripción:', finalTranscript || '(vacía)');
+      logger.debug('dictation_recording_ended', { hasTranscript: !!finalTranscript.trim() });
       setListening(false);
       if (finalTranscript.trim()) {
         await sendToSmartEntry(finalTranscript.trim());
@@ -221,9 +227,9 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
     try {
       recognition.start();
       setListening(true);
-      console.log('Dictado: Grabación activa');
+      logger.debug('dictation_recording_active');
     } catch (err: any) {
-      console.error('Dictado ERROR al iniciar:', err?.message || err);
+      logger.error('dictation_start_failed', { message: err?.message }, err);
       setError('Error al iniciar grabación');
     }
   }, [sendToSmartEntry]);
@@ -261,6 +267,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
         type="button"
         onClick={handleClick}
         disabled={processing || !supported}
+        aria-label={!supported ? 'Dictado por voz no disponible' : listening ? 'Detener dictado por voz' : processing ? 'Procesando dictado' : 'Iniciar dictado por voz'}
         className={`
           relative h-9 w-9 rounded-xl flex items-center justify-center
           transition-all duration-300

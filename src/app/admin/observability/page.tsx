@@ -1,23 +1,31 @@
 import React from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../api/auth/[...nextauth]/options';
 import { redirect } from 'next/navigation';
-import { getSystemTelemetry, TelemetryData } from '../../actions/admin';
+import type { TelemetryData } from '../../actions/admin';
+import { getSystemTelemetry } from '../../actions/admin';
+import { logger } from '@/lib/logger';
+import { getUserRole } from '@/lib/auth';
+import { ROLE_ADMIN } from '@/lib/constants-domain';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ObservabilityPage() {
-  const session = await getServerSession(authOptions);
+  const role = await getUserRole();
 
-  if ((session?.user as any)?.role !== 'admin') {
+  if (role !== ROLE_ADMIN) {
     redirect('/');
   }
 
   let telemetry: TelemetryData;
   try {
     telemetry = await getSystemTelemetry();
-  } catch {
-    redirect('/');
+  } catch (error) {
+    logger.error('observability_load_failed', {}, error);
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold">Error de Observabilidad</h1>
+        <p className="mt-2 text-zinc-600">No se pudo cargar la telemetría del sistema.</p>
+      </div>
+    );
   }
 
   const ragCoverage =

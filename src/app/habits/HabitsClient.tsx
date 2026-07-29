@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createHabit, archiveHabit } from '../actions/habits';
+import { archiveHabit } from '../actions/habits';
 import { HabitWizard } from './HabitWizard';
 import { HabitCard } from './habitCards';
 import type { HabitCardHabit } from '@/types/habits';

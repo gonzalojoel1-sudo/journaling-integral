@@ -3,17 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  User,
   Flame,
   Calendar,
-  Activity,
-  BookOpen,
-  Briefcase,
   Shield,
   Trash2,
-  ShieldAlert,
 } from 'lucide-react';
 import { adminDeleteUser, adminSetRole } from '@/app/actions/admin';
+import { ROLE_ADMIN, ROLE_USER } from '@/lib/constants-domain';
 
 interface UserStats {
   totalEntries: number;
@@ -62,7 +58,7 @@ export function AdminUsersClient({ users: initialUsers }: AdminUsersClientProps)
   };
 
   const handleToggleRole = async (user: AdminUser) => {
-    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    const newRole = user.role === ROLE_ADMIN ? ROLE_USER : ROLE_ADMIN;
     await adminSetRole(user.id, newRole);
     setUsers((prev) =>
       prev.map((u) => (u.id === user.id ? { ...u, role: newRole } : u)),
@@ -73,10 +69,7 @@ export function AdminUsersClient({ users: initialUsers }: AdminUsersClientProps)
   return (
     <div className="space-y-4 animate-fade-in">
       {users.map((user) => {
-        const usesSpiritual = user.stats.devotionalsCompleted > 0;
-        const usesBusiness = user.stats.businessCompleted > 0;
-        const usesHabits = user.stats.habitsCount > 0;
-        const isAdmin = user.role === 'admin';
+        const isAdmin = user.role === ROLE_ADMIN;
 
         return (
           <div
@@ -117,10 +110,12 @@ export function AdminUsersClient({ users: initialUsers }: AdminUsersClientProps)
                   Lvl {user.currentLevel}
                 </span>
                 <button
+                  type="button"
                   onClick={() => handleDelete(user.id)}
+                  aria-label={`Eliminar usuario ${user.name ?? user.id}`}
                   className="h-7 w-7 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center text-red-500 transition-colors"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>

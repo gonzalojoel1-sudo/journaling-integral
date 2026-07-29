@@ -5,6 +5,7 @@ import { db } from '../../db/db';
 import { dailyEntries } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { JournalForm } from './JournalForm';
+import { todayStr } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,11 +26,11 @@ export default async function JournalPage() {
   const habitsList = habitsRes.habits || [];
 
   // 2. Verificar si ya existe un registro para hoy
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = todayStr();
   const existingEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, todayStr)
+      eq(dailyEntries.date, today)
     ),
   });
 

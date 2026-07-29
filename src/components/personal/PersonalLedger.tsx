@@ -8,6 +8,7 @@ import {
   updatePersonalTransaction,
   deletePersonalTransaction,
 } from '@/app/actions/personal-finance';
+import { todayStr } from '@/lib/dates';
 
 interface Transaction {
   id: string;
@@ -25,7 +26,7 @@ interface PersonalLedgerProps {
 }
 
 function formatDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [, m, d] = dateStr.split('-').map(Number);
   return `${d}/${m}`;
 }
 
@@ -48,7 +49,7 @@ const emptyForm: EditFormData = {
   category: 'Supermercado',
   account: 'Efectivo',
   description: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayStr(),
 };
 
 const ACCOUNTS = ['Banco', 'Efectivo', 'Billetera Virtual'];
@@ -63,7 +64,7 @@ function getCategories(type: string): string[] {
   return type === 'ingreso' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 }
 
-export function PersonalLedger({ transactions, categories: customCategories }: PersonalLedgerProps) {
+export function PersonalLedger({ transactions }: PersonalLedgerProps) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -111,7 +112,7 @@ export function PersonalLedger({ transactions, categories: customCategories }: P
   const openNew = () => {
     setShowNew(true);
     setEditingId(null);
-    setEditForm({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+    setEditForm({ ...emptyForm, date: todayStr() });
   };
 
   const renderEditRow = (isNew: boolean) => (
@@ -160,13 +161,15 @@ export function PersonalLedger({ transactions, categories: customCategories }: P
       </td>
       <td className="py-2.5">
         <div className="flex items-center gap-1">
-          <button onClick={isNew ? handleCreate : handleSaveEdit} disabled={saving}
+          <button type="button" onClick={isNew ? handleCreate : handleSaveEdit} disabled={saving}
+            aria-label={isNew ? 'Guardar nuevo registro' : 'Guardar cambios'}
             className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-600/40 flex items-center justify-center text-emerald-400 transition-colors">
-            <Save className="h-3 w-3" />
+            <Save className="h-3 w-3" aria-hidden="true" />
           </button>
-          <button onClick={() => { setEditingId(null); setShowNew(false); }}
+          <button type="button" onClick={() => { setEditingId(null); setShowNew(false); }}
+            aria-label="Cancelar edición"
             className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-400 transition-colors">
-            <X className="h-3 w-3" />
+            <X className="h-3 w-3" aria-hidden="true" />
           </button>
         </div>
       </td>
@@ -231,13 +234,15 @@ export function PersonalLedger({ transactions, categories: customCategories }: P
                   </td>
                   <td className="py-2.5">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(tx)}
+                      <button type="button" onClick={() => handleEdit(tx)}
+                        aria-label={`Editar transacción ${tx.description ?? tx.id}`}
                         className="h-6 w-6 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors">
-                        <Pencil className="h-3 w-3" />
+                        <Pencil className="h-3 w-3" aria-hidden="true" />
                       </button>
-                      <button onClick={() => handleDelete(tx.id)}
+                      <button type="button" onClick={() => handleDelete(tx.id)}
+                        aria-label={`Eliminar transacción ${tx.description ?? tx.id}`}
                         className="h-6 w-6 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors">
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3" aria-hidden="true" />
                       </button>
                     </div>
                   </td>

@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, Heart, Brain, FileText, Briefcase, CheckSquare, Save, Loader2, Check } from 'lucide-react';
+import { z } from 'zod';
 import { FlowStep } from './FlowStep';
 import { PlanBModal } from './PlanBModal';
 import { StepEnergia, getEnergiaSummary } from './steps/StepEnergia';
@@ -13,7 +14,21 @@ import { StepNegocio, getNegocioSummary } from './steps/StepNegocio';
 import { StepCierre, getCierreSummary } from './steps/StepCierre';
 import { useAutosave } from './useAutosave';
 import { submitDailyEntry } from '../actions/daily-journal';
+import { saveJournalDraft } from '../actions/save-journal-draft';
 import { SmartDictationButton } from '@/components/SmartDictationButton';
+import { logger } from '@/lib/logger';
+import { parseJsonColumn } from '@/lib/json';
+
+const DailyHabitEntrySchema = z.object({
+  habitId: z.string(),
+  name: z.string().optional(),
+  habitType: z.string().optional(),
+  type: z.string().optional(),
+  completed: z.boolean().optional(),
+});
+const DailyHabitsSchema = z.array(DailyHabitEntrySchema);
+
+const PrepTomorrowSchema = z.array(z.string().max(500)).max(50);
 
 interface Habit {
   id: string;
@@ -44,14 +59,13 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   const [showPlanBModal, setShowPlanBModal] = useState(!existingEntry);
   const [isPlanB, setIsPlanB] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   const [activeStep, setActiveStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const totalSteps = userLevel === 1 ? 4 : 6;
 
-  const [isPlanBUsed, setIsPlanBUsed] = useState<boolean>(existingEntry?.isPlanBUsed === 1 || false);
+  const [isPlanBUsed] = useState<boolean>(existingEntry?.isPlanBUsed === 1 || false);
 
   const [sleepRating, setSleepRating] = useState<number>(existingEntry?.sleepRating ?? 7);
   const [energyRating, setEnergyRating] = useState<number>(existingEntry?.energyRating ?? 7);
@@ -71,7 +85,12 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [devotionalNotes, setDevotionalNotes] = useState<string>(existingEntry?.devotionalNotes ?? '');
   const [dailyHabits, setDailyHabits] = useState<any[]>(() => {
     if (existingEntry?.dailyHabitsJson) {
-      return JSON.parse(existingEntry.dailyHabitsJson);
+      const parsed = parseJsonColumn<any[]>(
+        existingEntry.dailyHabitsJson,
+        DailyHabitsSchema,
+        [],
+      );
+      if (parsed.length > 0) return parsed;
     }
     return habitsList.map(h => ({ habitId: h.id, name: h.name, habitType: h.habitType || h.type, completed: false }));
   });
@@ -86,9 +105,13 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [whatWorked, setWhatWorked] = useState<string>(existingEntry?.whatWorked ?? '');
   const [whatDidNotWork, setWhatDidNotWork] = useState<string>(existingEntry?.whatDidNotWork ?? '');
   const [improvementIdea, setImprovementIdea] = useState<string>(existingEntry?.improvementIdea ?? '');
-  const [prep1, setPrep1] = useState<string>(existingEntry?.prepTomorrowJson ? JSON.parse(existingEntry.prepTomorrowJson)[0] : '');
-  const [prep2, setPrep2] = useState<string>(existingEntry?.prepTomorrowJson ? JSON.parse(existingEntry.prepTomorrowJson)[1] : '');
-  const [prep3, setPrep3] = useState<string>(existingEntry?.prepTomorrowJson ? JSON.parse(existingEntry.prepTomorrowJson)[2] : '');
+  const prepTomorrowParsed = useMemo(
+    () => parseJsonColumn<string[]>(existingEntry?.prepTomorrowJson, PrepTomorrowSchema, []),
+    [existingEntry?.prepTomorrowJson],
+  );
+  const [prep1, setPrep1] = useState<string>(prepTomorrowParsed[0] ?? '');
+  const [prep2, setPrep2] = useState<string>(prepTomorrowParsed[1] ?? '');
+  const [prep3, setPrep3] = useState<string>(prepTomorrowParsed[2] ?? '');
 
   const autosaveData = useMemo(() => ({
     sleepRating, energyRating, focusRating, stressRating, quickEnergyAction,
@@ -109,8 +132,42 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   ]);
 
   const mockSave = useCallback(async (data: Record<string, unknown>) => {
-    await new Promise((r) => setTimeout(r, 800));
-    console.log('[Autosave] Borrador guardado:', data);
+    const stringOrUndefined = (key: string): string | undefined => {
+      const v = data[key];
+      return typeof v === 'string' ? v : undefined;
+    };
+    const ratingOrUndefined = (key: string): number | undefined => {
+      const v = data[key];
+      return typeof v === 'number' ? v : undefined;
+    };
+    const draft = {
+      sleepRating: ratingOrUndefined('sleepRating'),
+      energyRating: ratingOrUndefined('energyRating'),
+      focusRating: ratingOrUndefined('focusRating'),
+      stressRating: ratingOrUndefined('stressRating'),
+      quickEnergyAction: stringOrUndefined('quickEnergyAction'),
+      gratitude1: stringOrUndefined('gratitude1'),
+      gratitude2: stringOrUndefined('gratitude2'),
+      gratitude3: stringOrUndefined('gratitude3'),
+      wisdomRequest: stringOrUndefined('wisdomRequest'),
+      chooseToBeIdentity: stringOrUndefined('chooseToBeIdentity'),
+      identityAction: stringOrUndefined('identityAction'),
+      dailyMicroAchievement: stringOrUndefined('dailyMicroAchievement'),
+      devotionalNotes: stringOrUndefined('devotionalNotes'),
+      mitSer: stringOrUndefined('mitSer'),
+      mitNegocio: stringOrUndefined('mitNegocio'),
+      mitRelaciones: stringOrUndefined('mitRelaciones'),
+      whatWorked: stringOrUndefined('whatWorked'),
+      whatDidNotWork: stringOrUndefined('whatDidNotWork'),
+      improvementIdea: stringOrUndefined('improvementIdea'),
+      prepTomorrow: [stringOrUndefined('prep1'), stringOrUndefined('prep2'), stringOrUndefined('prep3')].filter(
+        (v): v is string => typeof v === 'string',
+      ),
+    };
+    const result = await saveJournalDraft(draft);
+    if (!result.success) {
+      logger.warn('autosave_failed', { error: result.error });
+    }
   }, []);
 
   const { isSaving, lastSaved, hasChanges } = useAutosave({
@@ -166,10 +223,10 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   const handleSmartDictation = useCallback((data: any) => {
     if (data.energy) {
-      if (data.energy.sleepRating != null) setSleepRating(data.energy.sleepRating);
-      if (data.energy.energyRating != null) setEnergyRating(data.energy.energyRating);
-      if (data.energy.focusRating != null) setFocusRating(data.energy.focusRating);
-      if (data.energy.stressRating != null) setStressRating(data.energy.stressRating);
+      if (data.energy.sleepRating !== null && data.energy.sleepRating !== undefined) setSleepRating(data.energy.sleepRating);
+      if (data.energy.energyRating !== null && data.energy.energyRating !== undefined) setEnergyRating(data.energy.energyRating);
+      if (data.energy.focusRating !== null && data.energy.focusRating !== undefined) setFocusRating(data.energy.focusRating);
+      if (data.energy.stressRating !== null && data.energy.stressRating !== undefined) setStressRating(data.energy.stressRating);
       if (data.energy.quickEnergyAction) setQuickEnergyAction(data.energy.quickEnergyAction);
     }
     if (data.gratitude) {
@@ -204,11 +261,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
     }
     if (data.mit) {
       if (data.mit.ser) setMitSer(data.mit.ser);
-      if (data.mit.serCompleted != null) setMitSerCompleted(data.mit.serCompleted);
+      if (data.mit.serCompleted !== null && data.mit.serCompleted !== undefined) setMitSerCompleted(data.mit.serCompleted);
       if (data.mit.negocio) setMitNegocio(data.mit.negocio);
-      if (data.mit.negocioCompleted != null) setMitNegocioCompleted(data.mit.negocioCompleted);
+      if (data.mit.negocioCompleted !== null && data.mit.negocioCompleted !== undefined) setMitNegocioCompleted(data.mit.negocioCompleted);
       if (data.mit.relaciones) setMitRelaciones(data.mit.relaciones);
-      if (data.mit.relacionesCompleted != null) setMitRelacionesCompleted(data.mit.relacionesCompleted);
+      if (data.mit.relacionesCompleted !== null && data.mit.relacionesCompleted !== undefined) setMitRelacionesCompleted(data.mit.relacionesCompleted);
     }
     if (data.closure) {
       if (data.closure.whatWorked) setWhatWorked(data.closure.whatWorked);
@@ -276,7 +333,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
         router.refresh();
       }, 2500);
     } catch (err) {
-      console.error('Submit error:', err);
+      logger.error('journal_submit_error', {}, err);
       setError('Error de conexión. Intenta de nuevo.');
       setLoading(false);
     }
@@ -304,10 +361,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+              <label htmlFor="plan-b-choose-identity" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
                 Hoy elijo SER:
               </label>
               <input
+                id="plan-b-choose-identity"
                 type="text"
                 value={chooseToBeIdentity}
                 onChange={(e) => setChooseToBeIdentity(e.target.value)}
@@ -317,10 +375,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+              <label htmlFor="plan-b-identity-action" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
                 Acción específica para demostrarlo:
               </label>
               <input
+                id="plan-b-identity-action"
                 type="text"
                 value={identityAction}
                 onChange={(e) => setIdentityAction(e.target.value)}
@@ -330,10 +389,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+              <label htmlFor="plan-b-gratitude-1" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
                 Gracias Dios por:
               </label>
               <input
+                id="plan-b-gratitude-1"
                 type="text"
                 value={gratitude1}
                 onChange={(e) => setGratitude1(e.target.value)}

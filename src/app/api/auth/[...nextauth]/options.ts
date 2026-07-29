@@ -1,14 +1,9 @@
-import { NextAuthOptions } from 'next-auth';
+import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from '@/db/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { scryptSync } from 'crypto';
-
-function hashPassword(password: string): string {
-  const salt = 'journaling-integral-salt-key';
-  return scryptSync(password, salt, 64).toString('hex');
-}
+import { verifyPassword } from '@/lib/password';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -31,8 +26,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('No existe ningún usuario registrado con este email.');
         }
 
-        const hashedPassword = hashPassword(credentials.password);
-        if (user.password !== hashedPassword) {
+        if (!verifyPassword(credentials.password, user.password)) {
           throw new Error('Contraseña incorrecta.');
         }
 
@@ -49,14 +43,14 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        session.user.id = token.id;
+        session.user.role = token.role;
       }
       return session;
     }
@@ -67,5 +61,14 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'journaling-nextauth-super-secret-key-12345',
+  secret: (() => {
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        'NEXTAUTH_SECRET environment variable is required and must be at least 32 characters. ' +
+        'Generate one with: openssl rand -base64 32'
+      );
+    }
+    return secret;
+  })(),
 };

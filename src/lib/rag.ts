@@ -4,8 +4,41 @@ import { db } from '@/db/db';
 import { journalEmbeddings } from '@/db/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logger } from './logger';
+import { safeJsonParse } from './json';
 
-const EMBEDDING_MODEL = 'gemini-embedding-001';
+export const EMBEDDING_MODEL = 'text-embedding-004';
+export const EMBEDDING_DIMENSIONS = 768;
+
+const MAX_CONTENT_LENGTH = 8000;
+
+function truncateContent(text: string): string {
+  if (text.length <= MAX_CONTENT_LENGTH) return text;
+  logger.warn('rag_content_truncated', {
+    originalLength: text.length,
+    maxLength: MAX_CONTENT_LENGTH,
+  });
+  return text.slice(0, MAX_CONTENT_LENGTH);
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  attempts: number = 3,
+  delayMs: number = 500,
+): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
 
 // ============================================================
 // GENERATE EMBEDDING
@@ -18,7 +51,8 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const genAI = new GoogleGenerativeAI(gemini);
   const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
 
-  const result = await model.embedContent(text);
+  const truncated = truncateContent(text);
+  const result = await withRetry(() => model.embedContent(truncated), 3, 500);
   return result.embedding.values;
 }
 
@@ -108,7 +142,11 @@ export async function storeEntryEmbedding(
     if (existing) {
       await db
         .update(journalEmbeddings)
-        .set({ content, embedding: embeddingJson })
+        .set({
+          content,
+          embedding: embeddingJson,
+          modelVersion: EMBEDDING_MODEL,
+        })
         .where(eq(journalEmbeddings.id, existing.id));
     } else {
       await db.insert(journalEmbeddings).values({
@@ -117,11 +155,12 @@ export async function storeEntryEmbedding(
         entryId,
         content,
         embedding: embeddingJson,
+        modelVersion: EMBEDDING_MODEL,
         createdAt: new Date().toISOString(),
       });
     }
   } catch (error) {
-    console.error('[RAG] Error storing embedding:', error);
+    logger.error('rag_store_embedding_failed', {}, error);
   }
 }
 
@@ -130,6 +169,7 @@ export async function storeEntryEmbedding(
 // ============================================================
 
 interface SimilarEntry {
+  id: string;
   content: string;
   similarity: number;
   date: string;
@@ -157,20 +197,24 @@ export async function searchSimilarEntries(
 
     if (userEmbeddings.length === 0) return [];
 
-    const scored = userEmbeddings.map((emb) => {
-      const embVector = JSON.parse(emb.embedding) as number[];
-      const similarity = cosineSimilarity(queryEmbedding, embVector);
-      return {
-        content: emb.content,
-        similarity,
-        date: emb.createdAt.split('T')[0],
-      };
-    });
+    const scored = userEmbeddings
+      .map((emb) => {
+        const embVector = safeJsonParse<number[]>(emb.embedding, []);
+        if (embVector.length === 0) return null;
+        const similarity = cosineSimilarity(queryEmbedding, embVector);
+        return {
+          id: emb.entryId,
+          content: emb.content,
+          similarity,
+          date: emb.createdAt.split('T')[0],
+        };
+      })
+      .filter((s): s is SimilarEntry => s !== null);
 
     scored.sort((a, b) => b.similarity - a.similarity);
     return scored.slice(0, topK);
   } catch (error) {
-    console.error('[RAG] Error searching entries:', error);
+    logger.error('rag_search_entries_failed', {}, error);
     return [];
   }
 }

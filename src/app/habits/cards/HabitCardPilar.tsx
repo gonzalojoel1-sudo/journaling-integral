@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Zap, CheckCircle, Check, X } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-import { IPilarHabit } from '@/types/habits';
+import type { IPilarHabit } from '@/types/habits';
 
 const domainLabels: Record<string, string> = {
   cuerpo: 'Cuerpo', mente: 'Mente', trabajo: 'Trabajo',

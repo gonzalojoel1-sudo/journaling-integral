@@ -97,10 +97,12 @@ export function BusinessSettingsModal({ settings, onClose, initialShowNew = fals
             Unidades de Negocio
           </span>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Cerrar configuración"
             className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-400 transition-colors"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Check } from 'lucide-react';
-import { ICadenaHabit } from '@/types/habits';
+import type { ICadenaHabit } from '@/types/habits';
 
 export function HabitCardCadena({ habit }: { habit: ICadenaHabit }) {
   const [expanded, setExpanded] = useState(false);

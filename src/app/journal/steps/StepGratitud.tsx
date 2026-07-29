@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Heart } from 'lucide-react';
 
 interface StepGratitudProps {
   gratitude1: string;

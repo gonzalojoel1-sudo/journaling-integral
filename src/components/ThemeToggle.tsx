@@ -41,10 +41,11 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
+      aria-label={darkMode ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
       className="p-2 rounded-lg bg-stone-100 dark:bg-stone-850 hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 transition-colors"
       title="Cambiar tema de color"
     >
-      {darkMode ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-600" />}
+      {darkMode ? <Sun className="h-4 w-4 text-amber-500" aria-hidden="true" /> : <Moon className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
     </button>
   );
 }

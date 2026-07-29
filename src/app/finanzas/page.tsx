@@ -4,6 +4,7 @@ import { getPersonalMetricsRange } from '../actions/personal-finance';
 import { MetricCard } from '@/components/business/MetricCard';
 import { PersonalLedger } from '@/components/personal/PersonalLedger';
 import { DonutChart } from '@/components/personal/DonutChart';
+import { todayStr, addDays } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,16 +17,15 @@ const INCOME_COLORS = ['#059669', '#34d399', '#6ee7b7', '#a7f3d0', '#10b981', '#
 const EXPENSE_COLORS = ['#be123c', '#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#9f1239'];
 
 export default async function FinanzasPage() {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+  const today = todayStr();
+  const thirtyDaysAgo = addDays(today, -30);
 
-  const metrics = await getPersonalMetricsRange(thirtyDaysAgo, todayStr);
+  const metrics = await getPersonalMetricsRange(thirtyDaysAgo, today);
 
   const liquidity = metrics.success ? (metrics.liquidity ?? 0) : 0;
   const expenses = metrics.success ? (metrics.totalExpenses ?? 0) : 0;
   const savingsRate = metrics.success ? (metrics.savingsRate ?? 0) : 0;
   const transactions = metrics.success ? (metrics.transactions ?? []) : [];
-  const totalIncome = metrics.success ? (metrics.totalIncome ?? 0) : 0;
 
   const incomeBreakdown = transactions
     .filter((t) => t.type === 'ingreso')
@@ -55,7 +55,7 @@ export default async function FinanzasPage() {
           </h1>
         </div>
         <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
-          {thirtyDaysAgo.split('-').reverse().join('/')} — {todayStr.split('-').reverse().join('/')}
+          {thirtyDaysAgo.split('-').reverse().join('/')} — {today.split('-').reverse().join('/')}
         </span>
       </header>
 

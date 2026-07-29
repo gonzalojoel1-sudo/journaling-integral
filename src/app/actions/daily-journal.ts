@@ -3,7 +3,7 @@
 import { db } from '../../db/db';
 import { dailyEntries, users, habits, businessTransactions } from '../../db/schema';
 import { applyDecayAndBonus } from '../../lib/habit-strength';
-import { eq, and, desc, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, getOrCreateUserProfile } from './auth';
@@ -15,14 +15,29 @@ import {
   CreateBusinessTransactionSchema,
 } from '@/lib/validations';
 import { storeEntryEmbedding, buildEntryContent } from '@/lib/rag';
+import { logger } from '@/lib/logger';
+import { todayStr, yesterdayStr } from '@/lib/dates';
+import {
+  HABIT_TYPE_PILAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_RESCUE_DECAY_THRESHOLD,
+  HABIT_RESCUE_MIN_GAIN,
+  SEMBRAR_MAX_DAYS_PER_CYCLE,
+  STREAK_SHIELD_MAX,
+  STREAK_SHIELD_AWARD_DAYS,
+  ANALYTICS_DAYS_WINDOW,
+} from '@/lib/constants-domain';
 
 function calculateStreak(
   lastEntryDate: string | null,
   currentStreak: number,
   todayStr: string,
 ): number {
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  if (lastEntryDate === yesterdayStr) {
+  const yesterday = yesterdayStr();
+  if (lastEntryDate === yesterday) {
     return currentStreak + 1;
   }
   if (lastEntryDate !== todayStr) {
@@ -42,13 +57,13 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     }
 
     const user = profileRes.user;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDateStr = todayStr();
     const timeStr = new Date().toTimeString().split(' ')[0].substring(0, 5);
 
     const existingEntry = await db.query.dailyEntries.findFirst({
       where: and(
         eq(dailyEntries.userId, user.id),
-        eq(dailyEntries.date, todayStr),
+        eq(dailyEntries.date, todayDateStr),
       ),
     });
 
@@ -58,7 +73,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     const entryData = {
       id: entryId,
       userId: user.id,
-      date: todayStr,
+      date: todayDateStr,
       time: timeStr,
       levelAtEntry: user.currentLevel,
       isPlanBUsed: formData.isPlanBUsed ? 1 : 0,
@@ -129,189 +144,193 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       createdAt: existingEntry?.createdAt || new Date().toISOString(),
     };
 
-    if (existingEntry) {
-      await db.update(dailyEntries).set(entryData).where(eq(dailyEntries.id, existingEntry.id));
-    } else {
-      await db.insert(dailyEntries).values(entryData);
-
-      const newStreak = calculateStreak(user.lastEntryDate, user.streakCurrent, todayStr);
-      const newMaxStreak = Math.max(newStreak, user.streakMax);
-
-      await db
-        .update(users)
-        .set({
-          streakCurrent: newStreak,
-          streakMax: newMaxStreak,
-          lastEntryDate: todayStr,
+    // Pre-load all habits referenced in formData in a single query (eliminates N+1)
+    const habitIds = (formData.dailyHabits || [])
+      .map((h: { habitId?: string }) => h.habitId)
+      .filter(Boolean) as string[];
+    const habitRecords = habitIds.length > 0
+      ? await db.query.habits.findMany({
+          where: and(eq(habits.userId, user.id), inArray(habits.id, habitIds)),
         })
-        .where(eq(users.id, user.id));
-    }
+      : [];
+    const habitMap = new Map(habitRecords.map((h) => [h.id, h]));
 
-    // RAG: Generate embedding in background (non-blocking)
-    const contentForEmbedding = buildEntryContent(entryData);
-    storeEntryEmbedding(user.id, entryId, contentForEmbedding).catch((err) =>
-      console.error('[RAG] Falló la generación del embedding en segundo plano:', err),
-    );
+    // Atomic core: entry insert/update + streak update + all habit updates.
+    // If any mutation fails, the entire batch rolls back — DB never half-updates.
+    await db.transaction(async (tx) => {
+      if (existingEntry) {
+        await tx.update(dailyEntries).set(entryData).where(eq(dailyEntries.id, existingEntry.id));
+      } else {
+        await tx.insert(dailyEntries).values(entryData);
 
-    const dateLimit = new Date();
-    dateLimit.setDate(dateLimit.getDate() - 30);
-    const dateLimitStr = dateLimit.toISOString().split('T')[0];
+        const newStreak = calculateStreak(user.lastEntryDate, user.streakCurrent, todayDateStr);
+        const newMaxStreak = Math.max(newStreak, user.streakMax);
 
-    const entriesLast30Days = await db.query.dailyEntries.findMany({
-      where: and(
-        eq(dailyEntries.userId, user.id),
-        gte(dailyEntries.date, dateLimitStr),
-      ),
-    });
-
-    // Levels deprecated — progression is now tracked via badges
-
-    if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      const pilarHabits: { id: string; domain: string | null; currentStrength: number; lastStrengthDate: string | null }[] = [];
-      let totalNonPilarToComplete = 0;
-      let completedNonPilar = 0;
-
-      for (const habitEntry of formData.dailyHabits) {
-        if (!habitEntry.habitId) continue;
-
-        const habitRecord = await db.query.habits.findFirst({
-          where: eq(habits.id, habitEntry.habitId),
-        });
-
-        if (!habitRecord) continue;
-
-        if (habitRecord.habitType === 'pilar') {
-          pilarHabits.push({
-            id: habitRecord.id,
-            domain: habitRecord.domain,
-            currentStrength: habitRecord.currentStrength ?? 0,
-            lastStrengthDate: habitRecord.lastStrengthDate,
-          });
-          continue;
-        }
-
-        totalNonPilarToComplete++;
-        if (habitEntry.completed === true) completedNonPilar++;
-
-        if (habitRecord.habitType === 'preciso') {
-          if (habitEntry.completed === true) {
-            await db.update(habits).set({
-              triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
-              actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-          if (!habitEntry.completed) continue;
-        }
-
-        const { newStrength, newDate } = applyDecayAndBonus(
-          habitRecord.currentStrength ?? 0,
-          habitRecord.lastStrengthDate,
-          todayStr,
-          habitEntry.completed === true,
-        );
-
-        await db
-          .update(habits)
+        await tx
+          .update(users)
           .set({
-            currentStrength: newStrength,
-            lastStrengthDate: newDate,
+            streakCurrent: newStreak,
+            streakMax: newMaxStreak,
+            lastEntryDate: todayDateStr,
           })
-          .where(eq(habits.id, habitEntry.habitId));
+          .where(eq(users.id, user.id));
+      }
 
-        if (habitRecord.habitType === 'sembrar') {
-          const currentDays = habitRecord.daysInCurrentCycle ?? 0;
-          if (habitEntry.completed === true && currentDays < 15) {
-            await db.update(habits).set({
-              daysInCurrentCycle: currentDays + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
+      // Levels deprecated — progression is now tracked via badges
+
+      if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
+        const today = todayStr();
+
+        const pilarHabits: { id: string; domain: string | null; currentStrength: number; lastStrengthDate: string | null }[] = [];
+        let totalNonPilarToComplete = 0;
+        let completedNonPilar = 0;
+
+        for (const habitEntry of formData.dailyHabits) {
+          if (!habitEntry.habitId) continue;
+
+          const habitRecord = habitMap.get(habitEntry.habitId);
+          if (!habitRecord) continue;
+
+          if (habitRecord.habitType === HABIT_TYPE_PILAR) {
+            pilarHabits.push({
+              id: habitRecord.id,
+              domain: habitRecord.domain,
+              currentStrength: habitRecord.currentStrength ?? 0,
+              lastStrengthDate: habitRecord.lastStrengthDate,
+            });
+            continue;
           }
-        }
 
-        if (
-          !habitEntry.completed &&
-          habitRecord.rescueAction &&
-          habitRecord.activeAction !== habitRecord.rescueAction &&
-          newStrength < (habitRecord.currentStrength ?? 0) * 0.85
-        ) {
-          await db
+          totalNonPilarToComplete++;
+          if (habitEntry.completed === true) completedNonPilar++;
+
+          if (habitRecord.habitType === HABIT_TYPE_PRECISO) {
+            if (habitEntry.completed === true) {
+              await tx.update(habits).set({
+                triggerHitCount: (habitRecord.triggerHitCount ?? 0) + 1,
+                actionExecutedCount: (habitRecord.actionExecutedCount ?? 0) + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+            if (!habitEntry.completed) continue;
+          }
+
+          const { newStrength, newDate } = applyDecayAndBonus(
+            habitRecord.currentStrength ?? 0,
+            habitRecord.lastStrengthDate,
+            today,
+            habitEntry.completed === true,
+          );
+
+          await tx
             .update(habits)
-            .set({ activeAction: habitRecord.rescueAction })
+            .set({
+              currentStrength: newStrength,
+              lastStrengthDate: newDate,
+            })
             .where(eq(habits.id, habitEntry.habitId));
-        }
 
-        if (
-          habitEntry.completed === true &&
-          habitRecord.rescueAction &&
-          habitRecord.rescueAction !== habitRecord.activeAction
-        ) {
-          if (newStrength >= (habitRecord.currentStrength ?? 0) + 2.5) {
-            await db
+          if (habitRecord.habitType === HABIT_TYPE_SEMBRAR) {
+            const currentDays = habitRecord.daysInCurrentCycle ?? 0;
+            if (habitEntry.completed === true && currentDays < SEMBRAR_MAX_DAYS_PER_CYCLE) {
+              await tx.update(habits).set({
+                daysInCurrentCycle: currentDays + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+          }
+
+          if (
+            !habitEntry.completed &&
+            habitRecord.rescueAction &&
+            habitRecord.activeAction !== habitRecord.rescueAction &&
+            newStrength < (habitRecord.currentStrength ?? 0) * HABIT_RESCUE_DECAY_THRESHOLD
+          ) {
+            await tx
               .update(habits)
               .set({ activeAction: habitRecord.rescueAction })
               .where(eq(habits.id, habitEntry.habitId));
           }
-        }
 
-        if (habitRecord.habitType === 'crecer') {
-          const currentStreak = habitRecord.currentStreak ?? 0;
-          const currentShields = habitRecord.streakShields ?? 0;
+          if (
+            habitEntry.completed === true &&
+            habitRecord.rescueAction &&
+            habitRecord.rescueAction !== habitRecord.activeAction
+          ) {
+            if (newStrength >= (habitRecord.currentStrength ?? 0) + HABIT_RESCUE_MIN_GAIN) {
+              await tx
+                .update(habits)
+                .set({ activeAction: habitRecord.rescueAction })
+                .where(eq(habits.id, habitEntry.habitId));
+            }
+          }
 
-          if (habitEntry.completed === true) {
-            const newStreak = currentStreak + 1;
-            const newShields = Math.min(currentShields + (newStreak % 7 === 0 ? 1 : 0), 2);
-            await db.update(habits).set({
-              currentStreak: newStreak,
-              streakShields: newShields,
-            }).where(eq(habits.id, habitEntry.habitId));
-          } else if (currentShields > 0) {
-            await db.update(habits).set({
-              streakShields: currentShields - 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          } else {
-            await db.update(habits).set({
-              currentStreak: 0,
-            }).where(eq(habits.id, habitEntry.habitId));
+          if (habitRecord.habitType === HABIT_TYPE_CRECER) {
+            const currentStreak = habitRecord.currentStreak ?? 0;
+            const currentShields = habitRecord.streakShields ?? 0;
+
+            if (habitEntry.completed === true) {
+              const newStreak = currentStreak + 1;
+              const newShields = Math.min(
+                currentShields + (newStreak % STREAK_SHIELD_AWARD_DAYS === 0 ? 1 : 0),
+                STREAK_SHIELD_MAX,
+              );
+              await tx.update(habits).set({
+                currentStreak: newStreak,
+                streakShields: newShields,
+              }).where(eq(habits.id, habitEntry.habitId));
+            } else if (currentShields > 0) {
+              await tx.update(habits).set({
+                streakShields: currentShields - 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            } else {
+              await tx.update(habits).set({
+                currentStreak: 0,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+          }
+
+          if (habitRecord.habitType === HABIT_TYPE_CAMBIAR) {
+            if (habitEntry.completed === true) {
+              await tx.update(habits).set({
+                victoryCount: (habitRecord.victoryCount ?? 0) + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
+            if (habitEntry.temptationAppeared && !habitEntry.completed) {
+              await tx.update(habits).set({
+                temptationCount: (habitRecord.temptationCount ?? 0) + 1,
+              }).where(eq(habits.id, habitEntry.habitId));
+            }
           }
         }
 
-        if (habitRecord.habitType === 'cambiar') {
-          if (habitEntry.completed === true) {
-            await db.update(habits).set({
-              victoryCount: (habitRecord.victoryCount ?? 0) + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
-          }
-          if (habitEntry.temptationAppeared && !habitEntry.completed) {
-            await db.update(habits).set({
-              temptationCount: (habitRecord.temptationCount ?? 0) + 1,
-            }).where(eq(habits.id, habitEntry.habitId));
+        // Pilar: auto-derive completion from all other habits
+        if (pilarHabits.length > 0) {
+          const allNonPilarCompleted = totalNonPilarToComplete > 0 && totalNonPilarToComplete === completedNonPilar;
+
+          for (const pilar of pilarHabits) {
+            const { newStrength, newDate } = applyDecayAndBonus(
+              pilar.currentStrength,
+              pilar.lastStrengthDate,
+              today,
+              allNonPilarCompleted,
+            );
+
+            await tx.update(habits).set({
+              currentStrength: newStrength,
+              lastStrengthDate: newDate,
+              pilarCompleted: allNonPilarCompleted ? 1 : 0,
+            }).where(eq(habits.id, pilar.id));
+
+            // Keystone effect: ephemeral bonus computed at display time, not persisted
           }
         }
       }
+    });
 
-      // Pilar: auto-derive completion from all other habits
-      if (pilarHabits.length > 0) {
-        const allNonPilarCompleted = totalNonPilarToComplete > 0 && totalNonPilarToComplete === completedNonPilar;
-
-        for (const pilar of pilarHabits) {
-          const { newStrength, newDate } = applyDecayAndBonus(
-            pilar.currentStrength,
-            pilar.lastStrengthDate,
-            todayStr,
-            allNonPilarCompleted,
-          );
-
-          await db.update(habits).set({
-            currentStrength: newStrength,
-            lastStrengthDate: newDate,
-            pilarCompleted: allNonPilarCompleted ? 1 : 0,
-          }).where(eq(habits.id, pilar.id));
-
-          // Keystone effect: ephemeral bonus computed at display time, not persisted
-        }
-      }
-    }
+    // RAG: Generate embedding in background (non-blocking) — fired AFTER the commit
+    const contentForEmbedding = buildEntryContent(entryData);
+    storeEntryEmbedding(user.id, entryId, contentForEmbedding).catch((err) =>
+      logger.error('rag_embedding_background_failed', {}, err),
+    );
 
     revalidatePath('/');
     revalidatePath('/journal');
@@ -337,7 +356,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       badgeUnlocked,
     };
   } catch (error) {
-    console.error('Error al guardar el diario:', error);
+    logger.error('daily_journal_save_failed', {}, error);
     return { success: false, error: 'Hubo un error al procesar el guardado.' };
   }
 }
@@ -348,11 +367,11 @@ export async function getAnalyticsData() {
     const entries = await db.query.dailyEntries.findMany({
       where: eq(dailyEntries.userId, userId),
       orderBy: [desc(dailyEntries.date)],
-      limit: 30,
+      limit: ANALYTICS_DAYS_WINDOW,
     });
     return { success: true, entries };
   } catch (error) {
-    console.error('Error al obtener analíticas:', error);
+    logger.error('daily_journal_analytics_failed', {}, error);
     return { success: false, error: 'No se pudo generar el reporte de analíticas.' };
   }
 }
@@ -360,7 +379,7 @@ export async function getAnalyticsData() {
 export async function getDailyBusinessMetrics(date?: string) {
   try {
     const userId = await getCurrentUserId();
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || todayStr();
 
     const txns = await db.query.businessTransactions.findMany({
       where: and(
@@ -393,7 +412,7 @@ export async function getDailyBusinessMetrics(date?: string) {
       transactions: txns,
     };
   } catch (error) {
-    console.error('Error al obtener métricas de negocio:', error);
+    logger.error('daily_journal_business_metrics_failed', {}, error);
     return { success: false, error: 'No se pudieron obtener las métricas.' };
   }
 }
@@ -466,7 +485,7 @@ export async function getBusinessMetricsRange(startDate: string, endDate: string
       weeklyData: Object.values(weeklyData),
     };
   } catch (error) {
-    console.error('Error al obtener métricas de negocio:', error);
+    logger.error('daily_journal_business_metrics_failed', {}, error);
     return { success: false, error: 'No se pudieron obtener las métricas.' };
   }
 }
@@ -485,7 +504,7 @@ export async function createBusinessTransaction(data: {
     if (!v.success) return { success: false, error: v.error };
 
     const userId = await getCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDateStr = todayStr();
 
     await db.insert(businessTransactions).values({
       id: randomUUID(),
@@ -496,7 +515,7 @@ export async function createBusinessTransaction(data: {
       description: data.description || null,
       source: data.source || 'General',
       isSale: data.isSale ? 1 : 0,
-      date: data.date || todayStr,
+      date: data.date || todayDateStr,
       dailyEntryId: null,
       createdAt: new Date().toISOString(),
     });
@@ -505,7 +524,7 @@ export async function createBusinessTransaction(data: {
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('Error al crear transacción:', error);
+    logger.error('daily_journal_create_transaction_failed', {}, error);
     return { success: false, error: 'No se pudo crear la transacción.' };
   }
 }

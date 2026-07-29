@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Shield } from 'lucide-react';
-import { ICrecerHabit } from '@/types/habits';
+import type { ICrecerHabit } from '@/types/habits';
 
 const STREAK_TIERS = [
   { min: 0, icon: '🔥', label: 'Empezando' },

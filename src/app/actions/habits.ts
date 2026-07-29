@@ -5,8 +5,9 @@ import { habits } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { getCurrentUserId, requireCurrentUserId } from './auth';
 import { validate, CreateHabitSchema, ArchiveHabitSchema } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export async function getActiveHabits() {
   try {
@@ -16,7 +17,7 @@ export async function getActiveHabits() {
     });
     return { success: true, habits: list };
   } catch (error) {
-    console.error('Error al obtener hábitos:', error);
+    logger.error('habits_get_active_failed', {}, error);
     return { success: false, error: 'No se pudo cargar la lista de hábitos.' };
   }
 }
@@ -83,7 +84,7 @@ export async function createHabit(data: {
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('Error al añadir hábito:', error);
+    logger.error('habits_add_failed', {}, error);
     return { success: false, error: 'Ocurrió un error al guardar el hábito.' };
   }
 }
@@ -93,13 +94,22 @@ export async function archiveHabit(habitId: string) {
     const v = validate(ArchiveHabitSchema, { habitId });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.update(habits).set({ isActive: 0 }).where(eq(habits.id, habitId));
+    const userId = await requireCurrentUserId();
+    const result = await db.update(habits)
+      .set({ isActive: 0 })
+      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+      .returning({ id: habits.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Hábito no encontrado o sin permisos' };
+    }
+
     revalidatePath('/habits');
     revalidatePath('/journal');
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('Error al archivar hábito:', error);
+    logger.error('habits_archive_failed', {}, error);
     return { success: false, error: 'No se pudo completar la operación.' };
   }
 }
@@ -120,7 +130,7 @@ export async function triggerAutoRescue(habitId: string) {
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('Error en auto-rescue:', error);
+    logger.error('habits_auto_rescue_failed', {}, error);
     return { success: false, error: 'No se pudo ejecutar el rescate.' };
   }
 }

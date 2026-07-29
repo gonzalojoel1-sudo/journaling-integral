@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Briefcase, Minus, Plus, PlusCircle } from 'lucide-react';
 import { autoSaveBizField, registerSale } from '../actions/business';
+import { todayStr } from '@/lib/dates';
 
 interface BusinessUnit {
   id: string;
@@ -41,7 +42,7 @@ export function BizCompactPanel({
   date,
   businessUnits,
 }: BizCompactPanelProps) {
-  const todayStr = date || new Date().toISOString().split('T')[0];
+  const todayDateStr = date || todayStr();
 
   const [prospectDone, setProspectDone] = useState(initialProspect);
   const [followUpDone, setFollowUpDone] = useState(initialFollowUp);
@@ -66,10 +67,10 @@ export function BizCompactPanel({
       const actions = { ...pendingActionsRef.current };
       pendingActionsRef.current = {};
       for (const [f, v] of Object.entries(actions)) {
-        await autoSaveBizField(f, v, todayStr);
+        await autoSaveBizField(f, v, todayDateStr);
       }
     }, 500);
-  }, [todayStr]);
+  }, [todayDateStr]);
 
   useEffect(() => {
     return () => {
@@ -110,7 +111,7 @@ export function BizCompactPanel({
   const handleRegisterSale = async () => {
     if (!selectedUnit) return;
     setRegistering(true);
-    const result = await registerSale(selectedUnit, todayStr);
+    const result = await registerSale(selectedUnit, todayDateStr);
     if (result.success) {
       setSales((s) => s + 1);
     }
@@ -286,6 +287,14 @@ function BizCounter({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [editing]);
 
   const commit = () => {
     const parsed = Math.max(0, parseInt(draft, 10) || 0);
@@ -314,6 +323,7 @@ function BizCounter({
             <span className="text-sm font-extrabold text-zinc-400">{prefix}</span>
           )}
           <input
+            ref={inputRef}
             type="number"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -325,7 +335,6 @@ function BizCounter({
                 setEditing(false);
               }
             }}
-            autoFocus
             min={0}
             className="w-16 text-center text-sm font-extrabold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 rounded-lg px-1 py-0.5 outline-none focus:ring-2 focus:ring-emerald-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
@@ -354,16 +363,18 @@ function BizCounter({
         <button
           type="button"
           onClick={decrement}
+          aria-label={`Disminuir ${label}`}
           className="h-5 w-5 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
         >
-          <Minus className="h-3 w-3" />
+          <Minus className="h-3 w-3" aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={increment}
+          aria-label={`Aumentar ${label}`}
           className="h-5 w-5 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="h-3 w-3" aria-hidden="true" />
         </button>
       </div>
       <p className="text-[9px] font-mono text-zinc-400 uppercase">{label}</p>

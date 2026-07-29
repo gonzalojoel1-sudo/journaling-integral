@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { VoiceRecorder } from './VoiceRecorder';
 import { submitVoiceEntry } from '@/app/actions/voice-entry';
 import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface Section {
   key: string;
@@ -67,7 +68,7 @@ export function VoiceJournal() {
       setDone(true);
       setTimeout(() => router.push('/'), 2000);
     } else {
-      console.error('Voice entry failed:', res.error);
+      logger.error('voice_entry_failed', {}, res?.error);
     }
     setLoading(false);
   }
@@ -86,10 +87,12 @@ export function VoiceJournal() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-8">
         <button
+          type="button"
           onClick={() => router.push('/')}
+          aria-label="Volver al inicio"
           className="text-gray-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </button>
         <div>
           <h1 className="text-xl font-bold text-gray-100">Diario por Voz</h1>

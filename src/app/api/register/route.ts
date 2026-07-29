@@ -3,20 +3,19 @@ import { db } from '@/db/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { scryptSync } from 'crypto';
-
-function hashPassword(password: string): string {
-  const salt = 'journaling-integral-salt-key';
-  return scryptSync(password, salt, 64).toString('hex');
-}
+import { hashPassword } from '@/lib/password';
+import { logger } from '@/lib/logger';
+import { validate, RegisterSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
-
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Faltan campos requeridos.' }, { status: 400 });
+    const body = await request.json().catch(() => null);
+    const v = validate(RegisterSchema, body);
+    if (!v.success) {
+      return NextResponse.json({ error: v.error }, { status: 400 });
     }
+
+    const { name, email, password } = v.data;
 
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, email),
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error al registrar usuario:', error);
+    logger.error('register_user_failed', { message: error?.message }, error);
     return NextResponse.json({ error: 'Error interno del servidor.' }, { status: 500 });
   }
 }

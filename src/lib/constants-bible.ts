@@ -1,8 +1,5 @@
-export const DEMO_USER_ID = 'demo-user-id' as const;
-export const DEMO_USER_EMAIL = 'joel@journalingintegral.demo' as const;
-export const DEMO_USER_NAME = 'Joel Pacheco' as const;
-export const DEMO_USER_PASSWORD_HASH =
-  '7d2143c548907019260ce52552eab73d263ba0343bcbabf3780aebfaa62dea003bbc1a3522005bd091e31158b10526bd11909312a98b3cca418b8eba0c806aa5' as const;
+// src/lib/constants-bible.ts
+// Bible-related constants and fallback data.
 
 export const FALLBACK_VERSES = [
   {

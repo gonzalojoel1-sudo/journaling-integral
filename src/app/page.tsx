@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { db } from '../db/db';
-import { dailyEntries, users } from '../db/schema';
+import { dailyEntries } from '../db/schema';
 import { getOrCreateUserProfile } from './actions/auth';
 import { getRandomVerse } from './actions/bible';
 import { getActiveWeeklyPlan } from './actions/weekly-planning';
@@ -13,6 +13,8 @@ import { getUserSettings } from './actions/user-settings';
 import { ALL_TEMPLATES } from '@/lib/challenge-templates';
 import { getCurrentEscalon, getNextEscalon } from '@/lib/challenge-auto-activate';
 import { eq, and } from 'drizzle-orm';
+import { parseJsonColumn } from '@/lib/json';
+import { z } from 'zod';
 import {
   Flame,
   Award,
@@ -24,11 +26,32 @@ import {
   BookOpen,
   Trophy,
 } from 'lucide-react';
+
+const PrepTomorrowSchema = z.array(z.string().max(500)).max(50);
+const WeeklyTaskSchema = z.object({
+  day: z.string(),
+  task: z.string(),
+});
+const WeeklyTasksSchema = z.array(WeeklyTaskSchema);
+const SavedHabitSchema = z.object({
+  habitId: z.string(),
+  name: z.string().optional(),
+  habitType: z.string().optional(),
+  type: z.string().optional(),
+  completed: z.boolean().optional(),
+});
+const SavedHabitsSchema = z.array(SavedHabitSchema);
+const BizActionsSchema = z.object({
+  prospect: z.string().optional(),
+  followUp: z.string().optional(),
+  mkt: z.string().optional(),
+});
 import { PriorityChecklist } from './dashboard/PriorityChecklist';
 import { HabitProgress } from './dashboard/HabitProgress';
 import { BizCompactPanel } from './dashboard/BizCompactPanel';
 import { PersonalFinanceWidget } from './dashboard/PersonalFinanceWidget';
 import { CircleWidget } from '@/components/circles/CircleWidget';
+import { todayStr, yesterdayStr } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,29 +67,29 @@ export default async function DashboardPage() {
     );
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = todayStr();
 
   const todayEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, todayStr)
+      eq(dailyEntries.date, today)
     ),
   });
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterday = yesterdayStr();
 
   const yesterdayEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, yesterdayStr)
+      eq(dailyEntries.date, yesterday)
     ),
   });
 
-  const prepTomorrowTasks: string[] = yesterdayEntry?.prepTomorrowJson
-    ? JSON.parse(yesterdayEntry.prepTomorrowJson)
-    : [];
+  const prepTomorrowTasks: string[] = parseJsonColumn<string[]>(
+    yesterdayEntry?.prepTomorrowJson,
+    PrepTomorrowSchema,
+    [],
+  );
 
   const weeklyPlanRes = await getActiveWeeklyPlan();
   const activeWeeklyPlan = weeklyPlanRes.plan;
@@ -76,16 +99,16 @@ export default async function DashboardPage() {
 
   if (activeWeeklyPlan) {
     weeklyFocusText = activeWeeklyPlan.focus;
-    try {
-      const parsedTasks = JSON.parse(activeWeeklyPlan.tasksJson);
-      const daysInSpanish = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      const todayDayName = daysInSpanish[new Date().getDay()];
-      const foundTask = parsedTasks.find((t: any) => t.day === todayDayName);
-      if (foundTask && foundTask.task.trim() !== '') {
-        todayWeeklyDestrabeAction = foundTask.task;
-      }
-    } catch (e) {
-      console.error('Error al parsear tareas semanales:', e);
+    const parsedTasks = parseJsonColumn<Array<{ day: string; task: string }>>(
+      activeWeeklyPlan.tasksJson,
+      WeeklyTasksSchema,
+      [],
+    );
+    const daysInSpanish = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const todayDayName = daysInSpanish[new Date().getDay()];
+    const foundTask = parsedTasks.find((t) => t.day === todayDayName);
+    if (foundTask && foundTask.task.trim() !== '') {
+      todayWeeklyDestrabeAction = foundTask.task;
     }
   }
 
@@ -100,7 +123,7 @@ export default async function DashboardPage() {
   const habitsRes = await getActiveHabits();
   const habitsList = habitsRes.habits || [];
 
-  const todayBizMetrics = await getDailyBusinessMetrics(todayStr);
+  const todayBizMetrics = await getDailyBusinessMetrics(today);
   const bizUnitsRes = await getBusinessSettingsList();
   const bizUnits = Array.isArray(bizUnitsRes) ? bizUnitsRes : [];
   const todayIncome = todayBizMetrics.success ? (todayBizMetrics.totalIncome ?? 0) : 0;
@@ -112,14 +135,18 @@ export default async function DashboardPage() {
 
   if (habitsList.length > 0) {
     if (todayEntry?.dailyHabitsJson) {
-      try {
-        const savedHabits = JSON.parse(todayEntry.dailyHabitsJson);
-        parsedHabits = savedHabits.map((h: any) => {
+      const savedHabits = parseJsonColumn<Array<{ habitId: string; name?: string; habitType?: string; type?: string; completed?: boolean }>>(
+        todayEntry.dailyHabitsJson,
+        SavedHabitsSchema,
+        [],
+      );
+      if (savedHabits.length > 0) {
+        parsedHabits = savedHabits.map((h) => {
           const dbHabit = habitsList.find(dbh => dbh.id === h.habitId);
           return {
             id: h.habitId,
-            name: h.name,
-            habitType: h.habitType || h.type,
+            name: h.name ?? '',
+            habitType: h.habitType || h.type || '',
             completed: h.completed,
             currentStrength: dbHabit?.currentStrength ?? 0,
             lastStrengthDate: dbHabit?.lastStrengthDate ?? null,
@@ -129,9 +156,9 @@ export default async function DashboardPage() {
           };
         });
         initialCompletedIds = savedHabits
-          .filter((h: any) => h.completed)
-          .map((h: any) => h.habitId);
-      } catch {
+          .filter((h) => h.completed)
+          .map((h) => h.habitId);
+      } else {
         parsedHabits = habitsList.map((h) => ({ id: h.id, name: h.name, habitType: h.habitType, currentStrength: h.currentStrength ?? 0, lastStrengthDate: h.lastStrengthDate ?? null, activeAction: h.activeAction ?? null, rescueAction: h.rescueAction ?? null, celebration: h.celebration ?? null }));
       }
     } else {
@@ -156,12 +183,14 @@ export default async function DashboardPage() {
   let bizFollowUpText = '';
   let bizMktText = '';
   if (todayEntry?.bizActionsSpecific) {
-    try {
-      const parsed = JSON.parse(todayEntry.bizActionsSpecific);
-      bizProspectText = parsed.prospect || '';
-      bizFollowUpText = parsed.followUp || '';
-      bizMktText = parsed.mkt || '';
-    } catch {}
+    const parsed = parseJsonColumn<{ prospect?: string; followUp?: string; mkt?: string }>(
+      todayEntry.bizActionsSpecific,
+      BizActionsSchema,
+      {},
+    );
+    bizProspectText = parsed.prospect || '';
+    bizFollowUpText = parsed.followUp || '';
+    bizMktText = parsed.mkt || '';
   }
 
   return (

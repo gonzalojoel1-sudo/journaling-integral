@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Activity } from 'lucide-react';
 
 interface StepEnergiaProps {
   sleepRating: number;
@@ -59,10 +58,11 @@ export function StepEnergia({
       </div>
 
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+        <label htmlFor="quick-energy-action" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
           Acción rápida para mejorar energía:
         </label>
         <input
+          id="quick-energy-action"
           type="text"
           value={quickEnergyAction}
           onChange={(e) => setQuickEnergyAction(e.target.value)}

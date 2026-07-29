@@ -1,25 +1,43 @@
 'use client';
 
 import React, { useState } from 'react';
+import { z } from 'zod';
+import { parseJsonColumn } from '@/lib/json';
 import {
-  TrendingUp, 
-  Activity, 
-  Moon, 
-  Brain, 
-  AlertTriangle, 
-  Printer, 
-  Compass, 
+  Activity,
+  Moon,
+  Brain,
+  AlertTriangle,
+  Printer,
+  Compass,
   Award,
   Sparkles,
-  Zap,
-  Heart,
-  TrendingDown,
   LineChart,
   Target,
   ShieldCheck,
   Bookmark,
   Trophy,
 } from 'lucide-react';
+
+const SMARTObjectiveSchema = z.object({
+  id: z.string().optional(),
+  objective: z.string().optional(),
+  targetDate: z.string().optional(),
+  isCompleted: z.boolean().optional(),
+});
+const SMARTObjectivesArraySchema = z.array(SMARTObjectiveSchema);
+
+const ActionRowSchema = z.object({
+  action: z.string().optional(),
+  frequency: z.string().optional(),
+  indicator: z.string().optional(),
+});
+const MetaPlanSchema = z.object({
+  metaIndex: z.number().optional(),
+  metaTitle: z.string().optional(),
+  actions: z.array(ActionRowSchema),
+});
+const MetaPlansArraySchema = z.array(MetaPlanSchema);
 
 interface DailyEntry {
   id: string;
@@ -85,8 +103,8 @@ export function ProgressClient({ entries, activePlan, badges }: ProgressClientPr
   };
 
   const chartEntries = [...validEntries].reverse().slice(-10);
-  const smartObjectives = activePlan?.smartObjectivesJson ? JSON.parse(activePlan.smartObjectivesJson) : [];
-  const metaPlans = activePlan?.actionsPlanJson ? JSON.parse(activePlan.actionsPlanJson) : [];
+  const smartObjectives = parseJsonColumn<unknown[]>(activePlan?.smartObjectivesJson, SMARTObjectivesArraySchema, []);
+  const metaPlans = parseJsonColumn<unknown[]>(activePlan?.actionsPlanJson, MetaPlansArraySchema, []);
 
   return (
     <div className="space-y-6">

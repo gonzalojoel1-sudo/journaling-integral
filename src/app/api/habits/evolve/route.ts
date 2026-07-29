@@ -1,14 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { habits } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { requireCurrentUserId } from '@/app/actions/auth';
+import { validate, EvolveHabitSchema } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
-    const { habitId, evolutionOptimal, evolutionMinimum } = await req.json();
-    if (!habitId) return NextResponse.json({ error: 'habitId required' }, { status: 400 });
+    const userId = await requireCurrentUserId();
 
-    const habit = await db.query.habits.findFirst({ where: eq(habits.id, habitId) });
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const v = validate(EvolveHabitSchema, body);
+    if (!v.success) {
+      return NextResponse.json({ error: v.error }, { status: 400 });
+    }
+
+    const { habitId, evolutionOptimal, evolutionMinimum } = v.data;
+
+    const habit = await db.query.habits.findFirst({
+      where: and(eq(habits.id, habitId), eq(habits.userId, userId)),
+    });
     if (!habit) return NextResponse.json({ error: 'Habit not found' }, { status: 404 });
 
     await db.update(habits).set({
@@ -22,7 +41,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error evolving habit:', error);
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    logger.error('habit_evolve_failed', {}, error);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

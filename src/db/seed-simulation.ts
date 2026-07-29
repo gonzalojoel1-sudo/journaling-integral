@@ -2,9 +2,23 @@ import { db } from './db';
 import { users, userSettings, habits, dailyEntries, businessTransactions, personalTransactions } from './schema';
 import { randomUUID } from 'crypto';
 import { storeEntryEmbedding, buildEntryContent } from '../lib/rag';
+import { logger } from '@/lib/logger';
+import {
+  HABIT_TYPE_PILAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CRECER,
+  ROLE_USER,
+  ANALYTICS_DAYS_WINDOW,
+} from '@/lib/constants-domain';
 
 async function runSimulationSeed() {
-  console.log('🚀 Iniciando simulación de alta densidad para KAIRO...');
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('simulation_seed_blocked_in_production');
+    process.exit(1);
+  }
+
+  logger.info('simulation_seed_started');
 
   const userId = randomUUID();
   const userEmail = 'simulador@irontech.com';
@@ -16,7 +30,7 @@ async function runSimulationSeed() {
     name: 'Joel Simulador',
     email: userEmail,
     password: '$2b$10$dummy_hash_for_simulation', // Hash bcrypt dummy
-    role: 'user',
+    role: ROLE_USER,
     currentLevel: 28,
     streakCurrent: 22,
     streakMax: 45,
@@ -25,7 +39,7 @@ async function runSimulationSeed() {
 
   // 2. Activar todos los paneles en Settings
   await db.insert(userSettings).values({
-    userId: userId,
+    userId,
     showBusinessPanel: 1,
     showFinancePanel: 1,
     showHabitsPanel: 1,
@@ -37,12 +51,12 @@ async function runSimulationSeed() {
 
   // 3. Crear Hábitos Core
   const habitList = [
-    { id: randomUUID(), name: 'Devocional Matutino y Oración', habitType: 'pilar', domain: 'espiritual' },
-    { id: randomUUID(), name: 'Prospectar 5 clientes (iRon Tech)', habitType: 'preciso', domain: 'trabajo' },
-    { id: randomUUID(), name: 'Cerrar caja y flujo de caja diario', habitType: 'sembrar', domain: 'trabajo' },
-    { id: randomUUID(), name: 'Entrenamiento de Fuerza', habitType: 'crecer', domain: 'cuerpo' },
-    { id: randomUUID(), name: 'Lectura de Estrategia', habitType: 'sembrar', domain: 'mente' },
-    { id: randomUUID(), name: 'Tiempo de calidad sin pantallas con la familia', habitType: 'pilar', domain: 'relaciones' },
+    { id: randomUUID(), name: 'Devocional Matutino y Oración', habitType: HABIT_TYPE_PILAR, domain: 'espiritual' },
+    { id: randomUUID(), name: 'Prospectar 5 clientes (iRon Tech)', habitType: HABIT_TYPE_PRECISO, domain: 'trabajo' },
+    { id: randomUUID(), name: 'Cerrar caja y flujo de caja diario', habitType: HABIT_TYPE_SEMBRAR, domain: 'trabajo' },
+    { id: randomUUID(), name: 'Entrenamiento de Fuerza', habitType: HABIT_TYPE_CRECER, domain: 'cuerpo' },
+    { id: randomUUID(), name: 'Lectura de Estrategia', habitType: HABIT_TYPE_SEMBRAR, domain: 'mente' },
+    { id: randomUUID(), name: 'Tiempo de calidad sin pantallas con la familia', habitType: HABIT_TYPE_PILAR, domain: 'relaciones' },
   ];
 
   for (const h of habitList) {
@@ -61,7 +75,7 @@ async function runSimulationSeed() {
   }
 
   // 4. Generar Historial de 30 Días (Simulación narrativa)
-  console.log('📅 Generando 30 días de registros diarios y finanzas...');
+  logger.info('simulation_generating_history', { days: ANALYTICS_DAYS_WINDOW });
 
   const textosDevocionales = [
     'Reflexión sobre la paciencia y la sabiduría en los negocios. Proverbios 16:3.',
@@ -77,7 +91,7 @@ async function runSimulationSeed() {
     'Seguimiento a prospectos antiguos. El servicio premium al cliente siempre paga.',
   ];
 
-  for (let i = 30; i >= 0; i--) {
+  for (let i = ANALYTICS_DAYS_WINDOW; i >= 0; i--) {
     const currentDate = new Date();
     currentDate.setDate(currentDate.getDate() - i);
     const dateStr = currentDate.toISOString().split('T')[0];
@@ -167,13 +181,13 @@ async function runSimulationSeed() {
 
     // 7. HIDRATAR LA MEMORIA RAG
     const content = buildEntryContent(entryData);
-    console.log(`🧠 Indexando memoria RAG para el día: ${dateStr}...`);
+    logger.info('simulation_rag_indexing', { date: dateStr });
     await storeEntryEmbedding(userId, entryId, content);
   }
 
-  console.log('\n✨ ¡Simulación completada con éxito!');
-  console.log(`📧 Inicia sesión con el correo: ${userEmail}`);
-  console.log('💡 Tip: Ve al chat y pregúntale a KAIRO: "¿Cómo han estado mis ventas de iPhones y mi enfoque espiritual en las últimas semanas?" y mira cómo extrae la data.');
+  logger.info('simulation_completed', { userEmail });
 }
 
-runSimulationSeed().catch(console.error);
+runSimulationSeed().catch((err) => {
+  logger.error('simulation_failed', {}, err);
+});

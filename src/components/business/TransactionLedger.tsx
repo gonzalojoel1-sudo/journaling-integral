@@ -8,6 +8,7 @@ import {
   deleteBusinessTransaction,
   createBusinessTransaction,
 } from '@/app/actions/business';
+import { todayStr, addDays } from '@/lib/dates';
 
 interface Transaction {
   id: string;
@@ -35,7 +36,7 @@ const FILTERS: { key: FilterPeriod; label: string }[] = [
 ];
 
 function formatDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [, m, d] = dateStr.split('-').map(Number);
   return `${d}/${m}`;
 }
 
@@ -46,28 +47,21 @@ function formatCurrency(n: number): string {
 function filterTransactions(transactions: Transaction[], period: FilterPeriod): Transaction[] {
   if (period === 'all') return transactions;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  const today = todayStr();
 
-  const cutoff = new Date(today);
+  const cutoff = (days: number) => addDays(today, -days);
+
   if (period === 'today') {
-    return transactions.filter((t) => t.date === todayStr);
+    return transactions.filter((t) => t.date === today);
   }
   if (period === 'week') {
-    cutoff.setDate(cutoff.getDate() - 7);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return transactions.filter((t) => t.date >= cutoffStr);
+    return transactions.filter((t) => t.date >= cutoff(7));
   }
   if (period === 'month') {
-    cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return transactions.filter((t) => t.date >= cutoffStr);
+    return transactions.filter((t) => t.date >= cutoff(30));
   }
   if (period === 'sixMonths') {
-    cutoff.setDate(cutoff.getDate() - 183);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return transactions.filter((t) => t.date >= cutoffStr);
+    return transactions.filter((t) => t.date >= cutoff(183));
   }
   return transactions;
 }
@@ -89,7 +83,7 @@ const emptyForm: EditFormData = {
   description: '',
   source: 'General',
   isSale: false,
-  date: new Date().toISOString().split('T')[0],
+  date: todayStr(),
 };
 
 export function TransactionLedger({ transactions }: TransactionLedgerProps) {
@@ -159,16 +153,10 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
   const openNew = () => {
     setShowNew(true);
     setEditingId(null);
-    setEditForm({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+    setEditForm({ ...emptyForm, date: todayStr() });
   };
 
   const editRow = (tx: Transaction) => {
-    const marginAmount = tx.type === 'ingreso' ? tx.amount - tx.cost : null;
-    const marginPct =
-      marginAmount !== null && tx.amount > 0
-        ? Math.round((marginAmount / tx.amount) * 100)
-        : null;
-
     return (
       <tr key={tx.id} className="border-b border-zinc-100 dark:border-white/[0.03]">
         <td className="py-2.5 text-xs text-zinc-500 font-mono pr-4">
@@ -228,17 +216,21 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
         <td className="py-2.5 pl-2">
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={handleSaveEdit}
               disabled={saving}
+              aria-label="Guardar cambios"
               className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-600/40 flex items-center justify-center text-emerald-400 transition-colors"
             >
-              <Save className="h-3 w-3" />
+              <Save className="h-3 w-3" aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={() => setEditingId(null)}
+              aria-label="Cancelar edición"
               className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-400 transition-colors"
             >
-              <X className="h-3 w-3" />
+              <X className="h-3 w-3" aria-hidden="true" />
             </button>
           </div>
         </td>
@@ -302,7 +294,7 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
             }}
             className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 transition-colors"
           >
-            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -397,17 +389,21 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
                 <td className="py-2.5 pl-2">
                   <div className="flex items-center gap-1">
                     <button
+                      type="button"
                       onClick={handleCreate}
                       disabled={saving}
+                      aria-label="Crear transacción"
                       className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-600/20 hover:bg-emerald-600/40 flex items-center justify-center text-emerald-400 transition-colors"
                     >
-                      <Save className="h-3 w-3" />
+                      <Save className="h-3 w-3" aria-hidden="true" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => setShowNew(false)}
-              className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-400 transition-colors"
+                      aria-label="Cancelar creación"
+                      className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-400 transition-colors"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </div>
                 </td>
@@ -479,16 +475,20 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
                   <td className="py-2.5">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
+                        type="button"
                         onClick={() => handleEdit(tx)}
+                        aria-label={`Editar transacción ${tx.description ?? tx.id}`}
                         className="h-6 w-6 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors"
                       >
-                        <Pencil className="h-3 w-3" />
+                        <Pencil className="h-3 w-3" aria-hidden="true" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDelete(tx.id)}
+                        aria-label={`Eliminar transacción ${tx.description ?? tx.id}`}
                         className="h-6 w-6 rounded-md bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 hover:text-rose-400 transition-colors"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3" aria-hidden="true" />
                       </button>
                     </div>
                   </td>

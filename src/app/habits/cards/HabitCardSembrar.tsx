@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-import { ISembrarHabit } from '@/types/habits';
+import type { ISembrarHabit } from '@/types/habits';
+import { logger } from '@/lib/logger';
 
 const CYCLE_TARGET = 15;
 
@@ -38,7 +39,7 @@ export function HabitCardSembrar({ habit }: { habit: ISembrarHabit }) {
         router.refresh();
       }
     } catch (e) {
-      console.error('Error upgrading habit:', e);
+      logger.error('habit_upgrade_failed', {}, e);
     } finally {
       setUpgrading(false);
     }

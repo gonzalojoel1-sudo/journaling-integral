@@ -28,16 +28,16 @@ const domainLabels: Record<string, string> = {
 };
 
 export function HabitCard({ habit }: { habit: HabitCardHabit }) {
+  const router = useRouter();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const config = typeConfig[habit.habitType || ''] || typeConfig.crecer;
+
   if (habit.habitType === 'crecer') return <HabitCardCrecer habit={habit as ICrecerHabit} />;
   if (habit.habitType === 'cadena') return <HabitCardCadena habit={habit as ICadenaHabit} />;
   if (habit.habitType === 'sembrar') return <HabitCardSembrar habit={habit as ISembrarHabit} />;
   if (habit.habitType === 'cambiar') return <HabitCardCambiar habit={habit as ICambiarHabit} />;
   if (habit.habitType === 'preciso') return <HabitCardPreciso habit={habit as IPrecisoHabit} />;
   if (habit.habitType === 'pilar') return <HabitCardPilar habit={habit as IPilarHabit} />;
-
-  const router = useRouter();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const config = typeConfig[habit.habitType || ''] || typeConfig.crecer;
 
   const handleArchive = async (e: React.MouseEvent) => {
     e.stopPropagation();

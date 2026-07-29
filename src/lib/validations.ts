@@ -1,4 +1,13 @@
 import { z } from 'zod';
+import {
+  ROLE_ADMIN,
+  ROLE_USER,
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_PILAR,
+} from './constants-domain';
 
 // ============================================================
 // COMMON / SHARED SCHEMAS
@@ -31,8 +40,6 @@ const RatingField = z
   .nullable()
   .optional();
 
-const OptionalTextField = z.string().max(2000).nullable().optional();
-
 export const DailyEntrySchema = z.object({
   // Energy
   sleepRating: RatingField,
@@ -56,8 +63,8 @@ export const DailyEntrySchema = z.object({
   devotionalNotes: z.string().max(2000).nullable().optional(),
 
   // Auto-education & Implementation Intentions (JSON arrays)
-  autoeducation: z.any().nullable().optional(),
-  implementationIntentions: z.any().nullable().optional(),
+  autoeducation: z.array(z.string().max(500)).max(50).nullable().optional(),
+  implementationIntentions: z.array(z.string().max(500)).max(50).nullable().optional(),
 
   // MITs (Most Important Tasks)
   mitSer: z.string().max(500).nullable().optional(),
@@ -78,7 +85,7 @@ export const DailyEntrySchema = z.object({
     .optional(),
 
   // Achievements & Reflection
-  achievementsTop3: z.any().nullable().optional(),
+  achievementsTop3: z.array(z.string().max(200)).max(10).nullable().optional(),
   whatWorked: z.string().max(1000).nullable().optional(),
   whatDidNotWork: z.string().max(1000).nullable().optional(),
   improvementIdea: z.string().max(1000).nullable().optional(),
@@ -107,7 +114,7 @@ export const DailyEntrySchema = z.object({
   mindsetEmpoweringAction: z.string().max(500).nullable().optional(),
 
   // Prep tomorrow
-  prepTomorrow: z.any().nullable().optional(),
+  prepTomorrow: z.array(z.string().max(500)).max(50).nullable().optional(),
 
   // Closure
   legacyReflection: z.string().max(1000).nullable().optional(),
@@ -120,15 +127,80 @@ export const DailyEntrySchema = z.object({
 export type DailyEntryInput = z.infer<typeof DailyEntrySchema>;
 
 // ============================================================
+// DRAFT (autosave — server-controlled fields excluded)
+// ============================================================
+
+export const DraftJournalSchema = z
+  .object({
+    sleepRating: RatingField,
+    energyRating: RatingField,
+    focusRating: RatingField,
+    stressRating: RatingField,
+    quickEnergyAction: z.string().max(500).nullable().optional(),
+
+    gratitude1: z.string().max(500).nullable().optional(),
+    gratitude2: z.string().max(500).nullable().optional(),
+    gratitude3: z.string().max(500).nullable().optional(),
+    wisdomRequest: z.string().max(1000).nullable().optional(),
+
+    chooseToBeIdentity: z.string().max(500).nullable().optional(),
+    identityAction: z.string().max(500).nullable().optional(),
+    dailyMicroAchievement: z.string().max(500).nullable().optional(),
+    devotionalNotes: z.string().max(2000).nullable().optional(),
+
+    autoeducation: z.array(z.string().max(500)).max(50).nullable().optional(),
+    implementationIntentions: z.array(z.string().max(500)).max(50).nullable().optional(),
+
+    mitSer: z.string().max(500).nullable().optional(),
+    mitNegocio: z.string().max(500).nullable().optional(),
+    mitRelaciones: z.string().max(500).nullable().optional(),
+
+    achievementsTop3: z.array(z.string().max(200)).max(10).nullable().optional(),
+    whatWorked: z.string().max(1000).nullable().optional(),
+    whatDidNotWork: z.string().max(1000).nullable().optional(),
+    improvementIdea: z.string().max(1000).nullable().optional(),
+
+    mindsetStateRating: RatingField,
+    mindsetEmotion1: z.string().max(200).nullable().optional(),
+    mindsetEmotion2: z.string().max(200).nullable().optional(),
+    mindsetEmotion3: z.string().max(200).nullable().optional(),
+    mindsetTriggers: z.string().max(500).nullable().optional(),
+    mindsetBiblicalTruth: z.string().max(500).nullable().optional(),
+    mindsetLimitingBelief: z.string().max(500).nullable().optional(),
+    mindsetLimitingAction: z.string().max(500).nullable().optional(),
+    mindsetEmpoweringBelief: z.string().max(500).nullable().optional(),
+    mindsetEmpoweringAction: z.string().max(500).nullable().optional(),
+
+    prepTomorrow: z.array(z.string().max(500)).max(50).nullable().optional(),
+    legacyReflection: z.string().max(1000).nullable().optional(),
+  })
+  .strict();
+
+export type DraftJournalInput = z.infer<typeof DraftJournalSchema>;
+
+export const HabitsDraftItemSchema = z
+  .object({
+    habitId: z.string().min(1).max(100),
+    name: z.string().max(200).optional(),
+    habitType: z.string().max(50).optional(),
+    completed: z.boolean(),
+  })
+  .strict();
+
+export const HabitsDraftSchema = z.array(HabitsDraftItemSchema).max(500);
+
+export type HabitsDraftInput = z.infer<typeof HabitsDraftSchema>;
+
+// ============================================================
 // HABITS
 // ============================================================
 
 export const HabitTypeEnum = z.enum([
-  'crecer',
-  'sembrar',
-  'cambiar',
-  'preciso',
-  'pilar',
+  HABIT_TYPE_CRECER,
+  HABIT_TYPE_SEMBRAR,
+  HABIT_TYPE_CAMBIAR,
+  HABIT_TYPE_PRECISO,
+  HABIT_TYPE_PILAR,
 ]);
 
 export const DomainEnum = z.enum([
@@ -169,6 +241,14 @@ export const ArchiveHabitSchema = z.object({
 });
 
 export type ArchiveHabitInput = z.infer<typeof ArchiveHabitSchema>;
+
+export const EvolveHabitSchema = z.object({
+  habitId: UUIDSchema,
+  evolutionOptimal: z.string().max(500).optional().nullable(),
+  evolutionMinimum: z.string().max(500).optional().nullable(),
+});
+
+export type EvolveHabitInput = z.infer<typeof EvolveHabitSchema>;
 
 // ============================================================
 // PERSONAL TRANSACTIONS
@@ -281,10 +361,25 @@ export const DeleteBusinessSettingSchema = z.object({
 // BUSINESS AUTO-SAVE & SYNC
 // ============================================================
 
+const ALLOWED_BIZ_FIELDS = [
+  'bizProspectCompleted',
+  'bizFollowUpCompleted',
+  'bizMktActionCompleted',
+  'bizContactsCount',
+  'bizSalesCount',
+  'bizIncome',
+  'bizExpenses',
+  'bizActionsSpecific',
+] as const;
+
+export type AllowedBizField = (typeof ALLOWED_BIZ_FIELDS)[number];
+
 export const AutoSaveBizFieldSchema = z.object({
-  field: z.string().min(1, 'Campo requerido'),
-  value: z.union([z.string().max(1000), z.number()]),
-  date: DateStringSchema,
+  field: z.enum(ALLOWED_BIZ_FIELDS, {
+    errorMap: () => ({ message: 'Campo no permitido' }),
+  }),
+  value: z.union([z.string().max(1000), z.number().finite(), z.boolean()]).optional(),
+  date: DateStringSchema.optional(),
 });
 
 export const AutoSyncSalesSchema = z.object({
@@ -306,7 +401,7 @@ export const AdminDeleteUserSchema = z.object({
 
 export const AdminSetRoleSchema = z.object({
   userId: UUIDSchema,
-  role: z.enum(['admin', 'user']),
+  role: z.enum([ROLE_ADMIN, ROLE_USER]),
 });
 
 // ============================================================
@@ -343,7 +438,15 @@ export type CompleteOnboardingInput = z.infer<typeof CompleteOnboardingSchema>;
 
 export const SaveWeeklyPlanSchema = z.object({
   focus: z.string().max(500).optional().default(''),
-  tasks: z.any().optional(),
+  tasks: z
+    .array(
+      z.object({
+        day: z.string().max(50),
+        task: z.string().max(500),
+      }),
+    )
+    .max(50)
+    .optional(),
   relationToNutre: z.string().max(1000).nullable().optional(),
 });
 
@@ -367,8 +470,37 @@ export const SaveQuarterlyPlanSchema = z.object({
   quarterlyBusiness: z.string().max(2000).nullable().optional(),
   quarterlyRelations: z.string().max(2000).nullable().optional(),
 
-  smartObjectives: z.any().nullable().optional(),
-  actionsPlan: z.any().nullable().optional(),
+  smartObjectives: z
+    .array(
+      z.object({
+        id: z.string().max(50),
+        objective: z.string().max(1000),
+        targetDate: z.string().max(20),
+        isCompleted: z.boolean(),
+      }),
+    )
+    .max(20)
+    .nullable()
+    .optional(),
+  actionsPlan: z
+    .array(
+      z.object({
+        metaIndex: z.number(),
+        metaTitle: z.string().max(200),
+        actions: z
+          .array(
+            z.object({
+              action: z.string().max(500),
+              frequency: z.string().max(100),
+              indicator: z.string().max(200),
+            }),
+          )
+          .max(50),
+      }),
+    )
+    .max(20)
+    .nullable()
+    .optional(),
   legacyAuditNotes: z.string().max(2000).nullable().optional(),
 });
 
@@ -416,6 +548,45 @@ export const SmartEntryRequestSchema = z.object({
     .min(1, 'La transcripción no puede estar vacía')
     .max(10000, 'Máximo 10,000 caracteres'),
 });
+
+// ============================================================
+// CIRCLES
+// ============================================================
+
+export const CreateCircleSchema = z.object({
+  name: z.string().min(1).max(100).default('Mi Círculo'),
+});
+
+export const GenerateInviteSchema = z.object({
+  circleId: UUIDSchema,
+});
+
+export const JoinCircleSchema = z.object({
+  code: z
+    .string()
+    .length(16, 'Código debe tener 16 caracteres')
+    .regex(/^[a-f0-9]+$/i, 'Código inválido'),
+});
+
+// ============================================================
+// AUTH — REGISTER
+// ============================================================
+
+export const RegisterSchema = z
+  .object({
+    name: z.string().trim().min(1, 'El nombre es requerido').max(100),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email('Correo electrónico inválido')
+      .max(254),
+    password: z
+      .string()
+      .min(8, 'La contraseña debe tener al menos 8 caracteres')
+      .max(128),
+  })
+  .strict();
 
 // ============================================================
 // HELPER: Validate and return typed errors

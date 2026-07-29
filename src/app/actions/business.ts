@@ -5,7 +5,7 @@ import { dailyEntries, businessTransactions, businessSettings } from '@/db/schem
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { getCurrentUserId, requireCurrentUserId } from './auth';
 import {
   validate,
   AutoSaveBizFieldSchema,
@@ -16,7 +16,10 @@ import {
   DeleteBusinessTransactionSchema,
   CreateBusinessTransactionSchema,
   RegisterSaleSchema,
+  type AllowedBizField,
 } from '@/lib/validations';
+import { logger } from '@/lib/logger';
+import { todayStr } from '@/lib/dates';
 
 export async function autoSaveBizField(field: string, value: string | number, date: string) {
   try {
@@ -56,18 +59,19 @@ export async function autoSaveBizField(field: string, value: string | number, da
       return { success: true, created: true, entryId };
     }
 
-    const updateData: Record<string, any> = {};
-    updateData[field] = value;
+    const updateData: Record<string, unknown> = {};
+    const allowedField = v.data.field as AllowedBizField;
+    updateData[allowedField] = v.data.value;
 
     await db.update(dailyEntries)
-      .set(updateData)
+      .set(updateData as Partial<typeof dailyEntries.$inferInsert>)
       .where(eq(dailyEntries.id, existing.id));
 
     revalidatePath('/');
     revalidatePath('/negocio');
     return { success: true, entryId: existing.id };
   } catch (error) {
-    console.error('[AUTO_SAVE] Error:', error);
+    logger.error('auto_save_error', {}, error);
     return { success: false, error: 'Failed to save' };
   }
 }
@@ -136,7 +140,7 @@ export async function autoSyncSalesWithTransaction(date: string) {
     revalidatePath('/negocio');
     return { success: true };
   } catch (error) {
-    console.error('[AUTO_SYNC] Error:', error);
+    logger.error('auto_sync_error', {}, error);
     return { success: false, error: 'Failed to sync' };
   }
 }
@@ -180,12 +184,12 @@ export async function upsertBusinessSetting(data: {
   try {
     const v = validate(UpsertBusinessSettingSchema, data);
     if (!v.success) {
-      console.error('[SETTINGS] Validation failed:', v.error);
+      logger.error('settings_validation_failed', {}, v.error);
       return { success: false, error: v.error };
     }
 
     const userId = await getCurrentUserId();
-    console.log('[SETTINGS] Creating/updating:', { userId, data });
+    logger.info('settings_upsert_started');
 
     const insertResult = await db.insert(businessSettings).values({
       id: data.id || randomUUID(),
@@ -211,12 +215,12 @@ export async function upsertBusinessSetting(data: {
       },
     });
 
-    console.log('[SETTINGS] Insert result:', JSON.stringify(insertResult));
+    logger.debug('settings_insert_result', { meta: insertResult });
     revalidatePath('/negocio');
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('[SETTINGS] Error:', error);
+    logger.error('settings_upsert_error', {}, error);
     return { success: false, error: String(error) };
   }
 }
@@ -226,7 +230,15 @@ export async function deleteBusinessSetting(id: string) {
     const v = validate(DeleteBusinessSettingSchema, { id });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.delete(businessSettings).where(eq(businessSettings.id, id));
+    const userId = await requireCurrentUserId();
+    const result = await db.delete(businessSettings)
+      .where(and(eq(businessSettings.id, id), eq(businessSettings.userId, userId)))
+      .returning({ id: businessSettings.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Configuración no encontrada o sin permisos' };
+    }
+
     revalidatePath('/negocio');
     return { success: true };
   } catch {
@@ -263,15 +275,21 @@ export async function updateBusinessTransaction(
       return { success: false, error: 'No fields to update' };
     }
 
-    await db.update(businessTransactions)
+    const userId = await requireCurrentUserId();
+    const result = await db.update(businessTransactions)
       .set(updateData)
-      .where(eq(businessTransactions.id, id));
+      .where(and(eq(businessTransactions.id, id), eq(businessTransactions.userId, userId)))
+      .returning({ id: businessTransactions.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Transacción no encontrada o sin permisos' };
+    }
 
     revalidatePath('/negocio');
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('[TX_EDIT] Error:', error);
+    logger.error('tx_edit_error', {}, error);
     return { success: false, error: 'Failed to update transaction' };
   }
 }
@@ -353,7 +371,7 @@ export async function registerSale(settingsId: string, date: string) {
     revalidatePath('/negocio');
     return { success: true };
   } catch (error) {
-    console.error('[REGISTER_SALE] Error:', error);
+    logger.error('register_sale_error', {}, error);
     return { success: false, error: 'Failed to register sale' };
   }
 }
@@ -363,7 +381,15 @@ export async function deleteBusinessTransaction(id: string) {
     const v = validate(DeleteBusinessTransactionSchema, { id });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.delete(businessTransactions).where(eq(businessTransactions.id, id));
+    const userId = await requireCurrentUserId();
+    const result = await db.delete(businessTransactions)
+      .where(and(eq(businessTransactions.id, id), eq(businessTransactions.userId, userId)))
+      .returning({ id: businessTransactions.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Transacción no encontrada o sin permisos' };
+    }
+
     revalidatePath('/negocio');
     revalidatePath('/');
     return { success: true };
@@ -386,7 +412,7 @@ export async function createBusinessTransaction(data: {
     if (!v.success) return { success: false, error: v.error };
 
     const userId = await getCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDateStr = todayStr();
 
     await db.insert(businessTransactions).values({
       id: randomUUID(),
@@ -397,7 +423,7 @@ export async function createBusinessTransaction(data: {
       description: data.description || null,
       source: data.source || 'General',
       isSale: data.isSale ? 1 : 0,
-      date: data.date || todayStr,
+      date: data.date || todayDateStr,
       dailyEntryId: null,
       createdAt: new Date().toISOString(),
     });
@@ -406,7 +432,7 @@ export async function createBusinessTransaction(data: {
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('Error al crear transacción:', error);
+    logger.error('create_transaction_error', {}, error);
     return { success: false, error: 'No se pudo crear la transacción.' };
   }
 }

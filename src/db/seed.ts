@@ -2,16 +2,24 @@ import { db } from './db';
 import { users, bibleVerses, habits, quarterlyPlans } from './schema';
 import { randomUUID } from 'crypto';
 import { BIBLE_VERSES_SEED } from './seed/data/bible-verses';
-import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH } from '@/lib/constants';
+import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH } from '@/lib/constants-demo';
+import { HABIT_TYPE_PILAR, HABIT_TYPE_CAMBIAR } from '@/lib/constants-domain';
+import { logger } from '@/lib/logger';
+import { todayStr } from '../lib/dates';
 
 async function seed() {
-  console.log('Iniciando carga de datos...');
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('seed_blocked_in_production');
+    process.exit(1);
+  }
+
+  logger.info('seed_started');
 
   try {
     await db.delete(bibleVerses);
-    console.log('Librería de versículos restablecida.');
-  } catch (e) {
-    console.log('Limpieza previa de versículos omitida.');
+    logger.info('bible_verses_reset');
+  } catch (_e) {
+    logger.info('bible_verses_reset_skipped');
   }
 
   const verses = BIBLE_VERSES_SEED.map((v) => ({
@@ -20,7 +28,7 @@ async function seed() {
   }));
 
   await db.insert(bibleVerses).values(verses);
-  console.log(`Librería cargada con éxito con ${verses.length} versículos de alto rendimiento.`);
+  logger.info('bible_verses_loaded', { count: verses.length });
 
   try {
     await db.insert(users).values({
@@ -31,12 +39,12 @@ async function seed() {
       currentLevel: 1,
       streakCurrent: 5,
       streakMax: 12,
-      lastEntryDate: new Date().toISOString().split('T')[0],
+      lastEntryDate: todayStr(),
       createdAt: new Date().toISOString(),
     });
-    console.log('Usuario demo inicializado.');
-  } catch (e) {
-    console.log('El usuario demo ya existe.');
+    logger.info('demo_user_initialized');
+  } catch (_e) {
+    logger.info('demo_user_already_exists');
   }
 
   const demoHabits = [
@@ -44,7 +52,7 @@ async function seed() {
       id: randomUUID(),
       userId: DEMO_USER_ID,
       name: 'Orar 3 minutos al despertar',
-      habitType: 'pilar',
+      habitType: HABIT_TYPE_PILAR,
       domain: 'espiritual',
       rescueAction: 'Orar 1 minuto',
       activeAction: 'Orar 3 minutos al despertar',
@@ -56,7 +64,7 @@ async function seed() {
       id: randomUUID(),
       userId: DEMO_USER_ID,
       name: 'No revisar el celular la primera hora',
-      habitType: 'cambiar',
+      habitType: HABIT_TYPE_CAMBIAR,
       domain: 'mente',
       rescueAction: '5 minutos sin celular',
       activeAction: '60 minutos sin celular al despertar',
@@ -71,7 +79,7 @@ async function seed() {
   for (const habit of demoHabits) {
     await db.insert(habits).values(habit);
   }
-  console.log('Hábitos de ejemplo creados para el usuario demo.');
+  logger.info('demo_habits_created');
 
   await db.insert(quarterlyPlans).values({
     id: randomUUID(),
@@ -133,11 +141,11 @@ async function seed() {
     createdAt: new Date().toISOString(),
   });
 
-  console.log('Planeamiento trimestral de demostración cargado exitosamente.');
-  console.log('Inicialización completada.');
+  logger.info('demo_quarterly_plan_loaded');
+  logger.info('seed_completed');
 }
 
 seed().catch((err) => {
-  console.error('Error durante la inserción de datos semilla:', err);
+  logger.error('seed_failed', {}, err);
   process.exit(1);
 });

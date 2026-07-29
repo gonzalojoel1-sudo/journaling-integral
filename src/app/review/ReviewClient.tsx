@@ -3,20 +3,18 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveWeeklyPlan } from '../actions/weekly-planning';
-import { 
-  Award, 
-  Activity, 
-  Briefcase, 
-  Sparkles, 
-  ArrowRight, 
+import {
+  Award,
+  Briefcase,
+  Sparkles,
+  ArrowRight,
   ArrowLeft,
   CheckCircle,
   Heart,
   Thermometer,
   User,
-  Zap,
-  Target
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface DailyEntry {
   id: string;
@@ -48,7 +46,6 @@ interface NuclearRelation {
 export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
   const router = useRouter();
   const [step, setStep] = useState<number>(1);
-  const totalEntries = weeklyEntries.length;
 
   // --- 1. COMPILACIÓN Y CLASIFICACIÓN DE LOGROS (Paso 1) ---
   const achievements = weeklyEntries
@@ -136,7 +133,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
         alert('Error al guardar la planificación.');
       }
     } catch (e) {
-      console.error(e);
+      logger.error('review_weekly_plan_save_failed', {}, e);
       alert('Error de conexión.');
     }
   };

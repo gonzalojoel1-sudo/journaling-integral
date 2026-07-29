@@ -1,5 +1,5 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { relations } from 'drizzle-orm';
+import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { relations, sql } from 'drizzle-orm';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -94,7 +94,9 @@ export const dailyEntries = sqliteTable('daily_entries', {
   dominantFocusCompleted: integer('dominant_focus_completed').default(0).notNull(),
 
   createdAt: text('created_at').notNull(),
-});
+}, (table) => ({
+  userDateIdx: index('daily_entries_user_date_idx').on(table.userId, table.date),
+}));
 
 export const dailyEntriesRelations = relations(dailyEntries, ({ one, many }) => ({
   user: one(users, {
@@ -216,52 +218,14 @@ export const habits = sqliteTable('habits', {
   // Meta
   createdAt: text('created_at').notNull(),
   isActive: integer('is_active').default(1).notNull(),
-});
+}, (table) => ({
+  userActiveIdx: index('habits_user_active_idx').on(table.userId, table.isActive),
+}));
 
 export const habitsRelations = relations(habits, ({ one }) => ({
   user: one(users, {
     fields: [habits.userId],
     references: [users.id],
-  }),
-}));
-
-export const chains = sqliteTable('chains', {
-  id: text('id').primaryKey(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  createdAt: text('created_at').notNull(),
-});
-
-export const chainItems = sqliteTable('chain_items', {
-  id: text('id').primaryKey(),
-  chainId: text('chain_id')
-    .notNull()
-    .references(() => chains.id, { onDelete: 'cascade' }),
-  habitId: text('habit_id')
-    .notNull()
-    .references(() => habits.id, { onDelete: 'cascade' }),
-  name: text('name'),
-  order: integer('order').notNull(),
-});
-
-export const chainsRelations = relations(chains, ({ one, many }) => ({
-  user: one(users, {
-    fields: [chains.userId],
-    references: [users.id],
-  }),
-  items: many(chainItems),
-}));
-
-export const chainItemsRelations = relations(chainItems, ({ one }) => ({
-  chain: one(chains, {
-    fields: [chainItems.chainId],
-    references: [chains.id],
-  }),
-  habit: one(habits, {
-    fields: [chainItems.habitId],
-    references: [habits.id],
   }),
 }));
 
@@ -286,7 +250,9 @@ export const challenges = sqliteTable('challenges', {
   progressJson: text('progress_json'),
   startedAt: text('started_at').notNull(),
   completedAt: text('completed_at'),
-});
+}, (table) => ({
+  userIdx: index('challenges_user_idx').on(table.userId),
+}));
 
 export const challengesRelations = relations(challenges, ({ one }) => ({
   user: one(users, {
@@ -304,7 +270,9 @@ export const badges = sqliteTable('badges', {
   area: text('area').notNull(),
   mineral: text('mineral').notNull(),
   unlockedAt: text('unlocked_at').notNull(),
-});
+}, (table) => ({
+  userBadgeIdx: index('badges_user_badge_idx').on(table.userId, table.badgeId),
+}));
 
 export const badgesRelations = relations(badges, ({ one }) => ({
   user: one(users, {
@@ -327,7 +295,9 @@ export const businessTransactions = sqliteTable('business_transactions', {
   date: text('date').notNull(),
   dailyEntryId: text('daily_entry_id'),
   createdAt: text('created_at').notNull(),
-});
+}, (table) => ({
+  userDateIdx: index('business_transactions_user_date_idx').on(table.userId, table.date),
+}));
 
 export const businessTransactionsRelations = relations(businessTransactions, ({ one }) => ({
   user: one(users, {
@@ -353,7 +323,12 @@ export const businessSettings = sqliteTable('business_settings', {
   monthlyGoal: real('monthly_goal').default(0).notNull(),
   isRecurring: integer('is_recurring').default(0).notNull(),
   createdAt: text('created_at').notNull(),
-});
+}, (table) => ({
+  userIdx: index('business_settings_user_idx').on(table.userId),
+  userActiveUnique: uniqueIndex('business_settings_user_active_unique')
+    .on(table.userId)
+    .where(sql`${table.isActive} = 1`),
+}));
 
 export const businessSettingsRelations = relations(businessSettings, ({ one }) => ({
   user: one(users, {
@@ -374,7 +349,9 @@ export const personalTransactions = sqliteTable('personal_transactions', {
   description: text('description'),
   date: text('date').notNull(),
   createdAt: text('created_at').notNull(),
-});
+}, (table) => ({
+  userDateIdx: index('personal_transactions_user_date_idx').on(table.userId, table.date),
+}));
 
 export const personalTransactionsRelations = relations(personalTransactions, ({ one }) => ({
   user: one(users, {
@@ -413,6 +390,7 @@ export const journalEmbeddings = sqliteTable('journal_embeddings', {
     .references(() => dailyEntries.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
   embedding: text('embedding').notNull(),
+  modelVersion: text('model_version').notNull().default('text-embedding-004'),
   createdAt: text('created_at').notNull(),
 });
 
@@ -437,10 +415,12 @@ export const rateLimits = sqliteTable('rate_limits', {
 export const circles = sqliteTable('circles', {
   id: text('id').primaryKey(),
   name: text('name').notNull().default('Mi Círculo'),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   visibilitySettings: text('visibility_settings').notNull().default('only_streak'),
   createdAt: text('created_at').notNull(),
-});
+}, (table) => ({
+  createdByIdx: index('circles_created_by_idx').on(table.createdBy),
+}));
 
 export const circlesRelations = relations(circles, ({ one, many }) => ({
   creator: one(users, {
@@ -452,13 +432,15 @@ export const circlesRelations = relations(circles, ({ one, many }) => ({
 
 export const circleMembers = sqliteTable('circle_members', {
   id: text('id').primaryKey(),
-  circleId: text('circle_id').notNull().references(() => circles.id),
-  userId: text('user_id').references(() => users.id),
-  invitedBy: text('invited_by').notNull().references(() => users.id),
+  circleId: text('circle_id').notNull().references(() => circles.id, { onDelete: 'cascade' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  invitedBy: text('invited_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
   status: text('status').notNull().default('pending'),
   joinedAt: text('joined_at'),
   inviteCode: text('invite_code').unique().notNull(),
-});
+}, (table) => ({
+  circleStatusIdx: index('circle_members_circle_status_idx').on(table.circleId, table.status),
+}));
 
 export const circleMembersRelations = relations(circleMembers, ({ one }) => ({
   circle: one(circles, {

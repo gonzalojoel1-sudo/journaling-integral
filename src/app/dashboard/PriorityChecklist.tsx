@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import { CheckCircle2, Circle, Target, Sparkles } from 'lucide-react';
+import { toggleHabitCompleted } from '@/app/actions/toggle-habit';
+import { logger } from '@/lib/logger';
 
 interface PriorityChecklistProps {
   mitSer: string | null;
@@ -24,7 +26,6 @@ export function PriorityChecklist({
   mitRelaciones,
   mitRelacionesCompleted,
   weeklyDestrabeAction,
-  weeklyFocus,
   prepTomorrowTasks,
   hasEntryToday,
 }: PriorityChecklistProps) {
@@ -33,9 +34,25 @@ export function PriorityChecklist({
     negocio: mitNegocioCompleted,
     relaciones: mitRelacionesCompleted,
   });
+  const [, startTransition] = useTransition();
 
   const toggleCheck = (key: 'ser' | 'negocio' | 'relaciones') => {
-    setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
+    setChecks((prev) => {
+      const next = !prev[key];
+      const kindMap = {
+        ser: 'mitSer',
+        negocio: 'mitNegocio',
+        relaciones: 'mitRelaciones',
+      } as const;
+      startTransition(async () => {
+        try {
+          await toggleHabitCompleted({ kind: kindMap[key], completed: next });
+        } catch (err) {
+          logger.error('mit_toggle_persist_failed', { key }, err);
+        }
+      });
+      return { ...prev, [key]: next };
+    });
   };
 
   const completedCount = Object.values(checks).filter(Boolean).length;

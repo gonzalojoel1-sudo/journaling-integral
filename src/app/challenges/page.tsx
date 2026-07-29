@@ -13,7 +13,7 @@ export default async function ChallengesPage() {
   const userBadges = badgesRes.badges || [];
   const badgeIds = new Set(userBadges.map((b: any) => b.badgeId));
 
-  const templatesForClient = CHALLENGE_TEMPLATES.map(({ check, ...rest }) => rest);
+  const templatesForClient = CHALLENGE_TEMPLATES.map(({ check: _check, ...rest }) => rest);
 
   return (
     <div className="space-y-6">

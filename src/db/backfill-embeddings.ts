@@ -1,41 +1,74 @@
 import 'dotenv/config';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { dailyEntries, journalEmbeddings } from './schema';
 import { storeEntryEmbedding, buildEntryContent } from '../lib/rag';
+import { logger } from '@/lib/logger';
+
+const BATCH_SIZE = 100;
 
 async function backfillEmbeddings() {
-  console.log('🧠 Iniciando backfill de embeddings RAG...');
+  logger.info('backfill_embeddings_started', { batchSize: BATCH_SIZE });
 
-  // Find all entries without embeddings
-  const allEntries = await db.select().from(dailyEntries);
-  const existingEmbeddings = await db.select({ entryId: journalEmbeddings.entryId }).from(journalEmbeddings);
-  const embeddedEntryIds = new Set(existingEmbeddings.map(e => e.entryId));
+  let offset = 0;
+  let totalScanned = 0;
+  let totalSuccess = 0;
+  let totalErrors = 0;
+  let totalSkipped = 0;
 
-  const entriesWithoutEmbeddings = allEntries.filter(e => !embeddedEntryIds.has(e.id));
+  while (true) {
+    const batch = await db
+      .select({ id: dailyEntries.id, userId: dailyEntries.userId, date: dailyEntries.date })
+      .from(dailyEntries)
+      .limit(BATCH_SIZE)
+      .offset(offset);
 
-  console.log(`📊 Total entries: ${allEntries.length}`);
-  console.log(`📊 Already embedded: ${embeddedEntryIds.size}`);
-  console.log(`📊 Need embedding: ${entriesWithoutEmbeddings.length}`);
+    if (batch.length === 0) break;
 
-  let successCount = 0;
-  let errorCount = 0;
+    const ids = batch.map(e => e.id);
+    const existing = await db
+      .select({ entryId: journalEmbeddings.entryId })
+      .from(journalEmbeddings)
+      .where(inArray(journalEmbeddings.entryId, ids));
+    const embeddedEntryIds = new Set(existing.map(e => e.entryId));
 
-  for (const entry of entriesWithoutEmbeddings) {
-    const content = buildEntryContent(entry);
-    console.log(`🧠 Indexando embedding para: ${entry.date}...`);
-    try {
-      await storeEntryEmbedding(entry.userId, entry.id, content);
-      successCount++;
-      console.log(`   ✅ OK`);
-    } catch (err: any) {
-      errorCount++;
-      console.log(`   ❌ Error: ${err.message}`);
+    totalScanned += batch.length;
+
+    for (const entry of batch) {
+      if (embeddedEntryIds.has(entry.id)) {
+        totalSkipped++;
+        continue;
+      }
+      const fullEntry = await db.query.dailyEntries.findFirst({
+        where: eq(dailyEntries.id, entry.id),
+      });
+      if (!fullEntry) {
+        totalErrors++;
+        continue;
+      }
+      const content = buildEntryContent(fullEntry);
+      try {
+        await storeEntryEmbedding(fullEntry.userId, fullEntry.id, content);
+        totalSuccess++;
+      } catch (err: any) {
+        totalErrors++;
+        logger.error('backfill_entry_failed', { entryId: entry.id, date: fullEntry.date, message: err?.message }, err);
+      }
     }
+
+    offset += BATCH_SIZE;
+
+    if (batch.length < BATCH_SIZE) break;
   }
 
-  console.log(`\n✨ Backfill completado:`);
-  console.log(`   ✅ Exitosos: ${successCount}`);
-  console.log(`   ❌ Errores: ${errorCount}`);
+  logger.info('backfill_completed', {
+    scanned: totalScanned,
+    success: totalSuccess,
+    skipped: totalSkipped,
+    errors: totalErrors,
+  });
 }
 
-backfillEmbeddings().catch(console.error);
+backfillEmbeddings().catch((err) => {
+  logger.error('backfill_failed', {}, err);
+});

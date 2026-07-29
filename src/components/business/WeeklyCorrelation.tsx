@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { getDailyBusinessMetrics, getBusinessMetricsRange } from '@/app/actions/daily-journal';
 
 interface DayCell {
   date: string;
