@@ -80,7 +80,7 @@ export function SettingsToggles({
     { label: 'Hábitos Diarios', desc: 'Gestor EOR, Habit Stacking, racha', value: habits, setter: setHabits },
     { label: 'Planificación Trimestral', desc: 'Visión 5 años, objetivos SMART, legado', value: quarterly, setter: setQuarterly },
     { label: 'Desafíos y Gamificación', desc: 'Insignias, niveles, retos de disciplina', value: challenges, setter: setChallenges },
-    { label: 'Asistente Espiritual', desc: 'Chat con IA pastor/mentor basado en Groq', value: aiAssistant, setter: setAiAssistant },
+    { label: 'Asistente Espiritual', desc: 'Chat con IA pastor/mentor (MiniMax)', value: aiAssistant, setter: setAiAssistant },
   ];
 
   return (

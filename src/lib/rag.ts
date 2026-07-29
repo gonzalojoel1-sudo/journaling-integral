@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getApiKeys } from '@/config/ai';
 import { db } from '@/db/db';
 import { journalEmbeddings } from '@/db/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
@@ -7,8 +5,7 @@ import { randomUUID } from 'crypto';
 import { logger } from './logger';
 import { safeJsonParse } from './json';
 
-export const EMBEDDING_MODEL = 'text-embedding-004';
-export const EMBEDDING_DIMENSIONS = 768;
+export const EMBEDDING_MODEL = 'local-tfidf-v1';
 
 const MAX_CONTENT_LENGTH = 8000;
 
@@ -21,44 +18,73 @@ function truncateContent(text: string): string {
   return text.slice(0, MAX_CONTENT_LENGTH);
 }
 
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  attempts: number = 3,
-  delayMs: number = 500,
-): Promise<T> {
-  let lastError: unknown;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      if (i < attempts - 1) {
-        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
-      }
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was',
+  'one', 'our', 'had', 'has', 'this', 'that', 'with', 'from', 'have', 'they',
+  'que', 'los', 'las', 'una', 'con', 'por', 'del', 'para',
+  'mas', 'pero', 'sus', 'fue', 'ser', 'son', 'todo', 'esta', 'este',
+  'estar', 'estoy', 'esto', 'eso', 'muy', 'sin',
+  'sobre', 'tambien', 'despues', 'ahora', 'antes', 'donde', 'cuando',
+  'tiene', 'tienen', 'tengo', 'hacer', 'hace', 'hacen', 'puede', 'pueden',
+  'yo', 'tu', 'el', 'ella', 'nos', 'mi', 'ti', 'si', 'no', 'al', 'lo', 'le',
+  'se', 'me', 'te', 'un', 'es', 'en', 'de',
+]);
+
+export function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !STOPWORDS.has(t));
+}
+
+type SparseVector = Record<string, number>;
+
+function computeTF(tokens: string[]): SparseVector {
+  const tf: SparseVector = {};
+  for (const t of tokens) {
+    tf[t] = (tf[t] || 0) + 1;
+  }
+  const total = tokens.length || 1;
+  for (const k of Object.keys(tf)) {
+    tf[k] = tf[k] / total;
+  }
+  return tf;
+}
+
+export function generateEmbedding(text: string): SparseVector {
+  const truncated = truncateContent(text);
+  const tokens = tokenize(truncated);
+  return computeTF(tokens);
+}
+
+function computeIDF(documents: SparseVector[]): SparseVector {
+  const df: Record<string, number> = {};
+  const n = documents.length;
+  for (const doc of documents) {
+    for (const term of Object.keys(doc)) {
+      df[term] = (df[term] || 0) + 1;
     }
   }
-  throw lastError;
+  const idf: SparseVector = {};
+  for (const term of Object.keys(df)) {
+    idf[term] = Math.log((n + 1) / (df[term] + 1)) + 1;
+  }
+  return idf;
 }
 
-// ============================================================
-// GENERATE EMBEDDING
-// ============================================================
-
-export async function generateEmbedding(text: string): Promise<number[]> {
-  const { gemini } = getApiKeys();
-  if (!gemini) throw new Error('Gemini API key not configured');
-
-  const genAI = new GoogleGenerativeAI(gemini);
-  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
-
-  const truncated = truncateContent(text);
-  const result = await withRetry(() => model.embedContent(truncated), 3, 500);
-  return result.embedding.values;
+function applyIDF(tf: SparseVector, idf: SparseVector): SparseVector {
+  const result: SparseVector = {};
+  for (const term of Object.keys(tf)) {
+    const weight = idf[term];
+    if (weight !== undefined) {
+      result[term] = tf[term] * weight;
+    }
+  }
+  return result;
 }
-
-// ============================================================
-// COSINE SIMILARITY
-// ============================================================
 
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
@@ -79,9 +105,30 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / denominator;
 }
 
-// ============================================================
-// BUILD ENTRY CONTENT FOR EMBEDDING
-// ============================================================
+export function sparseCosineSimilarity(a: SparseVector, b: SparseVector): number {
+  const keys = Object.keys(a).length < Object.keys(b).length ? Object.keys(a) : Object.keys(b);
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (const k of Object.keys(a)) {
+    normA += a[k] * a[k];
+  }
+  for (const k of Object.keys(b)) {
+    normB += b[k] * b[k];
+  }
+
+  for (const k of keys) {
+    if (a[k] !== undefined && b[k] !== undefined) {
+      dotProduct += a[k] * b[k];
+    }
+  }
+
+  const denominator = Math.sqrt(normA) * Math.sqrt(normB);
+  if (denominator === 0) return 0;
+
+  return dotProduct / denominator;
+}
 
 export function buildEntryContent(entry: Record<string, any>): string {
   const parts: string[] = [];
@@ -122,17 +169,13 @@ export function buildEntryContent(entry: Record<string, any>): string {
   return parts.join('. ');
 }
 
-// ============================================================
-// STORE ENTRY EMBEDDING (On-save)
-// ============================================================
-
 export async function storeEntryEmbedding(
   userId: string,
   entryId: string,
   content: string,
 ): Promise<void> {
   try {
-    const embedding = await generateEmbedding(content);
+    const embedding = generateEmbedding(content);
     const embeddingJson = JSON.stringify(embedding);
 
     const existing = await db.query.journalEmbeddings.findFirst({
@@ -160,13 +203,9 @@ export async function storeEntryEmbedding(
       });
     }
   } catch (error) {
-    logger.error('rag_store_embedding_failed', {}, error);
+    logger.error('rag_store_embedding_failed', { entryId }, error);
   }
 }
-
-// ============================================================
-// SEARCH SIMILAR ENTRIES
-// ============================================================
 
 interface SimilarEntry {
   id: string;
@@ -181,7 +220,7 @@ export async function searchSimilarEntries(
   topK: number = 3,
 ): Promise<SimilarEntry[]> {
   try {
-    const queryEmbedding = await generateEmbedding(query);
+    const queryTF = generateEmbedding(query);
 
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
@@ -190,6 +229,7 @@ export async function searchSimilarEntries(
     const userEmbeddings = await db.query.journalEmbeddings.findMany({
       where: and(
         eq(journalEmbeddings.userId, userId),
+        eq(journalEmbeddings.modelVersion, EMBEDDING_MODEL),
         gte(journalEmbeddings.createdAt, cutoffDate),
       ),
       orderBy: [desc(journalEmbeddings.createdAt)],
@@ -197,19 +237,30 @@ export async function searchSimilarEntries(
 
     if (userEmbeddings.length === 0) return [];
 
+    const docTFs: SparseVector[] = [];
+    for (const emb of userEmbeddings) {
+      const tf = safeJsonParse<SparseVector>(emb.embedding, {});
+      if (Object.keys(tf).length > 0) {
+        docTFs.push(tf);
+      } else {
+        docTFs.push(generateEmbedding(emb.content));
+      }
+    }
+
+    const idf = computeIDF(docTFs);
+    const queryTFIDF = applyIDF(queryTF, idf);
+
     const scored = userEmbeddings
-      .map((emb) => {
-        const embVector = safeJsonParse<number[]>(emb.embedding, []);
-        if (embVector.length === 0) return null;
-        const similarity = cosineSimilarity(queryEmbedding, embVector);
+      .map((emb, idx) => {
+        const docTFIDF = applyIDF(docTFs[idx], idf);
+        const similarity = sparseCosineSimilarity(queryTFIDF, docTFIDF);
         return {
           id: emb.entryId,
           content: emb.content,
           similarity,
           date: emb.createdAt.split('T')[0],
         };
-      })
-      .filter((s): s is SimilarEntry => s !== null);
+      });
 
     scored.sort((a, b) => b.similarity - a.similarity);
     return scored.slice(0, topK);

@@ -1,4 +1,4 @@
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { createOpenAI } from '@ai-sdk/openai';
 import { streamText, generateText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -24,6 +24,7 @@ import {
   formatContextForPrompt,
   type SimilarEntry,
 } from '@/lib/chat-context';
+import { PRIMARY_MODEL, FAST_MODEL, MINIMAX_BASE_URL } from '@/config/ai';
 
 const CHAT_TIMEOUT_MS = 30_000;
 
@@ -55,26 +56,17 @@ REGLA CRÍTICA DE SISTEMA: Tienes herramientas (tools) técnicas configuradas. S
 
 export async function POST(req: Request) {
   // ============================================================
-  // PROVIDERS: Primary (OpenRouter) + Fallback (OpenCode Zen)
+  // PROVIDERS: Primary (MiniMax-M3) + Fallback (MiniMax-M2.7-highspeed)
   // ============================================================
-  const openrouter = createOpenAICompatible({
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
-    name: 'openrouter',
+  const minimax = createOpenAI({
+    baseURL: MINIMAX_BASE_URL,
+    apiKey: process.env.MINIMAX_API_KEY,
   });
 
-  const opencode = createOpenAICompatible({
-    baseURL: 'https://opencode.ai/zen/v1',
-    apiKey: process.env.OPENCODE_API_KEY,
-    name: 'opencode',
-  });
-
-  const PRIMARY_MODEL = 'poolside/laguna-m.1:free';
-  const FALLBACK_MODEL = 'deepseek-v4-flash-free';
+  const FALLBACK_MODEL = FAST_MODEL;
 
   logger.debug('chat_api_key_presence', {
-    openrouter: !!process.env.OPENROUTER_API_KEY,
-    opencode: !!process.env.OPENCODE_API_KEY,
+    minimax: !!process.env.MINIMAX_API_KEY,
   });
 
   // Rate limiting: hybrid key (userId or IP)
@@ -116,7 +108,7 @@ export async function POST(req: Request) {
   const { messages } = v.data;
 
   // ============================================================
-  // RAG: Standalone Query con OpenCode Zen
+  // RAG: Standalone Query con MiniMax
   // ============================================================
   let enrichedSystemPrompt = SYSTEM_PROMPT;
   if (userId && messages.length > 0) {
@@ -137,7 +129,7 @@ export async function POST(req: Request) {
             let standaloneQuery;
             try {
               standaloneQuery = await generateText({
-                model: openrouter(PRIMARY_MODEL),
+                model: minimax(PRIMARY_MODEL),
                 system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
                 prompt: conversationHistory,
                 temperature: 0.3,
@@ -145,9 +137,9 @@ export async function POST(req: Request) {
                 maxRetries: 0,
               });
             } catch {
-              logger.warn('rag_standalone_query_openrouter_failed');
+              logger.warn('rag_standalone_query_primary_failed');
               standaloneQuery = await generateText({
-                model: opencode(FALLBACK_MODEL),
+                model: minimax(FALLBACK_MODEL),
                 system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
                 prompt: conversationHistory,
                 temperature: 0.3,
@@ -180,7 +172,7 @@ export async function POST(req: Request) {
   }
 
   // ============================================================
-  // CHAT PRINCIPAL: OpenRouter (Laguna M.1) con fallback a OpenCode
+  // CHAT PRINCIPAL: MiniMax-M3 con fallback a MiniMax-M2.7-highspeed
   // ============================================================
   const tools = {
     registrarTransaccionNegocio: tool({
@@ -292,7 +284,7 @@ export async function POST(req: Request) {
   };
 
   const streamWithTimeout = async (
-    modelFn: () => ReturnType<typeof openrouter>,
+    modelFn: () => ReturnType<typeof minimax>,
   ): Promise<Response> => {
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
@@ -309,7 +301,7 @@ export async function POST(req: Request) {
 
   try {
     logger.info('chat_attempt_primary', { model: PRIMARY_MODEL });
-    return await streamWithTimeout(() => openrouter(PRIMARY_MODEL));
+    return await streamWithTimeout(() => minimax(PRIMARY_MODEL));
   } catch (primaryErr: any) {
     const isTimeout = primaryErr?.message?.includes('timeout');
     logger.warn(
@@ -319,7 +311,7 @@ export async function POST(req: Request) {
     );
     try {
       logger.info('chat_attempt_fallback', { model: FALLBACK_MODEL });
-      return await streamWithTimeout(() => opencode(FALLBACK_MODEL));
+      return await streamWithTimeout(() => minimax(FALLBACK_MODEL));
     } catch (fallbackErr: any) {
       logger.error(
         'chat_both_providers_failed',

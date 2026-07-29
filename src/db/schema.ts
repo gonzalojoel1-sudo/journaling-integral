@@ -390,7 +390,7 @@ export const journalEmbeddings = sqliteTable('journal_embeddings', {
     .references(() => dailyEntries.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
   embedding: text('embedding').notNull(),
-  modelVersion: text('model_version').notNull().default('text-embedding-004'),
+  modelVersion: text('model_version').notNull().default('local-tfidf-v1'),
   createdAt: text('created_at').notNull(),
 });
 
