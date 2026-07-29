@@ -3,33 +3,41 @@
 import { db } from '../../db/db';
 import { bibleVerses } from '../../db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 import { FALLBACK_VERSES } from '@/lib/constants-bible';
 import { logger } from '@/lib/logger';
 
+// Cache "verse of the day" for 1 hour — reduces DB queries for static content
+const getRandomVerseCached = unstable_cache(
+  async (level: number) => {
+    try {
+      const filtered = await db
+        .select()
+        .from(bibleVerses)
+        .where(eq(bibleVerses.recommendedLevel, level))
+        .orderBy(sql`RANDOM()`)
+        .limit(1);
+
+      if (filtered.length > 0) return filtered[0];
+
+      const fallback = await db
+        .select()
+        .from(bibleVerses)
+        .orderBy(sql`RANDOM()`)
+        .limit(1);
+
+      return fallback[0] ?? null;
+    } catch (error) {
+      logger.error('bible_get_random_verse_failed', { level }, error);
+      return null;
+    }
+  },
+  ['bible-verse-by-level'],
+  { revalidate: 3600, tags: ['bible-verses'] },
+);
+
 export async function getRandomVerse(level: number = 1) {
-  try {
-    const filtered = await db
-      .select()
-      .from(bibleVerses)
-      .where(eq(bibleVerses.recommendedLevel, level))
-      .orderBy(sql`RANDOM()`)
-      .limit(1);
-
-    if (filtered.length > 0) return filtered[0];
-
-    const fallback = await db
-      .select()
-      .from(bibleVerses)
-      .orderBy(sql`RANDOM()`)
-      .limit(1);
-
-    if (fallback.length > 0) return fallback[0];
-
-    return null;
-  } catch (error) {
-    logger.error('bible_get_random_verse_failed', { level }, error);
-    return null;
-  }
+  return getRandomVerseCached(level);
 }
 
 export async function getVersesByTopic(topic?: string) {

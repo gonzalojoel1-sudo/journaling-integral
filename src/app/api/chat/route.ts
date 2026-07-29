@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, generateText, tool, stepCountIs } from 'ai';
+import { streamText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { validate, ChatRequestSchema } from '@/lib/validations';
@@ -109,63 +109,30 @@ export async function POST(req: Request) {
   const { messages } = v.data;
 
   // ============================================================
-  // RAG: Standalone Query con MiniMax
+  // RAG: Direct last-message search (no extra LLM call needed with TF-IDF)
+  // TF-IDF is keyword-based, so the last user message IS the search query.
+  // Eliminated the standalone-query LLM call that doubled cost/latency.
   // ============================================================
   let enrichedSystemPrompt = SYSTEM_PROMPT;
   if (userId && messages.length > 0) {
     const lastUserMessage = messages[messages.length - 1].content;
     if (typeof lastUserMessage === 'string' && lastUserMessage.trim()) {
-      const esSaludoOFraseCorta = lastUserMessage.length < 10 || /^(hola|hi|buenas|hey|buenos dias)/i.test(lastUserMessage.trim());
+      const esSaludoOFraseCorta =
+        lastUserMessage.length < 10 ||
+        /^(hola|hi|buenas|hey|buenos dias)/i.test(lastUserMessage.trim());
       if (esSaludoOFraseCorta) {
         logger.debug('rag_bypass_short_message');
       } else {
         try {
-          let searchQuery = lastUserMessage;
-          try {
-            const recentMessages = messages.slice(-4);
-            const conversationHistory = recentMessages
-              .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-              .join('\n');
-
-            let standaloneQuery;
-            try {
-              standaloneQuery = await generateText({
-                model: minimax(PRIMARY_MODEL),
-                providerOptions: MINIMAX_NO_THINKING,
-                system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
-                prompt: conversationHistory,
-                temperature: 0.3,
-                maxOutputTokens: 30,
-                maxRetries: 0,
-              });
-            } catch {
-              logger.warn('rag_standalone_query_primary_failed');
-              standaloneQuery = await generateText({
-                model: minimax(FALLBACK_MODEL),
-                providerOptions: MINIMAX_NO_THINKING,
-                system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
-                prompt: conversationHistory,
-                temperature: 0.3,
-                maxOutputTokens: 30,
-                maxRetries: 0,
-              });
-            }
-
-            if (standaloneQuery.text && standaloneQuery.text.trim()) {
-              searchQuery = standaloneQuery.text.trim();
-              logger.debug('rag_standalone_query_generated', { queryLength: searchQuery.length });
-            }
-          } catch (queryErr) {
-            logger.warn('rag_standalone_query_failed', {}, queryErr);
-          }
-
-          let similarEntries: SimilarEntry[] = [];
-          if (searchQuery && searchQuery.trim()) {
-            similarEntries = await searchSimilarEntries(userId, searchQuery, 3);
-          }
+          const similarEntries: SimilarEntry[] = await searchSimilarEntries(
+            userId,
+            lastUserMessage.trim(),
+            3,
+          );
           if (similarEntries.length > 0) {
             const contextBlock = formatContextForPrompt(similarEntries);
             enrichedSystemPrompt = `${SYSTEM_PROMPT}\n\n--- CONTEXTO DEL DIARIO DEL USUARIO ---\n${contextBlock}\n--- FIN DEL CONTEXTO ---\n\nUsa este contexto de su diario si es relevante para responder de forma personalizada, integrándolo orgánicamente en la conversación.`;
+            logger.debug('rag_context_injected', { entries: similarEntries.length });
           }
         } catch (ragErr) {
           logger.error('rag_failed_using_static_prompt', {}, ragErr);
