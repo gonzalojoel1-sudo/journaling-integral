@@ -1,6 +1,7 @@
 import { db } from '../db/db';
 import { rateLimits } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { logger } from './logger';
 
 export async function rateLimit(
   key: string,
@@ -32,7 +33,7 @@ export async function rateLimit(
     const resetMs = (existing.windowStart + windowMs) - now;
     return { success: true, remaining: limit - (existing.count + 1), resetMs: Math.max(0, resetMs) };
   } catch (error) {
-    console.error('[RATE-LIMIT] Error accessing Turso:', error);
+    logger.error('rate_limit_db_error', { key }, error);
     return { success: true, remaining: limit, resetMs: windowMs };
   }
 }

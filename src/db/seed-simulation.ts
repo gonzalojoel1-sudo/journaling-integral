@@ -2,9 +2,10 @@ import { db } from './db';
 import { users, userSettings, habits, dailyEntries, businessTransactions, personalTransactions } from './schema';
 import { randomUUID } from 'crypto';
 import { storeEntryEmbedding, buildEntryContent } from '../lib/rag';
+import { logger } from '@/lib/logger';
 
 async function runSimulationSeed() {
-  console.log('🚀 Iniciando simulación de alta densidad para KAIRO...');
+  logger.info('simulation_seed_started');
 
   const userId = randomUUID();
   const userEmail = 'simulador@irontech.com';
@@ -61,7 +62,7 @@ async function runSimulationSeed() {
   }
 
   // 4. Generar Historial de 30 Días (Simulación narrativa)
-  console.log('📅 Generando 30 días de registros diarios y finanzas...');
+  logger.info('simulation_generating_history', { days: 30 });
 
   const textosDevocionales = [
     'Reflexión sobre la paciencia y la sabiduría en los negocios. Proverbios 16:3.',
@@ -167,13 +168,13 @@ async function runSimulationSeed() {
 
     // 7. HIDRATAR LA MEMORIA RAG
     const content = buildEntryContent(entryData);
-    console.log(`🧠 Indexando memoria RAG para el día: ${dateStr}...`);
+    logger.info('simulation_rag_indexing', { date: dateStr });
     await storeEntryEmbedding(userId, entryId, content);
   }
 
-  console.log('\n✨ ¡Simulación completada con éxito!');
-  console.log(`📧 Inicia sesión con el correo: ${userEmail}`);
-  console.log('💡 Tip: Ve al chat y pregúntale a KAIRO: "¿Cómo han estado mis ventas de iPhones y mi enfoque espiritual en las últimas semanas?" y mira cómo extrae la data.');
+  logger.info('simulation_completed', { userEmail });
 }
 
-runSimulationSeed().catch(console.error);
+runSimulationSeed().catch((err) => {
+  logger.error('simulation_failed', {}, err);
+});

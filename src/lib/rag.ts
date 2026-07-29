@@ -4,6 +4,7 @@ import { db } from '@/db/db';
 import { journalEmbeddings } from '@/db/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { logger } from './logger';
 
 const EMBEDDING_MODEL = 'gemini-embedding-001';
 
@@ -121,7 +122,7 @@ export async function storeEntryEmbedding(
       });
     }
   } catch (error) {
-    console.error('[RAG] Error storing embedding:', error);
+    logger.error('rag_store_embedding_failed', {}, error);
   }
 }
 
@@ -170,7 +171,7 @@ export async function searchSimilarEntries(
     scored.sort((a, b) => b.similarity - a.similarity);
     return scored.slice(0, topK);
   } catch (error) {
-    console.error('[RAG] Error searching entries:', error);
+    logger.error('rag_search_entries_failed', {}, error);
     return [];
   }
 }

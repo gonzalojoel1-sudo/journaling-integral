@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { VoiceRecorder } from './VoiceRecorder';
 import { submitVoiceEntry } from '@/app/actions/voice-entry';
 import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface Section {
   key: string;
@@ -67,7 +68,7 @@ export function VoiceJournal() {
       setDone(true);
       setTimeout(() => router.push('/'), 2000);
     } else {
-      console.error('Voice entry failed:', res.error);
+      logger.error('voice_entry_failed', {}, res?.error);
     }
     setLoading(false);
   }

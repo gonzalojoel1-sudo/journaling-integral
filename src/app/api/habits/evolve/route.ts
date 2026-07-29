@@ -3,6 +3,7 @@ import { db } from '@/db/db';
 import { habits } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { requireCurrentUserId } from '@/app/actions/auth';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.error('Error evolving habit:', error);
+    logger.error('habit_evolve_failed', {}, error);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

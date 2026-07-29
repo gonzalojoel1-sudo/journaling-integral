@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
 import { validate, SaveQuarterlyPlanSchema } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export async function getActiveQuarterlyPlan() {
   try {
@@ -19,7 +20,7 @@ export async function getActiveQuarterlyPlan() {
     });
     return { success: true, plan: plan || null };
   } catch (error) {
-    console.error('Error al obtener plan trimestral:', error);
+    logger.error('quarterly_plan_get_failed', {}, error);
     return { success: false, error: 'No se pudo cargar el plan trimestral.' };
   }
 }
@@ -72,7 +73,7 @@ export async function saveQuarterlyPlan(formData: Record<string, any>) {
     revalidatePath('/quarterly');
     return { success: true };
   } catch (error) {
-    console.error('Error al guardar planeamiento trimestral:', error);
+    logger.error('quarterly_plan_save_failed', {}, error);
     return { success: false, error: 'No se pudo guardar la planeación.' };
   }
 }

@@ -14,6 +14,7 @@ import { StepCierre, getCierreSummary } from './steps/StepCierre';
 import { useAutosave } from './useAutosave';
 import { submitDailyEntry } from '../actions/daily-journal';
 import { SmartDictationButton } from '@/components/SmartDictationButton';
+import { logger } from '@/lib/logger';
 
 interface Habit {
   id: string;
@@ -110,7 +111,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   const mockSave = useCallback(async (data: Record<string, unknown>) => {
     await new Promise((r) => setTimeout(r, 800));
-    console.log('[Autosave] Borrador guardado:', data);
+    logger.debug('autosave_draft_saved', { fieldsCount: Object.keys(data).length });
   }, []);
 
   const { isSaving, lastSaved, hasChanges } = useAutosave({
@@ -276,7 +277,7 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
         router.refresh();
       }, 2500);
     } catch (err) {
-      console.error('Submit error:', err);
+      logger.error('journal_submit_error', {}, err);
       setError('Error de conexión. Intenta de nuevo.');
       setLoading(false);
     }

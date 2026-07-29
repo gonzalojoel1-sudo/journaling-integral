@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import { logger } from '@/lib/logger';
 
 const MAX_CIRCLE_SIZE = 3;
 
@@ -116,6 +117,6 @@ export async function getCircleWidgetData() {
 export async function sendEncouragement(targetUserId: string) {
   const userId = await getCurrentUserId();
   if (userId === targetUserId) return { success: false, error: 'No puedes animarte a ti mismo.' };
-  console.log(`[CIRCLE] ${userId} sent encouragement to ${targetUserId}`);
+  logger.info('circle_encouragement_sent', { hasTarget: !!targetUserId });
   return { success: true };
 }

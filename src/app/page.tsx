@@ -13,6 +13,7 @@ import { getUserSettings } from './actions/user-settings';
 import { ALL_TEMPLATES } from '@/lib/challenge-templates';
 import { getCurrentEscalon, getNextEscalon } from '@/lib/challenge-auto-activate';
 import { eq, and } from 'drizzle-orm';
+import { logger } from '@/lib/logger';
 import {
   Flame,
   Award,
@@ -85,7 +86,7 @@ export default async function DashboardPage() {
         todayWeeklyDestrabeAction = foundTask.task;
       }
     } catch (e) {
-      console.error('Error al parsear tareas semanales:', e);
+      logger.error('home_parse_weekly_tasks_failed', {}, e);
     }
   }
 

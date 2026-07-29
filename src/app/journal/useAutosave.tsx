@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 interface UseAutosaveOptions<T> {
   data: T;
@@ -59,7 +60,7 @@ export function useAutosave<T>({
         previousDataRef.current = data;
         setHasChanges(false);
       } catch (error) {
-        console.error('Autosave failed:', error);
+        logger.error('autosave_failed', {}, error);
       } finally {
         setIsSaving(false);
       }

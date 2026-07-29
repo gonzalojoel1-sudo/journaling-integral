@@ -15,6 +15,7 @@ import {
   CreateBusinessTransactionSchema,
 } from '@/lib/validations';
 import { storeEntryEmbedding, buildEntryContent } from '@/lib/rag';
+import { logger } from '@/lib/logger';
 
 function calculateStreak(
   lastEntryDate: string | null,
@@ -311,7 +312,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     // RAG: Generate embedding in background (non-blocking) — fired AFTER the commit
     const contentForEmbedding = buildEntryContent(entryData);
     storeEntryEmbedding(user.id, entryId, contentForEmbedding).catch((err) =>
-      console.error('[RAG] Falló la generación del embedding en segundo plano:', err),
+      logger.error('rag_embedding_background_failed', {}, err),
     );
 
     const dateLimit = new Date();
@@ -349,7 +350,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       badgeUnlocked,
     };
   } catch (error) {
-    console.error('Error al guardar el diario:', error);
+    logger.error('daily_journal_save_failed', {}, error);
     return { success: false, error: 'Hubo un error al procesar el guardado.' };
   }
 }
@@ -364,7 +365,7 @@ export async function getAnalyticsData() {
     });
     return { success: true, entries };
   } catch (error) {
-    console.error('Error al obtener analíticas:', error);
+    logger.error('daily_journal_analytics_failed', {}, error);
     return { success: false, error: 'No se pudo generar el reporte de analíticas.' };
   }
 }
@@ -405,7 +406,7 @@ export async function getDailyBusinessMetrics(date?: string) {
       transactions: txns,
     };
   } catch (error) {
-    console.error('Error al obtener métricas de negocio:', error);
+    logger.error('daily_journal_business_metrics_failed', {}, error);
     return { success: false, error: 'No se pudieron obtener las métricas.' };
   }
 }
@@ -478,7 +479,7 @@ export async function getBusinessMetricsRange(startDate: string, endDate: string
       weeklyData: Object.values(weeklyData),
     };
   } catch (error) {
-    console.error('Error al obtener métricas de negocio:', error);
+    logger.error('daily_journal_business_metrics_failed', {}, error);
     return { success: false, error: 'No se pudieron obtener las métricas.' };
   }
 }
@@ -517,7 +518,7 @@ export async function createBusinessTransaction(data: {
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('Error al crear transacción:', error);
+    logger.error('daily_journal_create_transaction_failed', {}, error);
     return { success: false, error: 'No se pudo crear la transacción.' };
   }
 }

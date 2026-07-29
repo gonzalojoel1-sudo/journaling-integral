@@ -4,6 +4,7 @@ import { db } from '../../db/db';
 import { bibleVerses } from '../../db/schema';
 import { eq } from 'drizzle-orm';
 import { FALLBACK_VERSES } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 export async function getRandomVerse(level: number = 1) {
   try {
@@ -16,7 +17,7 @@ export async function getRandomVerse(level: number = 1) {
     const randomIndex = Math.floor(Math.random() * selectionSource.length);
     return selectionSource[randomIndex];
   } catch (error) {
-    console.error('Error al obtener versículo:', error);
+    logger.error('bible_get_random_verse_failed', { level }, error);
     return null;
   }
 }

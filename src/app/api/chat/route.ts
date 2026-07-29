@@ -10,6 +10,7 @@ import { searchSimilarEntries } from '@/lib/rag';
 import { db } from '@/db/db';
 import { businessTransactions, habits } from '@/db/schema';
 import { randomUUID } from 'crypto';
+import { logger } from '@/lib/logger';
 
 // ============================================================
 // RAG: Format context for prompt injection
@@ -71,8 +72,10 @@ export async function POST(req: Request) {
   const PRIMARY_MODEL = 'poolside/laguna-m.1:free';
   const FALLBACK_MODEL = 'deepseek-v4-flash-free';
 
-  console.log('🔑 [DEBUG] OpenRouter API Key:', !!process.env.OPENROUTER_API_KEY);
-  console.log('🔑 [DEBUG] OpenCode API Key:', !!process.env.OPENCODE_API_KEY);
+  logger.debug('chat_api_key_presence', {
+    openrouter: !!process.env.OPENROUTER_API_KEY,
+    opencode: !!process.env.OPENCODE_API_KEY,
+  });
 
   // Rate limiting: hybrid key (userId or IP)
   const session = await getServerSession(authOptions);
@@ -121,7 +124,7 @@ export async function POST(req: Request) {
     if (typeof lastUserMessage === 'string' && lastUserMessage.trim()) {
       const esSaludoOFraseCorta = lastUserMessage.length < 10 || /^(hola|hi|buenas|hey|buenos dias)/i.test(lastUserMessage.trim());
       if (esSaludoOFraseCorta) {
-        console.log('⚡ [RAG] Bypass: Mensaje corto, saltando búsqueda de memoria.');
+        logger.debug('rag_bypass_short_message');
       } else {
         try {
           let searchQuery = lastUserMessage;
@@ -142,7 +145,7 @@ export async function POST(req: Request) {
                 maxRetries: 0,
               });
             } catch {
-              console.warn('[RAG] OpenRouter falló, usando OpenCode Zen como fallback');
+              logger.warn('rag_standalone_query_openrouter_failed');
               standaloneQuery = await generateText({
                 model: opencode(FALLBACK_MODEL),
                 system: 'Eres un analizador de contexto. Dada la siguiente conversación, genera una única frase corta de búsqueda (máximo 10 palabras) para encontrar entradas relevantes en la base de datos vectorial del usuario. Resume la intención real de su última pregunta basándote en el contexto. Responde ÚNICAMENTE con la frase de búsqueda, sin comillas ni explicaciones adicionales.',
@@ -155,10 +158,10 @@ export async function POST(req: Request) {
 
             if (standaloneQuery.text && standaloneQuery.text.trim()) {
               searchQuery = standaloneQuery.text.trim();
-              console.log('🔍 [RAG] Standalone Query generada:', searchQuery);
+              logger.debug('rag_standalone_query_generated', { queryLength: searchQuery.length });
             }
           } catch (queryErr) {
-            console.warn('[RAG] Standalone Query falló, usando lastUserMessage:', queryErr);
+            logger.warn('rag_standalone_query_failed', {}, queryErr);
           }
 
           let similarEntries: SimilarEntry[] = [];
@@ -170,7 +173,7 @@ export async function POST(req: Request) {
             enrichedSystemPrompt = `${SYSTEM_PROMPT}\n\n--- CONTEXTO DEL DIARIO DEL USUARIO ---\n${contextBlock}\n--- FIN DEL CONTEXTO ---\n\nUsa este contexto de su diario si es relevante para responder de forma personalizada, integrándolo orgánicamente en la conversación.`;
           }
         } catch (ragErr) {
-          console.error('[CHAT API WARNING]: RAG falló, usando prompt estático:', ragErr);
+          logger.error('rag_failed_using_static_prompt', {}, ragErr);
         }
       }
     }
@@ -191,7 +194,12 @@ export async function POST(req: Request) {
         isSale: z.number().describe('Usa 1 si es una venta de producto, de lo contrario 0'),
       }),
       execute: async ({ amount, cost, type, description, source, isSale }) => {
-        console.log('⚡ [TOOL EXECUTING] Registrar transacción:', { amount, cost, type, description, source, isSale });
+        logger.debug('tool_register_transaction', {
+          type,
+          isSale,
+          hasDescription: !!description,
+          amountRange: amount > 1000 ? 'large' : 'small',
+        });
         if (!userId) {
           return 'SISTEMA: Error - Usuario no autenticado.';
         }
@@ -215,7 +223,7 @@ export async function POST(req: Request) {
           revalidatePath('/', 'layout');
           return 'SISTEMA: Acción completada y guardada en SQLite con éxito. Informa al usuario.';
         } catch (error) {
-          console.error('❌ [TOOL DB ERROR]:', error);
+          logger.error('tool_register_transaction_db_error', {}, error);
           return 'SISTEMA: Error al guardar en la base de datos.';
         }
       },
@@ -231,7 +239,11 @@ export async function POST(req: Request) {
         celebration: z.string().optional().describe('Celebración al completar el hábito'),
       }),
       execute: async ({ name, habitType, domain, rescueAction, anchor, celebration }) => {
-        console.log('⚡ [TOOL EXECUTING] Crear hábito:', { name, habitType, domain, rescueAction, anchor });
+        logger.debug('tool_create_habit', {
+          habitType,
+          domain,
+          hasRescue: !!rescueAction,
+        });
         if (!userId) {
           return 'SISTEMA: Error - Usuario no autenticado.';
         }
@@ -262,7 +274,7 @@ export async function POST(req: Request) {
           revalidatePath('/', 'layout');
           return 'SISTEMA: Acción completada y guardada en SQLite con éxito. Informa al usuario.';
         } catch (error) {
-          console.error('❌ [TOOL DB ERROR]:', error);
+          logger.error('tool_create_habit_db_error', {}, error);
           return 'SISTEMA: Error al guardar en la base de datos.';
         }
       },
@@ -280,25 +292,25 @@ export async function POST(req: Request) {
   };
 
   try {
-    console.log(`🚀 [CHAT] Intentando con OpenRouter (${PRIMARY_MODEL})`);
+    logger.info('chat_attempt_primary', { model: PRIMARY_MODEL });
     const result = await streamText({
       model: openrouter(PRIMARY_MODEL),
       ...commonParams,
     });
-    console.log(`✅ [CHAT] Stream con OpenRouter inicializado exitosamente.`);
+    logger.info('chat_stream_initialized_primary');
     return result.toUIMessageStreamResponse();
   } catch (primaryErr: any) {
-    console.warn('[CHAT] OpenRouter falló, usando OpenCode Zen como fallback:', primaryErr?.message || primaryErr);
+    logger.warn('chat_primary_failed_using_fallback', { message: primaryErr?.message }, primaryErr);
     try {
-      console.log(`🚀 [CHAT] Intentando con OpenCode Zen (${FALLBACK_MODEL})`);
+      logger.info('chat_attempt_fallback', { model: FALLBACK_MODEL });
       const result = await streamText({
         model: opencode(FALLBACK_MODEL),
         ...commonParams,
       });
-      console.log(`✅ [CHAT] Stream con OpenCode Zen inicializado exitosamente.`);
+      logger.info('chat_stream_initialized_fallback');
       return result.toUIMessageStreamResponse();
     } catch (fallbackErr: any) {
-      console.error('[CHAT] Ambos proveedores fallaron:', fallbackErr?.message || fallbackErr);
+      logger.error('chat_both_providers_failed', { message: fallbackErr?.message }, fallbackErr);
       return new Response(fallbackErr?.message || 'Service temporarily unavailable', { status: 500 });
     }
   }

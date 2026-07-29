@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
 import { validate, SaveWeeklyPlanSchema } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 function getISOWeekLabel(date: Date = new Date()): string {
   const tempDate = new Date(date.getTime());
@@ -36,7 +37,7 @@ export async function getActiveWeeklyPlan() {
     });
     return { success: true, plan: plan || null };
   } catch (error) {
-    console.error('Error al obtener plan semanal:', error);
+    logger.error('weekly_plan_get_failed', {}, error);
     return { success: false, error: 'No se pudo cargar la planificación semanal.' };
   }
 }
@@ -75,7 +76,7 @@ export async function saveWeeklyPlan(formData: Record<string, any>) {
     revalidatePath('/review');
     return { success: true };
   } catch (error) {
-    console.error('Error al guardar plan semanal:', error);
+    logger.error('weekly_plan_save_failed', {}, error);
     return { success: false, error: 'No se pudo guardar la planeación dominical.' };
   }
 }

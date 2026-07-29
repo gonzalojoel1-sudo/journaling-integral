@@ -5,6 +5,7 @@ import { validate, SmartEntryRequestSchema } from '@/lib/validations';
 import { rateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
+import { logger } from '@/lib/logger';
 
 const JOURNAL_RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT as const,
@@ -232,14 +233,14 @@ export async function POST(request: Request) {
     const data = await tryGroq(transcript.trim());
     return Response.json({ success: true, data });
   } catch (groqErr: any) {
-    console.warn('[SMART-ENTRY] Groq failed, trying Gemini fallback:', groqErr?.message || groqErr);
+    logger.warn('smart_entry_groq_failed_trying_gemini', { message: groqErr?.message }, groqErr);
   }
 
   try {
     const data = await tryGemini(transcript.trim());
     return Response.json({ success: true, data });
   } catch (geminiErr: any) {
-    console.error('[SMART-ENTRY] Both providers failed. Gemini:', geminiErr?.message || geminiErr);
+    logger.error('smart_entry_both_providers_failed', { message: geminiErr?.message }, geminiErr);
     return Response.json(
       { error: 'Service temporarily unavailable. Please try again.' },
       { status: 500 },

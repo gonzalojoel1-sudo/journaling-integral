@@ -17,6 +17,7 @@ import {
   Zap,
   Target
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface DailyEntry {
   id: string;
@@ -136,7 +137,7 @@ export function ReviewClient({ weeklyEntries }: ReviewClientProps) {
         alert('Error al guardar la planificación.');
       }
     } catch (e) {
-      console.error(e);
+      logger.error('review_weekly_plan_save_failed', {}, e);
       alert('Error de conexión.');
     }
   };

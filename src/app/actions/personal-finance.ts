@@ -13,6 +13,7 @@ import {
   DeletePersonalTransactionSchema,
   WithdrawToPersonalSchema,
 } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export async function createPersonalTransaction(data: {
   amount: number;
@@ -65,7 +66,7 @@ export async function createPersonalTransaction(data: {
     revalidatePath('/finanzas');
     return { success: true };
   } catch (error) {
-    console.error('[PERSONAL] Create error:', error);
+    logger.error('personal_create_transaction_failed', {}, error);
     return { success: false, error: 'Failed to create' };
   }
 }
@@ -174,7 +175,7 @@ export async function getPersonalMetricsRange(startDate: string, endDate: string
       transactions: txns,
     };
   } catch (error) {
-    console.error('[PERSONAL] Metrics error:', error);
+    logger.error('personal_metrics_failed', {}, error);
     return { success: false, error: 'Failed to get metrics' };
   }
 }
@@ -219,7 +220,7 @@ export async function withdrawToPersonal(amount: number, date?: string) {
     revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error('[WITHDRAW] Error:', error);
+    logger.error('personal_withdraw_failed', {}, error);
     return { success: false, error: 'Failed to withdraw' };
   }
 }

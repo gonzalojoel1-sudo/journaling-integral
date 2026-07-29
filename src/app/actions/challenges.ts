@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
 import { ALL_TEMPLATES, getTemplate, ChallengeTemplate } from '@/lib/challenge-templates';
 import { validate, ActivateChallengeSchema } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export async function getActiveChallenges() {
   try {
@@ -20,7 +21,7 @@ export async function getActiveChallenges() {
     });
     return { success: true, challenges: list };
   } catch (error) {
-    console.error('Error al obtener desafios activos:', error);
+    logger.error('challenges_get_active_failed', {}, error);
     return { success: false, error: 'No se pudieron cargar los desafios' };
   }
 }
@@ -33,7 +34,7 @@ export async function getAllChallenges() {
     });
     return { success: true, challenges: list };
   } catch (error) {
-    console.error('Error al obtener desafios:', error);
+    logger.error('challenges_get_all_failed', {}, error);
     return { success: false, error: 'No se pudieron cargar los desafios' };
   }
 }
@@ -46,7 +47,7 @@ export async function getBadges() {
     });
     return { success: true, badges: list };
   } catch (error) {
-    console.error('Error al obtener insignias:', error);
+    logger.error('badges_get_failed', {}, error);
     return { success: false, error: 'No se pudieron cargar las insignias' };
   }
 }
@@ -82,7 +83,7 @@ export async function activateChallenge(templateId: string) {
     revalidatePath('/challenges');
     return { success: true };
   } catch (error) {
-    console.error('Error al activar desafio:', error);
+    logger.error('challenges_activate_failed', {}, error);
     return { success: false, error: 'No se pudo activar el desafio' };
   }
 }
@@ -146,7 +147,7 @@ export async function validateActiveChallenges(entry: any, user: any) {
 
     return { success: true, badgeUnlocked };
   } catch (error) {
-    console.error('Error al validar desafios:', error);
+    logger.error('challenges_validate_failed', {}, error);
     return { success: false };
   }
 }

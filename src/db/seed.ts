@@ -3,15 +3,16 @@ import { users, bibleVerses, habits, quarterlyPlans } from './schema';
 import { randomUUID } from 'crypto';
 import { BIBLE_VERSES_SEED } from './seed/data/bible-verses';
 import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 async function seed() {
-  console.log('Iniciando carga de datos...');
+  logger.info('seed_started');
 
   try {
     await db.delete(bibleVerses);
-    console.log('Librería de versículos restablecida.');
+    logger.info('bible_verses_reset');
   } catch (e) {
-    console.log('Limpieza previa de versículos omitida.');
+    logger.info('bible_verses_reset_skipped');
   }
 
   const verses = BIBLE_VERSES_SEED.map((v) => ({
@@ -20,7 +21,7 @@ async function seed() {
   }));
 
   await db.insert(bibleVerses).values(verses);
-  console.log(`Librería cargada con éxito con ${verses.length} versículos de alto rendimiento.`);
+  logger.info('bible_verses_loaded', { count: verses.length });
 
   try {
     await db.insert(users).values({
@@ -34,9 +35,9 @@ async function seed() {
       lastEntryDate: new Date().toISOString().split('T')[0],
       createdAt: new Date().toISOString(),
     });
-    console.log('Usuario demo inicializado.');
+    logger.info('demo_user_initialized');
   } catch (e) {
-    console.log('El usuario demo ya existe.');
+    logger.info('demo_user_already_exists');
   }
 
   const demoHabits = [
@@ -71,7 +72,7 @@ async function seed() {
   for (const habit of demoHabits) {
     await db.insert(habits).values(habit);
   }
-  console.log('Hábitos de ejemplo creados para el usuario demo.');
+  logger.info('demo_habits_created');
 
   await db.insert(quarterlyPlans).values({
     id: randomUUID(),
@@ -133,11 +134,11 @@ async function seed() {
     createdAt: new Date().toISOString(),
   });
 
-  console.log('Planeamiento trimestral de demostración cargado exitosamente.');
-  console.log('Inicialización completada.');
+  logger.info('demo_quarterly_plan_loaded');
+  logger.info('seed_completed');
 }
 
 seed().catch((err) => {
-  console.error('Error durante la inserción de datos semilla:', err);
+  logger.error('seed_failed', {}, err);
   process.exit(1);
 });

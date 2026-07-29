@@ -6,6 +6,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { Sparkles } from 'lucide-react';
 import { getUserSettings } from '@/app/actions/user-settings';
+import { logger } from '@/lib/logger';
 
 const ChatAssistant = dynamic(
   () => import('@/components/ChatAssistant').then((mod) => mod.ChatAssistant),
@@ -40,7 +41,7 @@ export function KairoChat() {
       setChatError(null);
     },
     onError: (err) => {
-      console.error('Kairo Error:', err);
+      logger.error('kairo_chat_error', {}, err);
       setChatError(err.message || 'Error de conexión');
     },
   });

@@ -14,6 +14,7 @@ import {
   DEMO_USER_PASSWORD_HASH,
 } from '@/lib/constants';
 import { validate, UpdateUserLevelSchema } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export const getCurrentUserId = cache(async (): Promise<string> => {
   try {
@@ -27,7 +28,7 @@ export const getCurrentUserId = cache(async (): Promise<string> => {
       }
     }
   } catch (error) {
-    console.error('Error al resolver ID de usuario en sesión:', error);
+    logger.error('auth_resolve_session_user_id_failed', {}, error);
   }
   return DEMO_USER_ID;
 });
@@ -56,7 +57,7 @@ export async function requireCurrentUserId(): Promise<string> {
     if (error instanceof Error && error.message === 'Unauthorized') {
       throw error;
     }
-    console.error('Error al resolver ID de usuario autenticado:', error);
+    logger.error('auth_resolve_authenticated_user_id_failed', {}, error);
   }
 
   throw new Error('Unauthorized');
@@ -97,7 +98,7 @@ export const getOrCreateUserProfile = cache(async () => {
 
     return { success: true, user };
   } catch (error) {
-    console.error('Error al obtener perfil de usuario:', error);
+    logger.error('auth_get_user_profile_failed', {}, error);
     return { success: false, error: 'No se pudo cargar el perfil del usuario.' };
   }
 });
@@ -119,7 +120,7 @@ export async function updateUserLevel(level: number, targetUserId?: string) {
     revalidatePath('/progress');
     return { success: true };
   } catch (error) {
-    console.error('Error al forzar nivel de usuario:', error);
+    logger.error('auth_force_user_level_failed', {}, error);
     return { success: false, error: 'No se pudo actualizar el nivel.' };
   }
 }
