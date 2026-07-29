@@ -52,6 +52,7 @@ import { HabitProgress } from './dashboard/HabitProgress';
 import { BizCompactPanel } from './dashboard/BizCompactPanel';
 import { PersonalFinanceWidget } from './dashboard/PersonalFinanceWidget';
 import { CircleWidget } from '@/components/circles/CircleWidget';
+import { todayStr, yesterdayStr } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,23 +68,21 @@ export default async function DashboardPage() {
     );
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = todayStr();
 
   const todayEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, todayStr)
+      eq(dailyEntries.date, today)
     ),
   });
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterday = yesterdayStr();
 
   const yesterdayEntry = await db.query.dailyEntries.findFirst({
     where: and(
       eq(dailyEntries.userId, user.id),
-      eq(dailyEntries.date, yesterdayStr)
+      eq(dailyEntries.date, yesterday)
     ),
   });
 
@@ -125,7 +124,7 @@ export default async function DashboardPage() {
   const habitsRes = await getActiveHabits();
   const habitsList = habitsRes.habits || [];
 
-  const todayBizMetrics = await getDailyBusinessMetrics(todayStr);
+  const todayBizMetrics = await getDailyBusinessMetrics(today);
   const bizUnitsRes = await getBusinessSettingsList();
   const bizUnits = Array.isArray(bizUnitsRes) ? bizUnitsRes : [];
   const todayIncome = todayBizMetrics.success ? (todayBizMetrics.totalIncome ?? 0) : 0;

@@ -13,6 +13,7 @@ import {
   GenerateInviteSchema,
   JoinCircleSchema,
 } from '@/lib/validations';
+import { todayStr, yesterdayStr } from '@/lib/dates';
 
 const MAX_CIRCLE_SIZE = 3;
 const INVITE_CODE_BYTES = 8;
@@ -166,8 +167,8 @@ export async function getCircleWidgetData() {
       },
     });
 
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const today = todayStr();
+    const yesterday = yesterdayStr();
 
     const enriched = members.map((m: any) => ({
       userId: m.user.id,

@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import { Check } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
+import { toggleHabitCompleted } from '@/app/actions/toggle-habit';
+import { logger } from '@/lib/logger';
 
 interface Habit {
   id: string;
@@ -31,15 +33,24 @@ const typeIcon: Record<string, string> = {
 
 export function HabitProgress({ habits, initialCompletedIds = [] }: HabitProgressProps) {
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set(initialCompletedIds));
+  const [, startTransition] = useTransition();
 
   const toggleHabit = (id: string) => {
     setCompletedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
+      const wasCompleted = next.has(id);
+      if (wasCompleted) {
         next.delete(id);
       } else {
         next.add(id);
       }
+      startTransition(async () => {
+        try {
+          await toggleHabitCompleted({ kind: 'habit', habitId: id, completed: !wasCompleted });
+        } catch (err) {
+          logger.error('habit_toggle_persist_failed', { habitId: id }, err);
+        }
+      });
       return next;
     });
   };

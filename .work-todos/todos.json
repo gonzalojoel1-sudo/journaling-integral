@@ -1,0 +1,14 @@
+{
+  "items": [
+    {"id": "1", "status": "completed", "title": "Create src/lib/dates.ts utility tests (RED)"},
+    {"id": "2", "status": "completed", "title": "Implement src/lib/dates.ts (GREEN)"},
+    {"id": "3", "status": "completed", "title": "Replace toISOString().split('T')[0] across src/*"},
+    {"id": "4", "status": "completed", "title": "Add aria-labels to 5 icon-only buttons"},
+    {"id": "5", "status": "completed", "title": "Associate labels with htmlFor in StepEnergia + JournalForm"},
+    {"id": "6", "status": "completed", "title": "Write tests for toggleHabitCompleted (RED)"},
+    {"id": "7", "status": "completed", "title": "Implement toggleHabitCompleted server action (GREEN)"},
+    {"id": "8", "status": "completed", "title": "Wire HabitProgress and PriorityChecklist to persistence"},
+    {"id": "9", "status": "completed", "title": "Run full test suite + lint + build verification"},
+    {"id": "10", "status": "completed", "title": "Write .superpowers/sdd/batch-07-report.md"}
+  ]
+}

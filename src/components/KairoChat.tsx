@@ -62,6 +62,8 @@ export function KairoChat() {
           setShow((prev) => !prev);
           setChatError(null);
         }}
+        aria-label={show ? 'Cerrar asistente Kairo' : 'Abrir asistente Kairo'}
+        aria-expanded={show}
         className={`fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 ${
           show
             ? 'bg-zinc-800 dark:bg-zinc-700 text-zinc-400 shadow-lg shadow-zinc-900/20'
@@ -69,7 +71,7 @@ export function KairoChat() {
         }`}
         title="Kairo"
       >
-        <Sparkles className={`h-5 w-5 transition-transform duration-300 ${show ? 'rotate-90' : ''}`} />
+        <Sparkles className={`h-5 w-5 transition-transform duration-300 ${show ? 'rotate-90' : ''}`} aria-hidden="true" />
       </button>
 
       {/* Chat panel — useChat state lives here, persists across routes */}

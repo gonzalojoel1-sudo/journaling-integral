@@ -82,8 +82,8 @@ export function CircleWidget() {
           <Users className="w-4 h-4 text-blue-400" />
           {circle.name}
         </h3>
-        <button onClick={handleInvite} className="text-gray-400 hover:text-white transition-colors" title="Invitar">
-          <LinkIcon className="w-4 h-4" />
+        <button onClick={handleInvite} aria-label="Invitar a mi círculo de confianza" className="text-gray-400 hover:text-white transition-colors" title="Invitar">
+          <LinkIcon className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 

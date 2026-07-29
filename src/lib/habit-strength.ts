@@ -1,3 +1,5 @@
+import { todayStr } from './dates';
+
 const DECAY_RATE = 0.90;
 
 function daysBetween(dateA: string, dateB: string): number {
@@ -36,8 +38,8 @@ export function getRealTimeStrength(
 ): number {
   if (!lastStrengthDate) return currentStrength;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const daysSince = daysBetween(lastStrengthDate, todayStr);
+  const today = todayStr();
+  const daysSince = daysBetween(lastStrengthDate, today);
 
   if (daysSince <= 0) return currentStrength;
 

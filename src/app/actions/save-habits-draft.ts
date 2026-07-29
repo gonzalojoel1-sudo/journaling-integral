@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { requireCurrentUserId } from './auth';
 import { logger } from '@/lib/logger';
 import { HabitsDraftSchema } from '@/lib/validations';
+import { todayStr } from '@/lib/dates';
 
 export async function saveHabitsDraft(dailyHabits: unknown) {
   try {
@@ -19,10 +20,10 @@ export async function saveHabitsDraft(dailyHabits: unknown) {
     }
 
     const userId = await requireCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = todayStr();
 
     const existing = await db.query.dailyEntries.findFirst({
-      where: and(eq(dailyEntries.userId, userId), eq(dailyEntries.date, todayStr)),
+      where: and(eq(dailyEntries.userId, userId), eq(dailyEntries.date, today)),
     });
 
     const habitsJson = JSON.stringify(v.data);
@@ -38,7 +39,7 @@ export async function saveHabitsDraft(dailyHabits: unknown) {
     await db.insert(dailyEntries).values({
       id: randomUUID(),
       userId,
-      date: todayStr,
+      date: today,
       time: new Date().toISOString(),
       levelAtEntry: 1,
       isPlanBUsed: 0,

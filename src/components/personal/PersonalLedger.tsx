@@ -8,6 +8,7 @@ import {
   updatePersonalTransaction,
   deletePersonalTransaction,
 } from '@/app/actions/personal-finance';
+import { todayStr } from '@/lib/dates';
 
 interface Transaction {
   id: string;
@@ -48,7 +49,7 @@ const emptyForm: EditFormData = {
   category: 'Supermercado',
   account: 'Efectivo',
   description: '',
-  date: new Date().toISOString().split('T')[0],
+  date: todayStr(),
 };
 
 const ACCOUNTS = ['Banco', 'Efectivo', 'Billetera Virtual'];
@@ -111,7 +112,7 @@ export function PersonalLedger({ transactions, categories: customCategories }: P
   const openNew = () => {
     setShowNew(true);
     setEditingId(null);
-    setEditForm({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+    setEditForm({ ...emptyForm, date: todayStr() });
   };
 
   const renderEditRow = (isNew: boolean) => (

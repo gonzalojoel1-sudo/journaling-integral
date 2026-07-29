@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { requireCurrentUserId } from './auth';
 import { logger } from '@/lib/logger';
 import { DraftJournalSchema } from '@/lib/validations';
+import { todayStr } from '@/lib/dates';
 
 export async function saveJournalDraft(data: unknown) {
   try {
@@ -19,10 +20,10 @@ export async function saveJournalDraft(data: unknown) {
     }
 
     const userId = await requireCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = todayStr();
 
     const existing = await db.query.dailyEntries.findFirst({
-      where: and(eq(dailyEntries.userId, userId), eq(dailyEntries.date, todayStr)),
+      where: and(eq(dailyEntries.userId, userId), eq(dailyEntries.date, today)),
     });
 
     const draft = v.data;
@@ -78,7 +79,7 @@ export async function saveJournalDraft(data: unknown) {
     await db.insert(dailyEntries).values({
       id: randomUUID(),
       userId,
-      date: todayStr,
+      date: today,
       time: new Date().toISOString(),
       sleepRating: draft.sleepRating ?? null,
       energyRating: draft.energyRating ?? null,

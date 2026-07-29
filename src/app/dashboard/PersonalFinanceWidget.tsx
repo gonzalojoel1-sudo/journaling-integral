@@ -1,6 +1,7 @@
 import React from 'react';
 import { Wallet } from 'lucide-react';
 import { getPersonalMetricsRange } from '@/app/actions/personal-finance';
+import { todayStr } from '@/lib/dates';
 
 function formatCurrency(n: number): string {
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
@@ -8,10 +9,10 @@ function formatCurrency(n: number): string {
 }
 
 export async function PersonalFinanceWidget() {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const firstOfMonth = `${todayStr.slice(0, 7)}-01`;
+  const today = todayStr();
+  const firstOfMonth = `${today.slice(0, 7)}-01`;
 
-  const metrics = await getPersonalMetricsRange(firstOfMonth, todayStr);
+  const metrics = await getPersonalMetricsRange(firstOfMonth, today);
 
   const liquidity = metrics.success ? (metrics.liquidity ?? 0) : 0;
   const monthlyExpenses = metrics.success ? (metrics.totalExpenses ?? 0) : 0;

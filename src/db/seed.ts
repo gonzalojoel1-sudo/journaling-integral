@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { BIBLE_VERSES_SEED } from './seed/data/bible-verses';
 import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH } from '@/lib/constants';
 import { logger } from '@/lib/logger';
+import { todayStr } from '../lib/dates';
 
 async function seed() {
   if (process.env.NODE_ENV === 'production') {
@@ -37,7 +38,7 @@ async function seed() {
       currentLevel: 1,
       streakCurrent: 5,
       streakMax: 12,
-      lastEntryDate: new Date().toISOString().split('T')[0],
+      lastEntryDate: todayStr(),
       createdAt: new Date().toISOString(),
     });
     logger.info('demo_user_initialized');

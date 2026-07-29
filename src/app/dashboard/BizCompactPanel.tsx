@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Briefcase, Minus, Plus, PlusCircle } from 'lucide-react';
 import { autoSaveBizField, registerSale } from '../actions/business';
+import { todayStr } from '@/lib/dates';
 
 interface BusinessUnit {
   id: string;
@@ -41,7 +42,7 @@ export function BizCompactPanel({
   date,
   businessUnits,
 }: BizCompactPanelProps) {
-  const todayStr = date || new Date().toISOString().split('T')[0];
+  const todayDateStr = date || todayStr();
 
   const [prospectDone, setProspectDone] = useState(initialProspect);
   const [followUpDone, setFollowUpDone] = useState(initialFollowUp);
@@ -66,10 +67,10 @@ export function BizCompactPanel({
       const actions = { ...pendingActionsRef.current };
       pendingActionsRef.current = {};
       for (const [f, v] of Object.entries(actions)) {
-        await autoSaveBizField(f, v, todayStr);
+        await autoSaveBizField(f, v, todayDateStr);
       }
     }, 500);
-  }, [todayStr]);
+  }, [todayDateStr]);
 
   useEffect(() => {
     return () => {
@@ -110,7 +111,7 @@ export function BizCompactPanel({
   const handleRegisterSale = async () => {
     if (!selectedUnit) return;
     setRegistering(true);
-    const result = await registerSale(selectedUnit, todayStr);
+    const result = await registerSale(selectedUnit, todayDateStr);
     if (result.success) {
       setSales((s) => s + 1);
     }

@@ -14,6 +14,7 @@ import {
   WithdrawToPersonalSchema,
 } from '@/lib/validations';
 import { logger } from '@/lib/logger';
+import { todayStr } from '@/lib/dates';
 
 export async function createPersonalTransaction(data: {
   amount: number;
@@ -28,7 +29,7 @@ export async function createPersonalTransaction(data: {
     if (!v.success) return { success: false, error: v.error };
 
     const userId = await getCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const today = todayStr();
     const now = new Date().toISOString();
 
     await db.insert(personalTransactions).values({
@@ -39,7 +40,7 @@ export async function createPersonalTransaction(data: {
       category: data.category || 'Otros',
       account: data.account || 'Efectivo',
       description: data.description || null,
-      date: data.date || todayStr,
+      date: data.date || today,
       createdAt: now,
     });
 
@@ -54,7 +55,7 @@ export async function createPersonalTransaction(data: {
         description: 'Retiro a Cuenta Personal',
         source: 'General',
         isSale: 0,
-        date: data.date || todayStr,
+        date: data.date || today,
         dailyEntryId: null,
         createdAt: now,
       });
@@ -186,7 +187,7 @@ export async function withdrawToPersonal(amount: number, date?: string) {
     if (!v.success) return { success: false, error: v.error };
 
     const userId = await getCurrentUserId();
-    const todayStr = date || new Date().toISOString().split('T')[0];
+    const today = date || todayStr();
     const now = new Date().toISOString();
 
     await db.insert(businessTransactions).values({
@@ -198,7 +199,7 @@ export async function withdrawToPersonal(amount: number, date?: string) {
       description: 'Retiro de Socios/Sueldo',
       source: 'General',
       isSale: 0,
-      date: todayStr,
+      date: today,
       dailyEntryId: null,
       createdAt: now,
     });
@@ -211,7 +212,7 @@ export async function withdrawToPersonal(amount: number, date?: string) {
       category: 'Retiro Negocio',
       account: 'Banco',
       description: 'Retiro desde negocio',
-      date: todayStr,
+      date: today,
       createdAt: now,
     });
 

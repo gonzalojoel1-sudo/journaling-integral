@@ -16,14 +16,15 @@ import {
 } from '@/lib/validations';
 import { storeEntryEmbedding, buildEntryContent } from '@/lib/rag';
 import { logger } from '@/lib/logger';
+import { todayStr, yesterdayStr, formatDateKey } from '@/lib/dates';
 
 function calculateStreak(
   lastEntryDate: string | null,
   currentStreak: number,
   todayStr: string,
 ): number {
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-  if (lastEntryDate === yesterdayStr) {
+  const yesterday = yesterdayStr();
+  if (lastEntryDate === yesterday) {
     return currentStreak + 1;
   }
   if (lastEntryDate !== todayStr) {
@@ -43,13 +44,13 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     }
 
     const user = profileRes.user;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDateStr = todayStr();
     const timeStr = new Date().toTimeString().split(' ')[0].substring(0, 5);
 
     const existingEntry = await db.query.dailyEntries.findFirst({
       where: and(
         eq(dailyEntries.userId, user.id),
-        eq(dailyEntries.date, todayStr),
+        eq(dailyEntries.date, todayDateStr),
       ),
     });
 
@@ -59,7 +60,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     const entryData = {
       id: entryId,
       userId: user.id,
-      date: todayStr,
+      date: todayDateStr,
       time: timeStr,
       levelAtEntry: user.currentLevel,
       isPlanBUsed: formData.isPlanBUsed ? 1 : 0,
@@ -149,7 +150,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       } else {
         await tx.insert(dailyEntries).values(entryData);
 
-        const newStreak = calculateStreak(user.lastEntryDate, user.streakCurrent, todayStr);
+        const newStreak = calculateStreak(user.lastEntryDate, user.streakCurrent, todayDateStr);
         const newMaxStreak = Math.max(newStreak, user.streakMax);
 
         await tx
@@ -157,7 +158,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
           .set({
             streakCurrent: newStreak,
             streakMax: newMaxStreak,
-            lastEntryDate: todayStr,
+            lastEntryDate: todayDateStr,
           })
           .where(eq(users.id, user.id));
       }
@@ -165,7 +166,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
       // Levels deprecated — progression is now tracked via badges
 
       if (formData.dailyHabits && Array.isArray(formData.dailyHabits)) {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const today = todayStr();
 
         const pilarHabits: { id: string; domain: string | null; currentStrength: number; lastStrengthDate: string | null }[] = [];
         let totalNonPilarToComplete = 0;
@@ -203,7 +204,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
           const { newStrength, newDate } = applyDecayAndBonus(
             habitRecord.currentStrength ?? 0,
             habitRecord.lastStrengthDate,
-            todayStr,
+            today,
             habitEntry.completed === true,
           );
 
@@ -293,7 +294,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
             const { newStrength, newDate } = applyDecayAndBonus(
               pilar.currentStrength,
               pilar.lastStrengthDate,
-              todayStr,
+              today,
               allNonPilarCompleted,
             );
 
@@ -317,7 +318,7 @@ export async function submitDailyEntry(formData: Record<string, any>) {
 
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - 30);
-    const dateLimitStr = dateLimit.toISOString().split('T')[0];
+    const dateLimitStr = formatDateKey(dateLimit);
 
     const entriesLast30Days = await db.query.dailyEntries.findMany({
       where: and(
@@ -373,7 +374,7 @@ export async function getAnalyticsData() {
 export async function getDailyBusinessMetrics(date?: string) {
   try {
     const userId = await getCurrentUserId();
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const targetDate = date || todayStr();
 
     const txns = await db.query.businessTransactions.findMany({
       where: and(
@@ -498,7 +499,7 @@ export async function createBusinessTransaction(data: {
     if (!v.success) return { success: false, error: v.error };
 
     const userId = await getCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDateStr = todayStr();
 
     await db.insert(businessTransactions).values({
       id: randomUUID(),
@@ -509,7 +510,7 @@ export async function createBusinessTransaction(data: {
       description: data.description || null,
       source: data.source || 'General',
       isSale: data.isSale ? 1 : 0,
-      date: data.date || todayStr,
+      date: data.date || todayDateStr,
       dailyEntryId: null,
       createdAt: new Date().toISOString(),
     });

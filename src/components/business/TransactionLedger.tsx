@@ -8,6 +8,7 @@ import {
   deleteBusinessTransaction,
   createBusinessTransaction,
 } from '@/app/actions/business';
+import { todayStr, addDays } from '@/lib/dates';
 
 interface Transaction {
   id: string;
@@ -46,28 +47,21 @@ function formatCurrency(n: number): string {
 function filterTransactions(transactions: Transaction[], period: FilterPeriod): Transaction[] {
   if (period === 'all') return transactions;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  const today = todayStr();
 
-  const cutoff = new Date(today);
+  const cutoff = (days: number) => addDays(today, -days);
+
   if (period === 'today') {
-    return transactions.filter((t) => t.date === todayStr);
+    return transactions.filter((t) => t.date === today);
   }
   if (period === 'week') {
-    cutoff.setDate(cutoff.getDate() - 7);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return transactions.filter((t) => t.date >= cutoffStr);
+    return transactions.filter((t) => t.date >= cutoff(7));
   }
   if (period === 'month') {
-    cutoff.setDate(cutoff.getDate() - 30);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return transactions.filter((t) => t.date >= cutoffStr);
+    return transactions.filter((t) => t.date >= cutoff(30));
   }
   if (period === 'sixMonths') {
-    cutoff.setDate(cutoff.getDate() - 183);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-    return transactions.filter((t) => t.date >= cutoffStr);
+    return transactions.filter((t) => t.date >= cutoff(183));
   }
   return transactions;
 }
@@ -89,7 +83,7 @@ const emptyForm: EditFormData = {
   description: '',
   source: 'General',
   isSale: false,
-  date: new Date().toISOString().split('T')[0],
+  date: todayStr(),
 };
 
 export function TransactionLedger({ transactions }: TransactionLedgerProps) {
@@ -159,7 +153,7 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
   const openNew = () => {
     setShowNew(true);
     setEditingId(null);
-    setEditForm({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+    setEditForm({ ...emptyForm, date: todayStr() });
   };
 
   const editRow = (tx: Transaction) => {
@@ -302,7 +296,7 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
             }}
             className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 transition-colors"
           >
-            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
           </button>
         </div>
       </div>

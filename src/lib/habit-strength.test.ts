@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyDecayAndBonus, getRealTimeStrength } from './habit-strength';
+import { todayStr, addDays } from './dates';
 
 const DECAY_RATE = 0.90;
 
@@ -110,27 +111,27 @@ describe('getRealTimeStrength', () => {
   });
 
   it('should return current strength if lastStrengthDate is today', () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayStr();
     const result = getRealTimeStrength(5.0, today);
     expect(result).toBe(5.0);
   });
 
   it('should apply decay for past dates', () => {
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const yesterday = addDays(todayStr(), -1);
     const result = getRealTimeStrength(10.0, yesterday);
     // 10.0 * 0.90^1 = 9.0
     expect(result).toBe(9.0);
   });
 
   it('should apply decay for 3 days ago', () => {
-    const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0];
+    const threeDaysAgo = addDays(todayStr(), -3);
     const result = getRealTimeStrength(10.0, threeDaysAgo);
     // 10.0 * 0.90^3 = 7.29
     expect(result).toBe(7.29);
   });
 
   it('should round to 2 decimal places', () => {
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const yesterday = addDays(todayStr(), -1);
     const result = getRealTimeStrength(1.0, yesterday);
     // 1.0 * 0.90^1 = 0.9
     expect(result).toBe(0.9);

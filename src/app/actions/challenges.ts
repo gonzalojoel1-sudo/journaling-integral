@@ -10,6 +10,7 @@ import { ALL_TEMPLATES, getTemplate, ChallengeTemplate } from '@/lib/challenge-t
 import { validate, ActivateChallengeSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
 import { safeJsonParse } from '@/lib/json';
+import { todayStr } from '@/lib/dates';
 
 export async function getActiveChallenges() {
   try {
@@ -104,7 +105,7 @@ export async function validateActiveChallenges(entry: any, user: any) {
       const template = getTemplate(ch.templateId);
       if (!template) continue;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayStr();
       const progress: Record<string, boolean> = safeJsonParse<Record<string, boolean>>(
         ch.progressJson,
         {},

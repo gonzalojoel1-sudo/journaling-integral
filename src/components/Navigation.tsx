@@ -148,6 +148,7 @@ function DesktopSidebar({ pathname }: DesktopSidebarProps) {
             </div>
             <button
               onClick={handleSignOut}
+              aria-label="Cerrar sesión"
               className="w-full flex items-center justify-center gap-2 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
             >
               <LogOut className="h-4 w-4" />

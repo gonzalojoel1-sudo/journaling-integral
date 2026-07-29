@@ -327,10 +327,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+              <label htmlFor="plan-b-choose-identity" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
                 Hoy elijo SER:
               </label>
               <input
+                id="plan-b-choose-identity"
                 type="text"
                 value={chooseToBeIdentity}
                 onChange={(e) => setChooseToBeIdentity(e.target.value)}
@@ -340,10 +341,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+              <label htmlFor="plan-b-identity-action" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
                 Acción específica para demostrarlo:
               </label>
               <input
+                id="plan-b-identity-action"
                 type="text"
                 value={identityAction}
                 onChange={(e) => setIdentityAction(e.target.value)}
@@ -353,10 +355,11 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
+              <label htmlFor="plan-b-gratitude-1" className="block text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2 font-mono">
                 Gracias Dios por:
               </label>
               <input
+                id="plan-b-gratitude-1"
                 type="text"
                 value={gratitude1}
                 onChange={(e) => setGratitude1(e.target.value)}

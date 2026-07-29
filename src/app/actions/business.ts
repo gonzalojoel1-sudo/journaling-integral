@@ -19,6 +19,7 @@ import {
   type AllowedBizField,
 } from '@/lib/validations';
 import { logger } from '@/lib/logger';
+import { todayStr } from '@/lib/dates';
 
 export async function autoSaveBizField(field: string, value: string | number, date: string) {
   try {
@@ -411,7 +412,7 @@ export async function createBusinessTransaction(data: {
     if (!v.success) return { success: false, error: v.error };
 
     const userId = await getCurrentUserId();
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayDateStr = todayStr();
 
     await db.insert(businessTransactions).values({
       id: randomUUID(),
@@ -422,7 +423,7 @@ export async function createBusinessTransaction(data: {
       description: data.description || null,
       source: data.source || 'General',
       isSale: data.isSale ? 1 : 0,
-      date: data.date || todayStr,
+      date: data.date || todayDateStr,
       dailyEntryId: null,
       createdAt: new Date().toISOString(),
     });
