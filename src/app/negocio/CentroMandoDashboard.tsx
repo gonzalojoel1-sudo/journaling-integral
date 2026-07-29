@@ -82,20 +82,6 @@ export function CentroMandoDashboard({
   const [filter, setFilter] = useState<FilterPeriod>('sixMonths');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  if (settingsList.length === 0) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <header className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono">Panel Financiero</p>
-            <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 mt-1">Centro de Mando</h1>
-          </div>
-        </header>
-        <CreateFirstUnitGate />
-      </div>
-    );
-  }
-
   const today = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => today.toISOString().split('T')[0], [today]);
   const filterStartStr = useMemo(
@@ -198,6 +184,20 @@ export function CentroMandoDashboard({
     filter === 'all'
       ? 'Histórico completo'
       : `${filterStartStr.split('-').reverse().join('/')} — ${todayStr.split('-').reverse().join('/')}`;
+
+  if (settingsList.length === 0) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <header className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 font-mono">Panel Financiero</p>
+            <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 mt-1">Centro de Mando</h1>
+          </div>
+        </header>
+        <CreateFirstUnitGate />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

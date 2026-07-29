@@ -40,8 +40,6 @@ const RatingField = z
   .nullable()
   .optional();
 
-const OptionalTextField = z.string().max(2000).nullable().optional();
-
 export const DailyEntrySchema = z.object({
   // Energy
   sleepRating: RatingField,

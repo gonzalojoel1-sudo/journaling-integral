@@ -3,15 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  User,
   Flame,
   Calendar,
-  Activity,
-  BookOpen,
-  Briefcase,
   Shield,
   Trash2,
-  ShieldAlert,
 } from 'lucide-react';
 import { adminDeleteUser, adminSetRole } from '@/app/actions/admin';
 import { ROLE_ADMIN, ROLE_USER } from '@/lib/constants-domain';
@@ -74,9 +69,6 @@ export function AdminUsersClient({ users: initialUsers }: AdminUsersClientProps)
   return (
     <div className="space-y-4 animate-fade-in">
       {users.map((user) => {
-        const usesSpiritual = user.stats.devotionalsCompleted > 0;
-        const usesBusiness = user.stats.businessCompleted > 0;
-        const usesHabits = user.stats.habitsCount > 0;
         const isAdmin = user.role === ROLE_ADMIN;
 
         return (

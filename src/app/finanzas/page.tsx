@@ -26,7 +26,6 @@ export default async function FinanzasPage() {
   const expenses = metrics.success ? (metrics.totalExpenses ?? 0) : 0;
   const savingsRate = metrics.success ? (metrics.savingsRate ?? 0) : 0;
   const transactions = metrics.success ? (metrics.transactions ?? []) : [];
-  const totalIncome = metrics.success ? (metrics.totalIncome ?? 0) : 0;
 
   const incomeBreakdown = transactions
     .filter((t) => t.type === 'ingreso')

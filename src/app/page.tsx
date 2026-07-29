@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { db } from '../db/db';
-import { dailyEntries, users } from '../db/schema';
+import { dailyEntries } from '../db/schema';
 import { getOrCreateUserProfile } from './actions/auth';
 import { getRandomVerse } from './actions/bible';
 import { getActiveWeeklyPlan } from './actions/weekly-planning';
@@ -13,8 +13,7 @@ import { getUserSettings } from './actions/user-settings';
 import { ALL_TEMPLATES } from '@/lib/challenge-templates';
 import { getCurrentEscalon, getNextEscalon } from '@/lib/challenge-auto-activate';
 import { eq, and } from 'drizzle-orm';
-import { logger } from '@/lib/logger';
-import { parseJsonColumn, safeJsonParse } from '@/lib/json';
+import { parseJsonColumn } from '@/lib/json';
 import { z } from 'zod';
 import {
   Flame,

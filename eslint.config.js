@@ -14,9 +14,15 @@ const eslintConfig = [
       "no-var": "error",
       "object-shorthand": "error",
       "quote-props": ["error", "as-needed"],
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
+    },
+  },
+  {
+    files: ["src/lib/logger.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
   {

@@ -16,7 +16,7 @@ import {
 } from '@/lib/validations';
 import { storeEntryEmbedding, buildEntryContent } from '@/lib/rag';
 import { logger } from '@/lib/logger';
-import { todayStr, yesterdayStr, formatDateKey } from '@/lib/dates';
+import { todayStr, yesterdayStr } from '@/lib/dates';
 import {
   HABIT_TYPE_PILAR,
   HABIT_TYPE_PRECISO,
@@ -331,17 +331,6 @@ export async function submitDailyEntry(formData: Record<string, any>) {
     storeEntryEmbedding(user.id, entryId, contentForEmbedding).catch((err) =>
       logger.error('rag_embedding_background_failed', {}, err),
     );
-
-    const dateLimit = new Date();
-    dateLimit.setDate(dateLimit.getDate() - ANALYTICS_DAYS_WINDOW);
-    const dateLimitStr = formatDateKey(dateLimit);
-
-    const entriesLast30Days = await db.query.dailyEntries.findMany({
-      where: and(
-        eq(dailyEntries.userId, user.id),
-        gte(dailyEntries.date, dateLimitStr),
-      ),
-    });
 
     revalidatePath('/');
     revalidatePath('/journal');

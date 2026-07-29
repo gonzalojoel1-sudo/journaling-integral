@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Brain } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-import { ICambiarHabit } from '@/types/habits';
+import type { ICambiarHabit } from '@/types/habits';
 
 const VICTORY_TARGET = 30;
 

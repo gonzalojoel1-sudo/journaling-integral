@@ -26,7 +26,7 @@ interface PersonalLedgerProps {
 }
 
 function formatDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [, m, d] = dateStr.split('-').map(Number);
   return `${d}/${m}`;
 }
 
@@ -64,7 +64,7 @@ function getCategories(type: string): string[] {
   return type === 'ingreso' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 }
 
-export function PersonalLedger({ transactions, categories: customCategories }: PersonalLedgerProps) {
+export function PersonalLedger({ transactions }: PersonalLedgerProps) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);

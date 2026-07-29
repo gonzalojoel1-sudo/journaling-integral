@@ -81,7 +81,7 @@ export async function POST(req: Request) {
   const sessionUser = await getSessionUser();
   const userId = sessionUser?.id ?? undefined;
   const clientId = getClientIdentifier(req, userId);
-  const { success: rateLimitOk, remaining } = await rateLimit(`chat:${clientId}`, RATE_LIMIT_CHAT_PER_MIN, MS_PER_MINUTE);
+  const { success: rateLimitOk } = await rateLimit(`chat:${clientId}`, RATE_LIMIT_CHAT_PER_MIN, MS_PER_MINUTE);
 
   if (!rateLimitOk) {
     return new Response(
@@ -262,7 +262,7 @@ export async function POST(req: Request) {
             name,
             habitType: habitType || HABIT_TYPE_CRECER,
             domain: domain || null,
-            rescueAction: rescueAction,
+            rescueAction,
             activeAction: rescueAction,
             celebration: celebration || celebrationMap[habitType || HABIT_TYPE_CRECER],
             anchor: anchor || null,

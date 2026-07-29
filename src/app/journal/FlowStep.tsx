@@ -15,7 +15,6 @@ interface FlowStepProps {
 }
 
 export function FlowStep({
-  stepNumber,
   title,
   icon,
   state,

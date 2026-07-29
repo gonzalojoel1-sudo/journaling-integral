@@ -58,14 +58,13 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
 
   const [showPlanBModal, setShowPlanBModal] = useState(!existingEntry);
   const [isPlanB, setIsPlanB] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   const [activeStep, setActiveStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const totalSteps = userLevel === 1 ? 4 : 6;
 
-  const [isPlanBUsed, setIsPlanBUsed] = useState<boolean>(existingEntry?.isPlanBUsed === 1 || false);
+  const [isPlanBUsed] = useState<boolean>(existingEntry?.isPlanBUsed === 1 || false);
 
   const [sleepRating, setSleepRating] = useState<number>(existingEntry?.sleepRating ?? 7);
   const [energyRating, setEnergyRating] = useState<number>(existingEntry?.energyRating ?? 7);

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-import { IPrecisoHabit } from '@/types/habits';
+import type { IPrecisoHabit } from '@/types/habits';
 
 export function HabitCardPreciso({ habit }: { habit: IPrecisoHabit }) {
   const [expanded, setExpanded] = useState(false);

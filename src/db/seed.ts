@@ -18,7 +18,7 @@ async function seed() {
   try {
     await db.delete(bibleVerses);
     logger.info('bible_verses_reset');
-  } catch (e) {
+  } catch (_e) {
     logger.info('bible_verses_reset_skipped');
   }
 
@@ -43,7 +43,7 @@ async function seed() {
       createdAt: new Date().toISOString(),
     });
     logger.info('demo_user_initialized');
-  } catch (e) {
+  } catch (_e) {
     logger.info('demo_user_already_exists');
   }
 

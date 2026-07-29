@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { applyDecayAndBonus, getRealTimeStrength } from './habit-strength';
 import { todayStr, addDays } from './dates';
 
-const DECAY_RATE = 0.90;
-
 describe('applyDecayAndBonus', () => {
   it('should add +1.0 when completed today (no previous strength)', () => {
     const result = applyDecayAndBonus(0, null, '2026-07-11', true);

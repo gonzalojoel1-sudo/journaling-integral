@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { StrengthBar } from '@/components/StrengthBar';
-import { ISembrarHabit } from '@/types/habits';
+import type { ISembrarHabit } from '@/types/habits';
 import { logger } from '@/lib/logger';
 
 const CYCLE_TARGET = 15;

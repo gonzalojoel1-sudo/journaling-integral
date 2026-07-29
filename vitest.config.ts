@@ -9,9 +9,9 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/lib/**/*.ts'],
-      exclude: ['src/lib/**/*.test.ts'],
+      reporter: ['text', 'html', 'json'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/db/seed.ts'],
     },
   },
   resolve: {

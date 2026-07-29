@@ -2,18 +2,15 @@
 
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { 
-  Sparkles, 
-  Mail, 
-  Lock, 
-  User, 
-  ArrowRight, 
-  Loader2 
+import {
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

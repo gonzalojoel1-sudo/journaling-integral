@@ -36,7 +36,7 @@ const FILTERS: { key: FilterPeriod; label: string }[] = [
 ];
 
 function formatDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const [, m, d] = dateStr.split('-').map(Number);
   return `${d}/${m}`;
 }
 
@@ -157,12 +157,6 @@ export function TransactionLedger({ transactions }: TransactionLedgerProps) {
   };
 
   const editRow = (tx: Transaction) => {
-    const marginAmount = tx.type === 'ingreso' ? tx.amount - tx.cost : null;
-    const marginPct =
-      marginAmount !== null && tx.amount > 0
-        ? Math.round((marginAmount / tx.amount) * 100)
-        : null;
-
     return (
       <tr key={tx.id} className="border-b border-zinc-100 dark:border-white/[0.03]">
         <td className="py-2.5 text-xs text-zinc-500 font-mono pr-4">

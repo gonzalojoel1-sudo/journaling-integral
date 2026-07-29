@@ -6,11 +6,11 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
-import { ALL_TEMPLATES, getTemplate, ChallengeTemplate } from '@/lib/challenge-templates';
+import type { ChallengeTemplate } from '@/lib/challenge-templates';
+import { getTemplate } from '@/lib/challenge-templates';
 import { validate, ActivateChallengeSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
 import { safeJsonParse } from '@/lib/json';
-import { todayStr } from '@/lib/dates';
 
 export async function getActiveChallenges() {
   try {
@@ -105,7 +105,6 @@ export async function validateActiveChallenges(entry: any, user: any) {
       const template = getTemplate(ch.templateId);
       if (!template) continue;
 
-      const today = todayStr();
       const progress: Record<string, boolean> = safeJsonParse<Record<string, boolean>>(
         ch.progressJson,
         {},

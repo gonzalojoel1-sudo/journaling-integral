@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Calendar, 
-  ChevronRight, 
-  Printer, 
-  Activity, 
-  Heart, 
-  BookOpen, 
-  Award,
-  X 
+import {
+  Calendar,
+  ChevronRight,
+  Printer,
+  Activity,
+  Heart,
+  BookOpen,
 } from 'lucide-react';
 
 interface DailyEntry {

@@ -51,7 +51,7 @@ export async function getVersesByTopic(topic?: string) {
 
     const randomIndex = Math.floor(Math.random() * list.length);
     return list[randomIndex];
-  } catch (error) {
+  } catch (_error) {
     const randomIndex = Math.floor(Math.random() * FALLBACK_VERSES.length);
     return FALLBACK_VERSES[randomIndex];
   }

@@ -39,7 +39,7 @@ async function runSimulationSeed() {
 
   // 2. Activar todos los paneles en Settings
   await db.insert(userSettings).values({
-    userId: userId,
+    userId,
     showBusinessPanel: 1,
     showFinancePanel: 1,
     showHabitsPanel: 1,

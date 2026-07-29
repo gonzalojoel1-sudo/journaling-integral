@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { z } from 'zod';
 import { parseJsonColumn } from '@/lib/json';
 import {
-  TrendingUp,
   Activity,
   Moon,
   Brain,
@@ -13,9 +12,6 @@ import {
   Compass,
   Award,
   Sparkles,
-  Zap,
-  Heart,
-  TrendingDown,
   LineChart,
   Target,
   ShieldCheck,

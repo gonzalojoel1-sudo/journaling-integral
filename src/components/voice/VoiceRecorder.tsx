@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Mic, Square, Play, Loader2 } from 'lucide-react';
+import { Mic, Square } from 'lucide-react';
 
 interface VoiceRecorderProps {
   onTranscriptionComplete: (text: string) => void;

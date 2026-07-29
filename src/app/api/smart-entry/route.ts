@@ -198,7 +198,7 @@ export async function POST(request: Request) {
   const sessionUser = await getSessionUser();
   const userId = sessionUser?.id ?? undefined;
   const clientId = getClientIdentifier(request, userId);
-  const { success: rateLimitOk, remaining } = await rateLimit(`smart-entry:${clientId}`, 5, 60000);
+  const { success: rateLimitOk } = await rateLimit(`smart-entry:${clientId}`, 5, 60000);
 
   if (!rateLimitOk) {
     return Response.json(

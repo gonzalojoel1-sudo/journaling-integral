@@ -1,6 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { getSystemTelemetry, TelemetryData } from '../../actions/admin';
+import type { TelemetryData } from '../../actions/admin';
+import { getSystemTelemetry } from '../../actions/admin';
 import { logger } from '@/lib/logger';
 import { getUserRole } from '@/lib/auth';
 import { ROLE_ADMIN } from '@/lib/constants-domain';

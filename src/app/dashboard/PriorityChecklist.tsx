@@ -26,7 +26,6 @@ export function PriorityChecklist({
   mitRelaciones,
   mitRelacionesCompleted,
   weeklyDestrabeAction,
-  weeklyFocus,
   prepTomorrowTasks,
   hasEntryToday,
 }: PriorityChecklistProps) {
