@@ -120,6 +120,71 @@ export const DailyEntrySchema = z.object({
 export type DailyEntryInput = z.infer<typeof DailyEntrySchema>;
 
 // ============================================================
+// DRAFT (autosave — server-controlled fields excluded)
+// ============================================================
+
+export const DraftJournalSchema = z
+  .object({
+    sleepRating: RatingField,
+    energyRating: RatingField,
+    focusRating: RatingField,
+    stressRating: RatingField,
+    quickEnergyAction: z.string().max(500).nullable().optional(),
+
+    gratitude1: z.string().max(500).nullable().optional(),
+    gratitude2: z.string().max(500).nullable().optional(),
+    gratitude3: z.string().max(500).nullable().optional(),
+    wisdomRequest: z.string().max(1000).nullable().optional(),
+
+    chooseToBeIdentity: z.string().max(500).nullable().optional(),
+    identityAction: z.string().max(500).nullable().optional(),
+    dailyMicroAchievement: z.string().max(500).nullable().optional(),
+    devotionalNotes: z.string().max(2000).nullable().optional(),
+
+    autoeducation: z.array(z.string().max(500)).max(50).nullable().optional(),
+    implementationIntentions: z.array(z.string().max(500)).max(50).nullable().optional(),
+
+    mitSer: z.string().max(500).nullable().optional(),
+    mitNegocio: z.string().max(500).nullable().optional(),
+    mitRelaciones: z.string().max(500).nullable().optional(),
+
+    achievementsTop3: z.array(z.string().max(200)).max(10).nullable().optional(),
+    whatWorked: z.string().max(1000).nullable().optional(),
+    whatDidNotWork: z.string().max(1000).nullable().optional(),
+    improvementIdea: z.string().max(1000).nullable().optional(),
+
+    mindsetStateRating: RatingField,
+    mindsetEmotion1: z.string().max(200).nullable().optional(),
+    mindsetEmotion2: z.string().max(200).nullable().optional(),
+    mindsetEmotion3: z.string().max(200).nullable().optional(),
+    mindsetTriggers: z.string().max(500).nullable().optional(),
+    mindsetBiblicalTruth: z.string().max(500).nullable().optional(),
+    mindsetLimitingBelief: z.string().max(500).nullable().optional(),
+    mindsetLimitingAction: z.string().max(500).nullable().optional(),
+    mindsetEmpoweringBelief: z.string().max(500).nullable().optional(),
+    mindsetEmpoweringAction: z.string().max(500).nullable().optional(),
+
+    prepTomorrow: z.array(z.string().max(500)).max(50).nullable().optional(),
+    legacyReflection: z.string().max(1000).nullable().optional(),
+  })
+  .strict();
+
+export type DraftJournalInput = z.infer<typeof DraftJournalSchema>;
+
+export const HabitsDraftItemSchema = z
+  .object({
+    habitId: z.string().min(1).max(100),
+    name: z.string().max(200).optional(),
+    habitType: z.string().max(50).optional(),
+    completed: z.boolean(),
+  })
+  .strict();
+
+export const HabitsDraftSchema = z.array(HabitsDraftItemSchema).max(500);
+
+export type HabitsDraftInput = z.infer<typeof HabitsDraftSchema>;
+
+// ============================================================
 // HABITS
 // ============================================================
 
@@ -484,7 +549,7 @@ export const GenerateInviteSchema = z.object({
 export const JoinCircleSchema = z.object({
   code: z
     .string()
-    .length(8, 'Código debe tener 8 caracteres')
+    .length(16, 'Código debe tener 16 caracteres')
     .regex(/^[a-f0-9]+$/i, 'Código inválido'),
 });
 

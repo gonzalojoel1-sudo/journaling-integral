@@ -5,13 +5,13 @@ import { quarterlyPlans } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { requireCurrentUserId } from './auth';
 import { validate, SaveQuarterlyPlanSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
 
 export async function getActiveQuarterlyPlan() {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await requireCurrentUserId();
     const plan = await db.query.quarterlyPlans.findFirst({
       where: and(
         eq(quarterlyPlans.userId, userId),
@@ -25,53 +25,83 @@ export async function getActiveQuarterlyPlan() {
   }
 }
 
-export async function saveQuarterlyPlan(formData: Record<string, any>) {
+export async function saveQuarterlyPlan(input: unknown) {
   try {
-    const v = validate(SaveQuarterlyPlanSchema, formData);
+    const v = validate(SaveQuarterlyPlanSchema, input);
     if (!v.success) return { success: false, error: v.error };
 
-    const userId = await getCurrentUserId();
-    const activePlanRes = await getActiveQuarterlyPlan();
-    const planId = activePlanRes.plan?.id || randomUUID();
+    const userId = await requireCurrentUserId();
 
-    const planData = {
-      id: planId,
-      userId: userId,
-      quarterLabel: formData.quarterLabel || 'Q1/2026',
-      year: formData.year ? Number(formData.year) : new Date().getFullYear(),
-      isActive: 1,
+    const year = v.data.year ?? new Date().getFullYear();
+    const quarterLabel = v.data.quarterLabel ?? 'Q1/2026';
 
-      fiveYearSpiritual: formData.fiveYearSpiritual || null,
-      fiveYearBeing: formData.fiveYearBeing || null,
-      fiveYearBusiness: formData.fiveYearBusiness || null,
-      fiveYearRelations: formData.fiveYearRelations || null,
+    await db
+      .update(quarterlyPlans)
+      .set({ isActive: 0 })
+      .where(and(eq(quarterlyPlans.userId, userId), eq(quarterlyPlans.isActive, 1)));
 
-      quarterlySpiritual: formData.quarterlySpiritual || null,
-      quarterlyBeing: formData.quarterlyBeing || null,
-      quarterlyBusiness: formData.quarterlyBusiness || null,
-      quarterlyRelations: formData.quarterlyRelations || null,
+    const existing = await db.query.quarterlyPlans.findFirst({
+      where: and(
+        eq(quarterlyPlans.userId, userId),
+        eq(quarterlyPlans.quarterLabel, quarterLabel),
+        eq(quarterlyPlans.year, year),
+      ),
+    });
 
-      smartObjectivesJson: formData.smartObjectives
-        ? JSON.stringify(formData.smartObjectives)
-        : '[]',
-      actionsPlanJson: formData.actionsPlan
-        ? JSON.stringify(formData.actionsPlan)
-        : '[]',
-      legacyAuditNotes: formData.legacyAuditNotes || null,
-      createdAt: activePlanRes.plan?.createdAt || new Date().toISOString(),
-    };
+    const smartObjectivesJson = v.data.smartObjectives
+      ? JSON.stringify(v.data.smartObjectives)
+      : '[]';
+    const actionsPlanJson = v.data.actionsPlan
+      ? JSON.stringify(v.data.actionsPlan)
+      : '[]';
 
-    if (activePlanRes.plan) {
+    if (existing) {
       await db
         .update(quarterlyPlans)
-        .set(planData)
-        .where(eq(quarterlyPlans.id, activePlanRes.plan.id));
-    } else {
-      await db.insert(quarterlyPlans).values(planData);
+        .set({
+          quarterLabel,
+          year,
+          isActive: 1,
+          fiveYearSpiritual: v.data.fiveYearSpiritual ?? null,
+          fiveYearBeing: v.data.fiveYearBeing ?? null,
+          fiveYearBusiness: v.data.fiveYearBusiness ?? null,
+          fiveYearRelations: v.data.fiveYearRelations ?? null,
+          quarterlySpiritual: v.data.quarterlySpiritual ?? null,
+          quarterlyBeing: v.data.quarterlyBeing ?? null,
+          quarterlyBusiness: v.data.quarterlyBusiness ?? null,
+          quarterlyRelations: v.data.quarterlyRelations ?? null,
+          smartObjectivesJson,
+          actionsPlanJson,
+          legacyAuditNotes: v.data.legacyAuditNotes ?? null,
+        })
+        .where(and(eq(quarterlyPlans.id, existing.id), eq(quarterlyPlans.userId, userId)));
+      revalidatePath('/quarterly');
+      return { success: true, planId: existing.id };
     }
 
+    const id = randomUUID();
+    await db.insert(quarterlyPlans).values({
+      id,
+      userId,
+      quarterLabel,
+      year,
+      isActive: 1,
+      fiveYearSpiritual: v.data.fiveYearSpiritual ?? null,
+      fiveYearBeing: v.data.fiveYearBeing ?? null,
+      fiveYearBusiness: v.data.fiveYearBusiness ?? null,
+      fiveYearRelations: v.data.fiveYearRelations ?? null,
+      quarterlySpiritual: v.data.quarterlySpiritual ?? null,
+      quarterlyBeing: v.data.quarterlyBeing ?? null,
+      quarterlyBusiness: v.data.quarterlyBusiness ?? null,
+      quarterlyRelations: v.data.quarterlyRelations ?? null,
+      smartObjectivesJson,
+      actionsPlanJson,
+      legacyAuditNotes: v.data.legacyAuditNotes ?? null,
+      createdAt: new Date().toISOString(),
+    });
+
     revalidatePath('/quarterly');
-    return { success: true };
+    return { success: true, planId: id };
   } catch (error) {
     logger.error('quarterly_plan_save_failed', {}, error);
     return { success: false, error: 'No se pudo guardar la planeación.' };

@@ -9,6 +9,9 @@ import {
   validate,
   HabitTypeEnum,
   DomainEnum,
+  DraftJournalSchema,
+  HabitsDraftSchema,
+  JoinCircleSchema,
 } from './validations';
 
 describe('DailyEntrySchema', () => {
@@ -446,5 +449,143 @@ describe('validate helper', () => {
     if (!result.success) {
       expect(result.fieldErrors.length).toBeGreaterThanOrEqual(1);
     }
+  });
+});
+
+describe('DraftJournalSchema', () => {
+  it('accepts a valid minimal draft', () => {
+    const r = DraftJournalSchema.safeParse({ gratitude1: 'Familia' });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts an empty object (all fields optional)', () => {
+    const r = DraftJournalSchema.safeParse({});
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects userId injection (mass assignment protection)', () => {
+    const r = DraftJournalSchema.safeParse({
+      gratitude1: 'Familia',
+      userId: 'attacker-controlled-id',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects date injection', () => {
+    const r = DraftJournalSchema.safeParse({
+      gratitude1: 'Familia',
+      date: '2099-12-31',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects time injection', () => {
+    const r = DraftJournalSchema.safeParse({
+      gratitude1: 'Familia',
+      time: '00:00:00',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects id injection', () => {
+    const r = DraftJournalSchema.safeParse({
+      gratitude1: 'Familia',
+      id: 'some-fake-id',
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects levelAtEntry injection', () => {
+    const r = DraftJournalSchema.safeParse({
+      gratitude1: 'Familia',
+      levelAtEntry: 99,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects gratitude1 > 500 chars', () => {
+    const r = DraftJournalSchema.safeParse({ gratitude1: 'A'.repeat(501) });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects sleepRating > 10', () => {
+    const r = DraftJournalSchema.safeParse({ sleepRating: 11 });
+    expect(r.success).toBe(false);
+  });
+
+  it('accepts valid numeric ratings', () => {
+    const r = DraftJournalSchema.safeParse({ sleepRating: 8, energyRating: 7 });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts arrays of strings (autoeducation)', () => {
+    const r = DraftJournalSchema.safeParse({ autoeducation: ['leer 10 min', 'meditar'] });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe('HabitsDraftSchema', () => {
+  it('accepts a valid habits array', () => {
+    const r = HabitsDraftSchema.safeParse([
+      { habitId: 'h-1', name: 'Meditar', habitType: 'crecer', completed: true },
+      { habitId: 'h-2', name: 'Correr', habitType: 'pilar', completed: false },
+    ]);
+    expect(r.success).toBe(true);
+  });
+
+  it('accepts an empty array', () => {
+    const r = HabitsDraftSchema.safeParse([]);
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects non-array input', () => {
+    const r = HabitsDraftSchema.safeParse({ habitId: 'h-1' });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects items missing habitId', () => {
+    const r = HabitsDraftSchema.safeParse([{ name: 'X', habitType: 'crecer', completed: false }]);
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects items with non-boolean completed', () => {
+    const r = HabitsDraftSchema.safeParse([{ habitId: 'h-1', name: 'X', habitType: 'crecer', completed: 'yes' }]);
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects userId injection at item level', () => {
+    const r = HabitsDraftSchema.safeParse([
+      { habitId: 'h-1', name: 'X', habitType: 'crecer', completed: true, userId: 'attacker' },
+    ]);
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects extra unknown fields per item', () => {
+    const r = HabitsDraftSchema.safeParse([
+      { habitId: 'h-1', name: 'X', habitType: 'crecer', completed: true, privilege: 'admin' },
+    ]);
+    expect(r.success).toBe(false);
+  });
+});
+
+describe('JoinCircleSchema', () => {
+  it('accepts a 16-char hex code (new format)', () => {
+    const r = JoinCircleSchema.safeParse({ code: 'a'.repeat(16) });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects 8-char code (legacy format)', () => {
+    const r = JoinCircleSchema.safeParse({ code: 'a'.repeat(8) });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects non-hex characters', () => {
+    const r = JoinCircleSchema.safeParse({ code: 'z'.repeat(16) });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejects empty code', () => {
+    const r = JoinCircleSchema.safeParse({ code: '' });
+    expect(r.success).toBe(false);
   });
 });

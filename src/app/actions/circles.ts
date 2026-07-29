@@ -2,10 +2,10 @@
 
 import { db } from '../../db/db';
 import { circles, circleMembers } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
+import { eq, and, or, isNull } from 'drizzle-orm';
+import { randomUUID, randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { requireCurrentUserId } from './auth';
 import { logger } from '@/lib/logger';
 import {
   validate,
@@ -15,26 +15,40 @@ import {
 } from '@/lib/validations';
 
 const MAX_CIRCLE_SIZE = 3;
+const INVITE_CODE_BYTES = 8;
 
 export async function createCircle(name?: string) {
   try {
     const v = validate(CreateCircleSchema, { name });
     if (!v.success) return { success: false, error: v.error };
 
-    const userId = await getCurrentUserId();
+    const userId = await requireCurrentUserId();
+
     const existing = await db.query.circles.findFirst({
       where: eq(circles.createdBy, userId),
     });
-    if (existing) return { success: false, error: 'Ya tienes un círculo.' };
+    if (existing) {
+      return { success: true, circleId: existing.id, alreadyExisted: true };
+    }
 
     const id = randomUUID();
-    await db.insert(circles).values({
-      id,
-      name: v.data.name,
-      createdBy: userId,
-      visibilitySettings: 'only_streak',
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      await db.insert(circles).values({
+        id,
+        name: v.data.name,
+        createdBy: userId,
+        visibilitySettings: 'only_streak',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (insertErr) {
+      const reCheck = await db.query.circles.findFirst({
+        where: eq(circles.createdBy, userId),
+      });
+      if (reCheck) {
+        return { success: true, circleId: reCheck.id, alreadyExisted: true };
+      }
+      throw insertErr;
+    }
 
     revalidatePath('/');
     return { success: true, circleId: id };
@@ -49,24 +63,24 @@ export async function generateInvite(circleId: string) {
     const v = validate(GenerateInviteSchema, { circleId });
     if (!v.success) return { success: false, error: v.error };
 
-    const userId = await getCurrentUserId();
+    const userId = await requireCurrentUserId();
     const circle = await db.query.circles.findFirst({
       where: and(eq(circles.id, circleId), eq(circles.createdBy, userId)),
     });
     if (!circle) return { success: false, error: 'Acceso denegado.' };
 
-    const memberCount = await db.query.circleMembers.findMany({
+    const activeMembers = await db.query.circleMembers.findMany({
       where: and(eq(circleMembers.circleId, circleId), eq(circleMembers.status, 'active')),
     });
-    if (memberCount.length >= MAX_CIRCLE_SIZE - 1) {
+    if (activeMembers.length >= MAX_CIRCLE_SIZE - 1) {
       return { success: false, error: 'Círculo completo (máx 3 personas).' };
     }
 
-    const inviteCode = randomUUID().slice(0, 8);
+    const inviteCode = randomBytes(INVITE_CODE_BYTES).toString('hex');
     await db.insert(circleMembers).values({
       id: randomUUID(),
       circleId,
-      userId: '',
+      userId: null,
       invitedBy: userId,
       status: 'pending',
       inviteCode,
@@ -86,13 +100,22 @@ export async function joinCircle(inviteCode: string) {
     const v = validate(JoinCircleSchema, { code: inviteCode });
     if (!v.success) return { success: false, error: v.error };
 
-    const userId = await getCurrentUserId();
+    const userId = await requireCurrentUserId();
     const member = await db.query.circleMembers.findFirst({
-      where: eq(circleMembers.inviteCode, inviteCode),
+      where: and(
+        eq(circleMembers.inviteCode, v.data.code),
+        or(isNull(circleMembers.userId), eq(circleMembers.userId, userId)),
+      ),
       with: { circle: true },
     });
-    if (!member) return { success: false, error: 'Invitación inválida.' };
-    if (member.status === 'active') return { success: false, error: 'Código ya usado.' };
+
+    if (!member) {
+      return { success: false, error: 'Código inválido o ya usado.' };
+    }
+
+    if (member.userId === userId) {
+      return { success: true, alreadyJoined: true, circleId: member.circleId };
+    }
 
     const activeMembers = await db.query.circleMembers.findMany({
       where: and(eq(circleMembers.circleId, member.circleId), eq(circleMembers.status, 'active')),
@@ -101,11 +124,24 @@ export async function joinCircle(inviteCode: string) {
       return { success: false, error: 'Círculo completo.' };
     }
 
-    await db.update(circleMembers)
+    const updateResult = await db.update(circleMembers)
       .set({ userId, status: 'active', joinedAt: new Date().toISOString() })
-      .where(eq(circleMembers.id, member.id));
+      .where(and(eq(circleMembers.id, member.id), isNull(circleMembers.userId)));
 
     revalidatePath('/');
+    if (updateResult.rowsAffected === 0) {
+      const reCheck = await db.query.circleMembers.findFirst({
+        where: and(
+          eq(circleMembers.inviteCode, v.data.code),
+          eq(circleMembers.userId, userId),
+        ),
+      });
+      if (reCheck) {
+        return { success: true, alreadyJoined: true, circleId: reCheck.circleId };
+      }
+      return { success: false, error: 'Código ya usado.' };
+    }
+
     return { success: true };
   } catch (error) {
     logger.error('join_circle_failed', {}, error);
@@ -115,7 +151,7 @@ export async function joinCircle(inviteCode: string) {
 
 export async function getCircleWidgetData() {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await requireCurrentUserId();
     const myCircle = await db.query.circles.findFirst({
       where: eq(circles.createdBy, userId),
     });
@@ -151,7 +187,7 @@ export async function getCircleWidgetData() {
 
 export async function sendEncouragement(targetUserId: string) {
   try {
-    const userId = await getCurrentUserId();
+    const userId = await requireCurrentUserId();
     if (userId === targetUserId) return { success: false, error: 'No puedes animarte a ti mismo.' };
     logger.info('circle_encouragement_sent', { hasTarget: !!targetUserId });
     return { success: true };

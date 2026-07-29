@@ -2,36 +2,60 @@
 
 import { db } from '../../db/db';
 import { dailyEntries } from '../../db/schema';
-import { eq } from 'drizzle-orm';
-import { getCurrentUserId } from './auth';
+import { eq, and } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { requireCurrentUserId } from './auth';
 import { logger } from '@/lib/logger';
+import { HabitsDraftSchema } from '@/lib/validations';
 
-export async function saveHabitsDraft(dailyHabits: unknown[]) {
+export async function saveHabitsDraft(dailyHabits: unknown) {
   try {
-    const userId = await getCurrentUserId();
-    if (!userId) return { success: false };
+    const v = HabitsDraftSchema.safeParse(dailyHabits);
+    if (!v.success) {
+      logger.warn('save_habits_draft_invalid_payload', {
+        issues: v.error.issues.map((i) => i.path.join('.')),
+      });
+      return { success: false, error: 'Datos de hábitos inválidos' };
+    }
 
+    const userId = await requireCurrentUserId();
     const todayStr = new Date().toISOString().split('T')[0];
 
     const existing = await db.query.dailyEntries.findFirst({
-      where: eq(dailyEntries.date, todayStr),
+      where: and(eq(dailyEntries.userId, userId), eq(dailyEntries.date, todayStr)),
     });
 
+    const habitsJson = JSON.stringify(v.data);
+
     if (existing) {
-      await db.update(dailyEntries)
-        .set({ dailyHabitsJson: JSON.stringify(dailyHabits) })
-        .where(eq(dailyEntries.id, existing.id));
-    } else {
-      await db.insert(dailyEntries).values({
-        id: crypto.randomUUID(),
-        userId,
-        date: todayStr,
-        time: new Date().toISOString(),
-        levelAtEntry: 1,
-        isPlanBUsed: 0,
-        dailyHabitsJson: JSON.stringify(dailyHabits),
-      } as typeof dailyEntries.$inferInsert);
+      await db
+        .update(dailyEntries)
+        .set({ dailyHabitsJson: habitsJson })
+        .where(and(eq(dailyEntries.id, existing.id), eq(dailyEntries.userId, userId)));
+      return { success: true };
     }
+
+    await db.insert(dailyEntries).values({
+      id: randomUUID(),
+      userId,
+      date: todayStr,
+      time: new Date().toISOString(),
+      levelAtEntry: 1,
+      isPlanBUsed: 0,
+      mitSerCompleted: 0,
+      mitNegocioCompleted: 0,
+      mitRelacionesCompleted: 0,
+      bizProspectCompleted: 0,
+      bizFollowUpCompleted: 0,
+      bizMktActionCompleted: 0,
+      bizContactsCount: 0,
+      bizSalesCount: 0,
+      bizIncome: 0.0,
+      bizExpenses: 0.0,
+      dominantFocusCompleted: 0,
+      dailyHabitsJson: habitsJson,
+      createdAt: new Date().toISOString(),
+    });
 
     return { success: true };
   } catch (error) {
