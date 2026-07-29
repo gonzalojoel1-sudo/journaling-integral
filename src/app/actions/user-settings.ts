@@ -5,6 +5,7 @@ import { userSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
+import { logger } from '@/lib/logger';
 import {
   validate,
   UpdateUserSettingSchema,
@@ -51,7 +52,8 @@ export async function getUserSettings() {
       aiAssistantEnabled: (settings.aiAssistantEnabled ?? 1) === 1,
       onboardingCompleted: settings.onboardingCompleted === 1,
     };
-  } catch {
+  } catch (error) {
+    logger.error('get_user_settings_failed', {}, error);
     return defaultSettings;
   }
 }
@@ -91,8 +93,9 @@ export async function updateUserSetting(field: string, value: boolean) {
     revalidatePath('/configuracion');
     revalidatePath('/', 'layout');
     return { success: true };
-  } catch {
-    return { success: false };
+  } catch (error) {
+    logger.error('update_user_setting_failed', { field }, error);
+    return { success: false, error: 'Error al actualizar configuración' };
   }
 }
 
@@ -133,7 +136,8 @@ export async function completeOnboarding(prefs: {
 
     revalidatePath('/', 'layout');
     return { success: true };
-  } catch {
-    return { success: false };
+  } catch (error) {
+    logger.error('complete_onboarding_failed', {}, error);
+    return { success: false, error: 'Error al completar el onboarding' };
   }
 }
