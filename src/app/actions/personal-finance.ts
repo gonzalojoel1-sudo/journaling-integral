@@ -5,7 +5,7 @@ import { personalTransactions, businessTransactions } from '@/db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { getCurrentUserId, requireCurrentUserId } from './auth';
 import {
   validate,
   CreatePersonalTransactionSchema,
@@ -93,9 +93,15 @@ export async function updatePersonalTransaction(
     if (data.description !== undefined) updateData.description = data.description;
     if (data.date !== undefined) updateData.date = data.date;
 
-    await db.update(personalTransactions)
+    const userId = await requireCurrentUserId();
+    const result = await db.update(personalTransactions)
       .set(updateData)
-      .where(eq(personalTransactions.id, id));
+      .where(and(eq(personalTransactions.id, id), eq(personalTransactions.userId, userId)))
+      .returning({ id: personalTransactions.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Transacción no encontrada o sin permisos' };
+    }
 
     revalidatePath('/finanzas');
     return { success: true };
@@ -109,7 +115,15 @@ export async function deletePersonalTransaction(id: string) {
     const v = validate(DeletePersonalTransactionSchema, { id });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.delete(personalTransactions).where(eq(personalTransactions.id, id));
+    const userId = await requireCurrentUserId();
+    const result = await db.delete(personalTransactions)
+      .where(and(eq(personalTransactions.id, id), eq(personalTransactions.userId, userId)))
+      .returning({ id: personalTransactions.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Transacción no encontrada o sin permisos' };
+    }
+
     revalidatePath('/finanzas');
     return { success: true };
   } catch {

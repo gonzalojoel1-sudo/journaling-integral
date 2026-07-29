@@ -5,7 +5,7 @@ import { dailyEntries, businessTransactions, businessSettings } from '@/db/schem
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { getCurrentUserId, requireCurrentUserId } from './auth';
 import {
   validate,
   AutoSaveBizFieldSchema,
@@ -228,7 +228,15 @@ export async function deleteBusinessSetting(id: string) {
     const v = validate(DeleteBusinessSettingSchema, { id });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.delete(businessSettings).where(eq(businessSettings.id, id));
+    const userId = await requireCurrentUserId();
+    const result = await db.delete(businessSettings)
+      .where(and(eq(businessSettings.id, id), eq(businessSettings.userId, userId)))
+      .returning({ id: businessSettings.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Configuración no encontrada o sin permisos' };
+    }
+
     revalidatePath('/negocio');
     return { success: true };
   } catch {
@@ -265,9 +273,15 @@ export async function updateBusinessTransaction(
       return { success: false, error: 'No fields to update' };
     }
 
-    await db.update(businessTransactions)
+    const userId = await requireCurrentUserId();
+    const result = await db.update(businessTransactions)
       .set(updateData)
-      .where(eq(businessTransactions.id, id));
+      .where(and(eq(businessTransactions.id, id), eq(businessTransactions.userId, userId)))
+      .returning({ id: businessTransactions.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Transacción no encontrada o sin permisos' };
+    }
 
     revalidatePath('/negocio');
     revalidatePath('/');
@@ -365,7 +379,15 @@ export async function deleteBusinessTransaction(id: string) {
     const v = validate(DeleteBusinessTransactionSchema, { id });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.delete(businessTransactions).where(eq(businessTransactions.id, id));
+    const userId = await requireCurrentUserId();
+    const result = await db.delete(businessTransactions)
+      .where(and(eq(businessTransactions.id, id), eq(businessTransactions.userId, userId)))
+      .returning({ id: businessTransactions.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Transacción no encontrada o sin permisos' };
+    }
+
     revalidatePath('/negocio');
     revalidatePath('/');
     return { success: true };

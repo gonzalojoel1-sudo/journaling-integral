@@ -5,7 +5,7 @@ import { habits } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUserId } from './auth';
+import { getCurrentUserId, requireCurrentUserId } from './auth';
 import { validate, CreateHabitSchema, ArchiveHabitSchema } from '@/lib/validations';
 
 export async function getActiveHabits() {
@@ -93,7 +93,16 @@ export async function archiveHabit(habitId: string) {
     const v = validate(ArchiveHabitSchema, { habitId });
     if (!v.success) return { success: false, error: v.error };
 
-    await db.update(habits).set({ isActive: 0 }).where(eq(habits.id, habitId));
+    const userId = await requireCurrentUserId();
+    const result = await db.update(habits)
+      .set({ isActive: 0 })
+      .where(and(eq(habits.id, habitId), eq(habits.userId, userId)))
+      .returning({ id: habits.id });
+
+    if (result.length === 0) {
+      return { success: false, error: 'Hábito no encontrado o sin permisos' };
+    }
+
     revalidatePath('/habits');
     revalidatePath('/journal');
     revalidatePath('/');
