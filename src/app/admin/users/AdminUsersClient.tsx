@@ -110,10 +110,12 @@ export function AdminUsersClient({ users: initialUsers }: AdminUsersClientProps)
                   Lvl {user.currentLevel}
                 </span>
                 <button
+                  type="button"
                   onClick={() => handleDelete(user.id)}
+                  aria-label={`Eliminar usuario ${user.name ?? user.id}`}
                   className="h-7 w-7 rounded-lg bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center text-red-500 transition-colors"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>

@@ -229,46 +229,6 @@ export const habitsRelations = relations(habits, ({ one }) => ({
   }),
 }));
 
-export const chains = sqliteTable('chains', {
-  id: text('id').primaryKey(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  createdAt: text('created_at').notNull(),
-});
-
-export const chainItems = sqliteTable('chain_items', {
-  id: text('id').primaryKey(),
-  chainId: text('chain_id')
-    .notNull()
-    .references(() => chains.id, { onDelete: 'cascade' }),
-  habitId: text('habit_id')
-    .notNull()
-    .references(() => habits.id, { onDelete: 'cascade' }),
-  name: text('name'),
-  order: integer('order').notNull(),
-});
-
-export const chainsRelations = relations(chains, ({ one, many }) => ({
-  user: one(users, {
-    fields: [chains.userId],
-    references: [users.id],
-  }),
-  items: many(chainItems),
-}));
-
-export const chainItemsRelations = relations(chainItems, ({ one }) => ({
-  chain: one(chains, {
-    fields: [chainItems.chainId],
-    references: [chains.id],
-  }),
-  habit: one(habits, {
-    fields: [chainItems.habitId],
-    references: [habits.id],
-  }),
-}));
-
 export const bibleVerses = sqliteTable('bible_verses', {
   id: text('id').primaryKey(),
   reference: text('reference').notNull(),

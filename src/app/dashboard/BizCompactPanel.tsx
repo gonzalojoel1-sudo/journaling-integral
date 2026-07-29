@@ -355,16 +355,18 @@ function BizCounter({
         <button
           type="button"
           onClick={decrement}
+          aria-label={`Disminuir ${label}`}
           className="h-5 w-5 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
         >
-          <Minus className="h-3 w-3" />
+          <Minus className="h-3 w-3" aria-hidden="true" />
         </button>
         <button
           type="button"
           onClick={increment}
+          aria-label={`Aumentar ${label}`}
           className="h-5 w-5 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
         >
-          <Plus className="h-3 w-3" />
+          <Plus className="h-3 w-3" aria-hidden="true" />
         </button>
       </div>
       <p className="text-[9px] font-mono text-zinc-400 uppercase">{label}</p>

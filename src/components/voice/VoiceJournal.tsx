@@ -87,10 +87,12 @@ export function VoiceJournal() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-8">
         <button
+          type="button"
           onClick={() => router.push('/')}
+          aria-label="Volver al inicio"
           className="text-gray-400 hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </button>
         <div>
           <h1 className="text-xl font-bold text-gray-100">Diario por Voz</h1>

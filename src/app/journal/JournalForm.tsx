@@ -14,6 +14,7 @@ import { StepNegocio, getNegocioSummary } from './steps/StepNegocio';
 import { StepCierre, getCierreSummary } from './steps/StepCierre';
 import { useAutosave } from './useAutosave';
 import { submitDailyEntry } from '../actions/daily-journal';
+import { saveJournalDraft } from '../actions/save-journal-draft';
 import { SmartDictationButton } from '@/components/SmartDictationButton';
 import { logger } from '@/lib/logger';
 import { parseJsonColumn } from '@/lib/json';
@@ -131,8 +132,42 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   ]);
 
   const mockSave = useCallback(async (data: Record<string, unknown>) => {
-    await new Promise((r) => setTimeout(r, 800));
-    logger.debug('autosave_draft_saved', { fieldsCount: Object.keys(data).length });
+    const stringOrUndefined = (key: string): string | undefined => {
+      const v = data[key];
+      return typeof v === 'string' ? v : undefined;
+    };
+    const ratingOrUndefined = (key: string): number | undefined => {
+      const v = data[key];
+      return typeof v === 'number' ? v : undefined;
+    };
+    const draft = {
+      sleepRating: ratingOrUndefined('sleepRating'),
+      energyRating: ratingOrUndefined('energyRating'),
+      focusRating: ratingOrUndefined('focusRating'),
+      stressRating: ratingOrUndefined('stressRating'),
+      quickEnergyAction: stringOrUndefined('quickEnergyAction'),
+      gratitude1: stringOrUndefined('gratitude1'),
+      gratitude2: stringOrUndefined('gratitude2'),
+      gratitude3: stringOrUndefined('gratitude3'),
+      wisdomRequest: stringOrUndefined('wisdomRequest'),
+      chooseToBeIdentity: stringOrUndefined('chooseToBeIdentity'),
+      identityAction: stringOrUndefined('identityAction'),
+      dailyMicroAchievement: stringOrUndefined('dailyMicroAchievement'),
+      devotionalNotes: stringOrUndefined('devotionalNotes'),
+      mitSer: stringOrUndefined('mitSer'),
+      mitNegocio: stringOrUndefined('mitNegocio'),
+      mitRelaciones: stringOrUndefined('mitRelaciones'),
+      whatWorked: stringOrUndefined('whatWorked'),
+      whatDidNotWork: stringOrUndefined('whatDidNotWork'),
+      improvementIdea: stringOrUndefined('improvementIdea'),
+      prepTomorrow: [stringOrUndefined('prep1'), stringOrUndefined('prep2'), stringOrUndefined('prep3')].filter(
+        (v): v is string => typeof v === 'string',
+      ),
+    };
+    const result = await saveJournalDraft(draft);
+    if (!result.success) {
+      logger.warn('autosave_failed', { error: result.error });
+    }
   }, []);
 
   const { isSaving, lastSaved, hasChanges } = useAutosave({

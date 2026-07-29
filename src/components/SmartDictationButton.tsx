@@ -267,6 +267,7 @@ export function SmartDictationButton({ dailyHabits, onDataExtracted }: SmartDict
         type="button"
         onClick={handleClick}
         disabled={processing || !supported}
+        aria-label={!supported ? 'Dictado por voz no disponible' : listening ? 'Detener dictado por voz' : processing ? 'Procesando dictado' : 'Iniciar dictado por voz'}
         className={`
           relative h-9 w-9 rounded-xl flex items-center justify-center
           transition-all duration-300

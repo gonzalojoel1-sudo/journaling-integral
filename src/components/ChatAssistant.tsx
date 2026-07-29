@@ -47,10 +47,12 @@ export function ChatAssistant({
           </span>
         </div>
         <button
+          type="button"
           onClick={onClose}
+          aria-label="Cerrar asistente"
           className="h-7 w-7 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400 transition-colors"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
 
@@ -113,12 +115,13 @@ export function ChatAssistant({
         <button
           type="submit"
           disabled={isLoading || !(input || '').trim()}
+          aria-label={isLoading ? 'Enviando mensaje' : 'Enviar mensaje'}
           className="h-8 w-8 rounded-xl bg-violet-500 hover:bg-violet-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 flex items-center justify-center text-white transition-colors shrink-0"
         >
           {isLoading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
           ) : (
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-3.5 w-3.5" aria-hidden="true" />
           )}
         </button>
       </form>
