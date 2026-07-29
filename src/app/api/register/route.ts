@@ -5,14 +5,17 @@ import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { hashPassword } from '@/lib/password';
 import { logger } from '@/lib/logger';
+import { validate, RegisterSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
-
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Faltan campos requeridos.' }, { status: 400 });
+    const body = await request.json().catch(() => null);
+    const v = validate(RegisterSchema, body);
+    if (!v.success) {
+      return NextResponse.json({ error: v.error }, { status: 400 });
     }
+
+    const { name, email, password } = v.data;
 
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, email),

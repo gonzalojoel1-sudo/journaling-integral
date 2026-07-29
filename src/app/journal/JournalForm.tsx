@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, Heart, Brain, FileText, Briefcase, CheckSquare, Save, Loader2, Check } from 'lucide-react';
+import { z } from 'zod';
 import { FlowStep } from './FlowStep';
 import { PlanBModal } from './PlanBModal';
 import { StepEnergia, getEnergiaSummary } from './steps/StepEnergia';
@@ -15,6 +16,18 @@ import { useAutosave } from './useAutosave';
 import { submitDailyEntry } from '../actions/daily-journal';
 import { SmartDictationButton } from '@/components/SmartDictationButton';
 import { logger } from '@/lib/logger';
+import { parseJsonColumn } from '@/lib/json';
+
+const DailyHabitEntrySchema = z.object({
+  habitId: z.string(),
+  name: z.string().optional(),
+  habitType: z.string().optional(),
+  type: z.string().optional(),
+  completed: z.boolean().optional(),
+});
+const DailyHabitsSchema = z.array(DailyHabitEntrySchema);
+
+const PrepTomorrowSchema = z.array(z.string().max(500)).max(50);
 
 interface Habit {
   id: string;
@@ -72,7 +85,12 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [devotionalNotes, setDevotionalNotes] = useState<string>(existingEntry?.devotionalNotes ?? '');
   const [dailyHabits, setDailyHabits] = useState<any[]>(() => {
     if (existingEntry?.dailyHabitsJson) {
-      return JSON.parse(existingEntry.dailyHabitsJson);
+      const parsed = parseJsonColumn<any[]>(
+        existingEntry.dailyHabitsJson,
+        DailyHabitsSchema,
+        [],
+      );
+      if (parsed.length > 0) return parsed;
     }
     return habitsList.map(h => ({ habitId: h.id, name: h.name, habitType: h.habitType || h.type, completed: false }));
   });
@@ -87,9 +105,13 @@ export function JournalForm({ userLevel, existingEntry, habitsList }: JournalFor
   const [whatWorked, setWhatWorked] = useState<string>(existingEntry?.whatWorked ?? '');
   const [whatDidNotWork, setWhatDidNotWork] = useState<string>(existingEntry?.whatDidNotWork ?? '');
   const [improvementIdea, setImprovementIdea] = useState<string>(existingEntry?.improvementIdea ?? '');
-  const [prep1, setPrep1] = useState<string>(existingEntry?.prepTomorrowJson ? JSON.parse(existingEntry.prepTomorrowJson)[0] : '');
-  const [prep2, setPrep2] = useState<string>(existingEntry?.prepTomorrowJson ? JSON.parse(existingEntry.prepTomorrowJson)[1] : '');
-  const [prep3, setPrep3] = useState<string>(existingEntry?.prepTomorrowJson ? JSON.parse(existingEntry.prepTomorrowJson)[2] : '');
+  const prepTomorrowParsed = useMemo(
+    () => parseJsonColumn<string[]>(existingEntry?.prepTomorrowJson, PrepTomorrowSchema, []),
+    [existingEntry?.prepTomorrowJson],
+  );
+  const [prep1, setPrep1] = useState<string>(prepTomorrowParsed[0] ?? '');
+  const [prep2, setPrep2] = useState<string>(prepTomorrowParsed[1] ?? '');
+  const [prep3, setPrep3] = useState<string>(prepTomorrowParsed[2] ?? '');
 
   const autosaveData = useMemo(() => ({
     sleepRating, energyRating, focusRating, stressRating, quickEnergyAction,

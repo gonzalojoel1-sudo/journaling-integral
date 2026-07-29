@@ -3,14 +3,39 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveQuarterlyPlan } from '../actions/quarterly-planning';
-import { 
-  Save, 
-  Compass, 
-  Target, 
-  Activity, 
-  Plus, 
+import { z } from 'zod';
+import { parseJsonColumn } from '@/lib/json';
+import {
+  Save,
+  Compass,
+  Target,
+  Activity,
+  Plus,
   Trash2
 } from 'lucide-react';
+
+const SMARTObjectiveSchema = z.object({
+  id: z.string(),
+  objective: z.string(),
+  targetDate: z.string(),
+  isCompleted: z.boolean(),
+});
+
+const SMARTObjectivesSchema = z.array(SMARTObjectiveSchema);
+
+const ActionRowSchema = z.object({
+  action: z.string(),
+  frequency: z.string(),
+  indicator: z.string(),
+});
+
+const MetaPlanSchema = z.object({
+  metaIndex: z.number(),
+  metaTitle: z.string(),
+  actions: z.array(ActionRowSchema),
+});
+
+const MetaPlansSchema = z.array(MetaPlanSchema);
 
 interface SMARTObjective {
   id: string;
@@ -74,7 +99,7 @@ export function QuarterlyPlanForm({ initialPlan, userLevel }: QuarterlyPlanFormP
   ];
   
   const [smartObjectives, setSmartObjectives] = useState<SMARTObjective[]>(
-    initialPlan?.smartObjectivesJson ? JSON.parse(initialPlan.smartObjectivesJson) : defaultSmartObjectives
+    parseJsonColumn<SMARTObjective[]>(initialPlan?.smartObjectivesJson, SMARTObjectivesSchema, defaultSmartObjectives)
   );
 
   const createDefaultMetaPlan = (index: number, title: string): MetaPlan => ({
@@ -96,7 +121,7 @@ export function QuarterlyPlanForm({ initialPlan, userLevel }: QuarterlyPlanFormP
   ];
 
   const [metaPlans, setMetaPlans] = useState<MetaPlan[]>(
-    initialPlan?.actionsPlanJson ? JSON.parse(initialPlan.actionsPlanJson) : defaultMetaPlans
+    parseJsonColumn<MetaPlan[]>(initialPlan?.actionsPlanJson, MetaPlansSchema, defaultMetaPlans)
   );
 
   const handleSmartChange = (index: number, field: keyof SMARTObjective, value: any) => {

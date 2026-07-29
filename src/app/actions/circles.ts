@@ -7,10 +7,19 @@ import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from './auth';
 import { logger } from '@/lib/logger';
+import {
+  validate,
+  CreateCircleSchema,
+  GenerateInviteSchema,
+  JoinCircleSchema,
+} from '@/lib/validations';
 
 const MAX_CIRCLE_SIZE = 3;
 
-export async function createCircle(name: string = 'Mi Círculo') {
+export async function createCircle(name?: string) {
+  const v = validate(CreateCircleSchema, { name });
+  if (!v.success) return { success: false, error: v.error };
+
   const userId = await getCurrentUserId();
   const existing = await db.query.circles.findFirst({
     where: eq(circles.createdBy, userId),
@@ -20,7 +29,7 @@ export async function createCircle(name: string = 'Mi Círculo') {
   const id = randomUUID();
   await db.insert(circles).values({
     id,
-    name,
+    name: v.data.name,
     createdBy: userId,
     visibilitySettings: 'only_streak',
     createdAt: new Date().toISOString(),
@@ -31,6 +40,9 @@ export async function createCircle(name: string = 'Mi Círculo') {
 }
 
 export async function generateInvite(circleId: string) {
+  const v = validate(GenerateInviteSchema, { circleId });
+  if (!v.success) return { success: false, error: v.error };
+
   const userId = await getCurrentUserId();
   const circle = await db.query.circles.findFirst({
     where: and(eq(circles.id, circleId), eq(circles.createdBy, userId)),
@@ -60,6 +72,9 @@ export async function generateInvite(circleId: string) {
 }
 
 export async function joinCircle(inviteCode: string) {
+  const v = validate(JoinCircleSchema, { code: inviteCode });
+  if (!v.success) return { success: false, error: v.error };
+
   const userId = await getCurrentUserId();
   const member = await db.query.circleMembers.findFirst({
     where: eq(circleMembers.inviteCode, inviteCode),

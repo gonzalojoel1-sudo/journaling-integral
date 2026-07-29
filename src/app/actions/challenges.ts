@@ -9,6 +9,7 @@ import { getCurrentUserId } from './auth';
 import { ALL_TEMPLATES, getTemplate, ChallengeTemplate } from '@/lib/challenge-templates';
 import { validate, ActivateChallengeSchema } from '@/lib/validations';
 import { logger } from '@/lib/logger';
+import { safeJsonParse } from '@/lib/json';
 
 export async function getActiveChallenges() {
   try {
@@ -104,7 +105,10 @@ export async function validateActiveChallenges(entry: any, user: any) {
       if (!template) continue;
 
       const today = new Date().toISOString().split('T')[0];
-      const progress = ch.progressJson ? JSON.parse(ch.progressJson) : {};
+      const progress: Record<string, boolean> = safeJsonParse<Record<string, boolean>>(
+        ch.progressJson,
+        {},
+      );
       const todayKey = `day_${ch.currentDay}`;
 
       if (template.check(entry, user)) {

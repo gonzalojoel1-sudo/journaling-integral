@@ -5,6 +5,7 @@ import { journalEmbeddings } from '@/db/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { logger } from './logger';
+import { safeJsonParse } from './json';
 
 const EMBEDDING_MODEL = 'gemini-embedding-001';
 
@@ -158,15 +159,18 @@ export async function searchSimilarEntries(
 
     if (userEmbeddings.length === 0) return [];
 
-    const scored = userEmbeddings.map((emb) => {
-      const embVector = JSON.parse(emb.embedding) as number[];
-      const similarity = cosineSimilarity(queryEmbedding, embVector);
-      return {
-        content: emb.content,
-        similarity,
-        date: emb.createdAt.split('T')[0],
-      };
-    });
+    const scored = userEmbeddings
+      .map((emb) => {
+        const embVector = safeJsonParse<number[]>(emb.embedding, []);
+        if (embVector.length === 0) return null;
+        const similarity = cosineSimilarity(queryEmbedding, embVector);
+        return {
+          content: emb.content,
+          similarity,
+          date: emb.createdAt.split('T')[0],
+        };
+      })
+      .filter((s): s is SimilarEntry => s !== null);
 
     scored.sort((a, b) => b.similarity - a.similarity);
     return scored.slice(0, topK);

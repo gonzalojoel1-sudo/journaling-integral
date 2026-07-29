@@ -433,6 +433,45 @@ export const SmartEntryRequestSchema = z.object({
 });
 
 // ============================================================
+// CIRCLES
+// ============================================================
+
+export const CreateCircleSchema = z.object({
+  name: z.string().min(1).max(100).default('Mi Círculo'),
+});
+
+export const GenerateInviteSchema = z.object({
+  circleId: UUIDSchema,
+});
+
+export const JoinCircleSchema = z.object({
+  code: z
+    .string()
+    .length(8, 'Código debe tener 8 caracteres')
+    .regex(/^[a-f0-9]+$/i, 'Código inválido'),
+});
+
+// ============================================================
+// AUTH — REGISTER
+// ============================================================
+
+export const RegisterSchema = z
+  .object({
+    name: z.string().trim().min(1, 'El nombre es requerido').max(100),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email('Correo electrónico inválido')
+      .max(254),
+    password: z
+      .string()
+      .min(8, 'La contraseña debe tener al menos 8 caracteres')
+      .max(128),
+  })
+  .strict();
+
+// ============================================================
 // HELPER: Validate and return typed errors
 // ============================================================
 

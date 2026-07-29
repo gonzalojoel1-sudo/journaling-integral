@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Users, Flame, Plus, Link as LinkIcon } from 'lucide-react';
 import { createCircle, generateInvite, getCircleWidgetData, sendEncouragement } from '@/app/actions/circles';
+import { safeJsonParse } from '@/lib/json';
 
 interface MemberData {
   userId: string;
@@ -22,7 +23,10 @@ export function CircleWidget() {
   useEffect(() => {
     loadData();
     const stored = localStorage.getItem('circle-encouraged');
-    if (stored) setEncouraged(new Set(JSON.parse(stored)));
+    if (stored) {
+      const parsed = safeJsonParse<string[]>(stored, []);
+      setEncouraged(new Set(parsed));
+    }
   }, []);
 
   async function loadData() {
