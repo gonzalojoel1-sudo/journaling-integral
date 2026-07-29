@@ -3,12 +3,7 @@ import { db } from '@/db/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { scryptSync } from 'crypto';
-
-function hashPassword(password: string): string {
-  const salt = 'journaling-integral-salt-key';
-  return scryptSync(password, salt, 64).toString('hex');
-}
+import { hashPassword } from '@/lib/password';
 
 export async function POST(request: Request) {
   try {

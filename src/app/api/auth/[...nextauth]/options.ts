@@ -3,12 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from '@/db/db';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { scryptSync } from 'crypto';
-
-function hashPassword(password: string): string {
-  const salt = 'journaling-integral-salt-key';
-  return scryptSync(password, salt, 64).toString('hex');
-}
+import { verifyPassword } from '@/lib/password';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -31,8 +26,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('No existe ningún usuario registrado con este email.');
         }
 
-        const hashedPassword = hashPassword(credentials.password);
-        if (user.password !== hashedPassword) {
+        if (!verifyPassword(credentials.password, user.password)) {
           throw new Error('Contraseña incorrecta.');
         }
 
