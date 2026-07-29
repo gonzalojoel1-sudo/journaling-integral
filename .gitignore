@@ -1,10 +1,27 @@
 node_modules
 .next
 local.db
+# ──────────────────────────────────────────────────────────────────
+# Secrets & environment files
+# NEVER commit .env files. The .env.example template is the ONLY
+# env file that should be tracked.
+# ──────────────────────────────────────────────────────────────────
 .env
+.env.*
 .env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
 .env.production
+.env.production.local
+# Re-include .env.example explicitly (it's the tracked template)
+!.env.example
+# ──────────────────────────────────────────────────────────────────
+# Misc
+# ──────────────────────────────────────────────────────────────────
 .aider*
+.superpowers/sdd/review-*.diff
 tsconfig.tsbuildinfo
 *.DS_Store
 src/.DS_Store
