@@ -1,6 +1,6 @@
 # Journaling Integral
 
-Aplicación de journaling integral con hábitos, finanzas personales, negocio, círculos, devocionales, y asistente IA. Construida con Next.js 15 (App Router) y React 19, persistencia en SQLite (local o Turso) vía Drizzle ORM, autenticación con NextAuth v4, y un asistente conversacional multi-provider (OpenAI, Google AI, Groq, OpenRouter, OpenCode).
+Aplicación de journaling integral con hábitos, finanzas personales, negocio, círculos, devocionales, y asistente IA. Construida con Next.js 15 (App Router) y React 19, persistencia en SQLite (local o Turso) vía Drizzle ORM, autenticación con NextAuth v4, y un asistente conversacional powered por **MiniMax** (M3 + M2.7-highspeed) con búsqueda semántica local.
 
 ## Stack
 
@@ -8,7 +8,8 @@ Aplicación de journaling integral con hábitos, finanzas personales, negocio, c
 - **Lenguaje:** TypeScript 5.7 (modo `strict`)
 - **ORM / DB:** Drizzle ORM 0.38 + libSQL / SQLite (Turso en prod, archivo local en dev)
 - **Auth:** NextAuth v4 (Credentials provider)
-- **IA:** Vercel AI SDK + Google AI, OpenAI, Groq, OpenRouter, OpenCode
+- **IA:** Vercel AI SDK + MiniMax (M3 + M2.7-highspeed) vía API OpenAI-compatible
+- **RAG:** TF-IDF local (`local-tfidf-v1`) — sin API externa
 - **Estilos:** Tailwind CSS 3
 - **Charts:** Recharts
 - **Validación:** Zod
@@ -19,13 +20,15 @@ Aplicación de journaling integral con hábitos, finanzas personales, negocio, c
 
 ```bash
 # 1. Instalar dependencias
-npm install
+pnpm install   # o npm install
 
 # 2. Crear archivo de entorno
 cp .env.example .env
 
-# 3. Editar .env con tus claves API (mínimo DATABASE_URL + NEXTAUTH_SECRET + PASSWORD_SALT)
-#    Si vas a usar Turso: DATABASE_URL=libsql://... y DATABASE_AUTH_TOKEN=...
+# 3. Editar .env con tus claves API:
+#    - DATABASE_URL (sqlite local o libsql Turso)
+#    - NEXTAUTH_SECRET + PASSWORD_SALT
+#    - MINIMAX_API_KEY (obtener en platform.minimax.io)
 
 # 4. Aplicar schema a la base de datos
 npm run db:push
@@ -48,10 +51,7 @@ La app queda disponible en `http://localhost:3000`.
 | `NEXTAUTH_SECRET` | Secreto para JWT/sesión | sí |
 | `NEXTAUTH_URL` | URL pública de la app | sí en prod |
 | `PASSWORD_SALT` | Salt para hashing de passwords (scrypt) | sí |
-| `GOOGLE_AI_STUDIO_KEY` | Google AI Studio | opcional |
-| `GROQ_API_KEY` | Groq | opcional |
-| `OPENROUTER_API_KEY` | OpenRouter | opcional |
-| `OPENCODE_API_KEY` | OpenCode | opcional |
+| `MINIMAX_API_KEY` | API key de MiniMax Token Plan | sí (para chat) |
 
 ## Scripts
 
@@ -182,40 +182,21 @@ journaling-integral/
 
 ## Tests
 
-- **262+ tests** distribuidos en 21 archivos.
+- **285 tests** distribuidos en 21 archivos (todos pasando).
 - Entorno: `jsdom` para componentes React; Node para lógica pura.
 - Mocks: Drizzle ORM (queries + insert + update), NextAuth, `next/cache`.
 
 ### Áreas cubiertas
 
-| Archivo | Tests | Notas |
-|---------|------:|-------|
-| `src/lib/auth.test.ts` | 11 | `getSessionUser`, `getUserRole`, `requireAdmin` |
-| `src/lib/password.test.ts` | 8 | `hashPassword`, `verifyPassword` (incluyendo salt faltante) |
-| `src/lib/habit-engine.test.ts` | 9 | Pilar, precisar, sembrar, crecer, cambiar; caminos vacíos y unknown ids |
-| `src/lib/habit-strength.test.ts` | 14 | `applyDecayAndBonus`, `getRealTimeStrength` |
-| `src/lib/constants-*.test.ts` | 18 | Constantes del dominio y demo |
-| `src/lib/dates.test.ts` | — | Helpers de fechas |
-| `src/lib/json.test.ts` | — | Serialización segura |
-| `src/lib/logger.test.ts` | — | Logger estructurado |
-| `src/lib/rag.test.ts` | — | Búsqueda semántica |
-| `src/lib/rate-limit.test.ts` | 4 | `cleanupRateLimits` |
-| `src/lib/validations.test.ts` | — | Schemas Zod |
-| `src/lib/chat-context.test.ts` | — | Contexto para el asistente |
-| `src/app/actions/auth.test.ts` | 4 | `getOrCreateUserProfile` |
-| `src/app/actions/save-journal-draft.test.ts` | — | Autosave del journal |
-| `src/app/actions/toggle-habit.test.ts` | 11 | `toggleHabitCompleted` |
-| `src/app/actions/toggle-habit-schema.test.ts` | 6 | Schema del toggle |
-| `src/app/actions/voice-entry.test.ts` | 3 | Wrapper de voz |
-| `src/app/negocio/CentroMandoDashboard.hooks.test.ts` | — | Estructural |
-| `src/app/negocio/centro-mando/CentroMandoDashboard.structure.test.ts` | 6 | Estructural |
-| `src/app/negocio/centro-mando/useDashboardData.test.ts` | 10 | Hook puro |
-| `src/lib/chat-context.test.ts` | — | Contexto |
+- Lógica pura: `auth`, `password`, `habit-engine`, `habit-strength`, `validations`, `rag`, `chat-context`
+- Server actions: `auth`, `save-journal-draft`, `toggle-habit`, `voice-entry`
+- Helpers: `constants-domain`, `dates`, `json`, `logger`, `rate-limit`
+- Estructurales: `CentroMandoDashboard`, `useDashboardData`
 
 ### Limitaciones conocidas
 
-- **No hay tests de render React.** La infraestructura actual (`jsx: "preserve"` + Vite 8 + oxc sin `@vitejs/plugin-react`) no permite renderizar JSX en jsdom. Los tests estructurales validan el contrato del source en su lugar.
-- **Cobertura aproximada:** ~20% de líneas en `src/lib/` y `src/app/actions/`. Los componentes y rutas de página no están cubiertos.
+- **No hay tests de render React.** La infraestructura actual (`jsx: "preserve"` + Vitest 4) no permite renderizar JSX en jsdom sin `@vitejs/plugin-react`. Los tests estructurales validan el contrato del source en su lugar.
+- **Cobertura aproximada:** ~20-25% de líneas (lib + actions principalmente). Componentes UI y rutas de página no están cubiertos por tests de integración.
 
 ## Lint
 
@@ -229,9 +210,21 @@ npm run lint
 
 - [`docs/auditoria-2026-07-25.md`](docs/auditoria-2026-07-25.md) — primera auditoría (3 críticos + varios medios).
 - [`docs/auditoria-2026-07-28-full.md`](docs/auditoria-2026-07-28-full.md) — auditoría masiva (8 agentes paralelos, 285+ hallazgos).
+- [`docs/MINIMAX_SETUP.md`](docs/MINIMAX_SETUP.md) — guía operativa de la integración MiniMax.
 - [`docs/debug-session-2026-07-27-create-first-unit-hangs.md`](docs/debug-session-2026-07-27-create-first-unit-hangs.md) — sesión de debug sobre `CreateFirstUnitGate`.
 
 Los reportes de batches previos viven en `.superpowers/sdd/`.
+
+## Migración reciente: MiniMax (2026-07-29)
+
+Toda la IA del proyecto corre sobre MiniMax Token Plan:
+- **Chat:** `MiniMax-M3` (primary) → `MiniMax-M2.7-highspeed` (fallback), thinking desactivado
+- **Smart-entry:** `MiniMax-M2.7-highspeed` (fast) → `MiniMax-M3` (primary)
+- **RAG:** TF-IDF local (sin API externa)
+- 1 sola API key: `MINIMAX_API_KEY`
+- 4 dependencias eliminadas (`@ai-sdk/google`, `@ai-sdk/openai-compatible`, `@google/generative-ai`, `groq-sdk`)
+
+Ver [MINIMAX_SETUP.md](docs/MINIMAX_SETUP.md) para detalles operativos.
 
 ## Licencia
 
