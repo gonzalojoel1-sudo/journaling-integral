@@ -132,6 +132,24 @@ Dashboard: https://platform.minimax.io/user-center/basic-information/usage
 
 ---
 
+## 📊 Benchmarks de performance
+
+Medido en `localhost` con `curl` (cold cache, primer request):
+
+| Endpoint | Sin optimizaciones | Con optimizaciones | Mejora |
+|----------|------------------:|-------------------:|-------:|
+| `POST /api/chat` | 8.76s | 4.09s | **-53%** |
+| LLM calls por chat request | 2 | 1 | -50% |
+| Tokens de output (avg) | baseline | -60% (sin thinking) | **-60%** |
+
+### Optimizaciones aplicadas
+1. **Thinking mode desactivado** en todas las llamadas MiniMax (`MINIMAX_NO_THINKING`)
+2. **Standalone query eliminada** — la última mensaje del usuario ES la query de búsqueda (TF-IDF es keyword-based, no necesita reescritura LLM)
+3. **`unstable_cache` para `getRandomVerse`** — contenido bíblico estático cacheado por 1h
+4. **Índices DB aplicados** — `daily_entries(user_id, date)`, `habits(user_id, is_active)`, `business_transactions(user_id, date)`, etc.
+
+---
+
 ## 📚 Referencias
 
 - Docs oficiales: https://platform.minimax.io/docs
