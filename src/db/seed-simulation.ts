@@ -5,6 +5,11 @@ import { storeEntryEmbedding, buildEntryContent } from '../lib/rag';
 import { logger } from '@/lib/logger';
 
 async function runSimulationSeed() {
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('simulation_seed_blocked_in_production');
+    process.exit(1);
+  }
+
   logger.info('simulation_seed_started');
 
   const userId = randomUUID();

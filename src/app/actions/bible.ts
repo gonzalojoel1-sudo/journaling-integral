@@ -2,20 +2,30 @@
 
 import { db } from '../../db/db';
 import { bibleVerses } from '../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { FALLBACK_VERSES } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 
 export async function getRandomVerse(level: number = 1) {
   try {
-    const list = await db.select().from(bibleVerses);
-    if (!list.length) return null;
+    const filtered = await db
+      .select()
+      .from(bibleVerses)
+      .where(eq(bibleVerses.recommendedLevel, level))
+      .orderBy(sql`RANDOM()`)
+      .limit(1);
 
-    const filtered = list.filter((v) => v.recommendedLevel === level);
-    const selectionSource = filtered.length > 0 ? filtered : list;
+    if (filtered.length > 0) return filtered[0];
 
-    const randomIndex = Math.floor(Math.random() * selectionSource.length);
-    return selectionSource[randomIndex];
+    const fallback = await db
+      .select()
+      .from(bibleVerses)
+      .orderBy(sql`RANDOM()`)
+      .limit(1);
+
+    if (fallback.length > 0) return fallback[0];
+
+    return null;
   } catch (error) {
     logger.error('bible_get_random_verse_failed', { level }, error);
     return null;

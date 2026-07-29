@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 import { rateLimits } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, lt } from 'drizzle-orm';
 import { logger } from './logger';
 
 export async function rateLimit(
@@ -69,4 +69,27 @@ export function getClientIdentifier(request: Request, userId?: string): string {
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) return forwarded.split(',')[0].trim();
   return '127.0.0.1';
+}
+
+export async function cleanupRateLimits(
+  maxAgeMs: number = 24 * 60 * 60 * 1000,
+): Promise<number> {
+  const cutoff = Date.now() - maxAgeMs;
+  if (!db) {
+    return 0;
+  }
+  try {
+    const result = await db
+      .delete(rateLimits)
+      .where(lt(rateLimits.windowStart, cutoff))
+      .run();
+    const deleted = result?.rowsAffected ?? 0;
+    if (deleted > 0) {
+      logger.info('rate_limit_cleanup', { deleted, cutoff });
+    }
+    return deleted;
+  } catch (error) {
+    logger.error('rate_limit_cleanup_error', { maxAgeMs }, error);
+    return 0;
+  }
 }

@@ -6,6 +6,11 @@ import { DEMO_USER_ID, DEMO_USER_EMAIL, DEMO_USER_NAME, DEMO_USER_PASSWORD_HASH 
 import { logger } from '@/lib/logger';
 
 async function seed() {
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('seed_blocked_in_production');
+    process.exit(1);
+  }
+
   logger.info('seed_started');
 
   try {

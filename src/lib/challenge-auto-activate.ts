@@ -1,6 +1,6 @@
 import { db } from '../db/db';
 import { badges, users } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 const ESCALONES = [
@@ -48,48 +48,58 @@ export async function autoActivateChallenges(userId: string, entry: any) {
   if (!user) return;
   const streak = user.streakCurrent || 0;
 
+  const allUserBadges = await db.query.badges.findMany({
+    where: eq(badges.userId, userId),
+  });
+  const badgeIds = new Set(allUserBadges.map(b => b.badgeId));
+
+  const areaBadgesByArea = new Map<string, Set<string>>();
+  for (const b of allUserBadges) {
+    let bucket = areaBadgesByArea.get(b.area);
+    if (!bucket) {
+      bucket = new Set<string>();
+      areaBadgesByArea.set(b.area, bucket);
+    }
+    bucket.add(b.badgeId);
+  }
+
   for (const e of ESCALONES) {
-    if (streak >= e.days) {
-      const existing = await db.query.badges.findFirst({
-        where: and(eq(badges.userId, userId), eq(badges.badgeId, e.id)),
+    if (streak >= e.days && !badgeIds.has(e.id)) {
+      await db.insert(badges).values({
+        id: randomUUID(),
+        userId,
+        badgeId: e.id,
+        area: 'diario',
+        mineral: 'escalon',
+        unlockedAt: new Date().toISOString(),
       });
-      if (!existing) {
-        await db.insert(badges).values({
-          id: randomUUID(),
-          userId,
-          badgeId: e.id,
-          area: 'diario',
-          mineral: 'escalon',
-          unlockedAt: new Date().toISOString(),
-        });
-      }
+      badgeIds.add(e.id);
     }
   }
 
   for (const area of AREAS) {
-    if (area.check(entry)) {
-      const existingAreaBadges = await db.query.badges.findMany({
-        where: and(eq(badges.userId, userId), eq(badges.area, area.key)),
-      });
-      for (const dias of AREA_ESCALONES) {
-        const badgeId = `${area.key}-${dias}`;
-        if (!existingAreaBadges.find(b => b.badgeId === badgeId)) {
-          const prevTier = AREA_ESCALONES.filter(d => d < dias).pop() || 0;
-          const prevBadgeId = prevTier ? `${area.key}-${prevTier}` : null;
-          const hasPrev = prevBadgeId ? existingAreaBadges.find(b => b.badgeId === prevBadgeId) : true;
-          if (!prevTier || hasPrev) {
-            const minDaysForThis = dias - prevTier;
-            if (streak >= minDaysForThis) {
-              await db.insert(badges).values({
-                id: randomUUID(),
-                userId,
-                badgeId,
-                area: area.key,
-                mineral: 'escalon',
-                unlockedAt: new Date().toISOString(),
-              });
-            }
-          }
+    if (!area.check(entry)) continue;
+    const existingBadgeIds = areaBadgesByArea.get(area.key) ?? new Set<string>();
+
+    for (const dias of AREA_ESCALONES) {
+      const badgeId = `${area.key}-${dias}`;
+      if (existingBadgeIds.has(badgeId)) continue;
+
+      const prevTier = AREA_ESCALONES.filter(d => d < dias).pop() || 0;
+      const prevBadgeId = prevTier ? `${area.key}-${prevTier}` : null;
+      const hasPrev = prevBadgeId ? existingBadgeIds.has(prevBadgeId) : true;
+      if (!prevTier || hasPrev) {
+        const minDaysForThis = dias - prevTier;
+        if (streak >= minDaysForThis) {
+          await db.insert(badges).values({
+            id: randomUUID(),
+            userId,
+            badgeId,
+            area: area.key,
+            mineral: 'escalon',
+            unlockedAt: new Date().toISOString(),
+          });
+          existingBadgeIds.add(badgeId);
         }
       }
     }
