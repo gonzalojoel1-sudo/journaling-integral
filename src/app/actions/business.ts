@@ -16,6 +16,7 @@ import {
   DeleteBusinessTransactionSchema,
   CreateBusinessTransactionSchema,
   RegisterSaleSchema,
+  type AllowedBizField,
 } from '@/lib/validations';
 
 export async function autoSaveBizField(field: string, value: string | number, date: string) {
@@ -56,11 +57,12 @@ export async function autoSaveBizField(field: string, value: string | number, da
       return { success: true, created: true, entryId };
     }
 
-    const updateData: Record<string, any> = {};
-    updateData[field] = value;
+    const updateData: Record<string, unknown> = {};
+    const allowedField = v.data.field as AllowedBizField;
+    updateData[allowedField] = v.data.value;
 
     await db.update(dailyEntries)
-      .set(updateData)
+      .set(updateData as Partial<typeof dailyEntries.$inferInsert>)
       .where(eq(dailyEntries.id, existing.id));
 
     revalidatePath('/');

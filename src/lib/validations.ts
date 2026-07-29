@@ -281,10 +281,25 @@ export const DeleteBusinessSettingSchema = z.object({
 // BUSINESS AUTO-SAVE & SYNC
 // ============================================================
 
+const ALLOWED_BIZ_FIELDS = [
+  'bizProspectCompleted',
+  'bizFollowUpCompleted',
+  'bizMktActionCompleted',
+  'bizContactsCount',
+  'bizSalesCount',
+  'bizIncome',
+  'bizExpenses',
+  'bizActionsSpecific',
+] as const;
+
+export type AllowedBizField = (typeof ALLOWED_BIZ_FIELDS)[number];
+
 export const AutoSaveBizFieldSchema = z.object({
-  field: z.string().min(1, 'Campo requerido'),
-  value: z.union([z.string().max(1000), z.number()]),
-  date: DateStringSchema,
+  field: z.enum(ALLOWED_BIZ_FIELDS, {
+    errorMap: () => ({ message: 'Campo no permitido' }),
+  }),
+  value: z.union([z.string().max(1000), z.number().finite(), z.boolean()]).optional(),
+  date: DateStringSchema.optional(),
 });
 
 export const AutoSyncSalesSchema = z.object({
