@@ -67,5 +67,14 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'journaling-nextauth-super-secret-key-12345',
+  secret: (() => {
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        'NEXTAUTH_SECRET environment variable is required and must be at least 32 characters. ' +
+        'Generate one with: openssl rand -base64 32'
+      );
+    }
+    return secret;
+  })(),
 };
